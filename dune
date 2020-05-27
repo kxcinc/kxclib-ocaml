@@ -1,0 +1,21 @@
+(library
+ (name kxclib)
+ (public_name kxclib)
+ (modules kxclib)
+ (libraries)
+ (preprocess (pps ppxlib.metaquot)))
+
+(library
+ (name kxclib_ppx)
+ (modules ppx_all)
+ (public_name kxclib.ppx)
+ (kind ppx_rewriter)
+ (libraries ppxlib)
+ (preprocess (pps ppxlib.metaquot)))
+
+(env
+ (dev
+  (flags (:standard -warn-error -A -g)))
+ (release
+  (ocamlopt_flags -O3)
+  (flags (:standard))))

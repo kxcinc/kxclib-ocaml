@@ -1,0 +1,7 @@
+(library
+ (name kxctests)
+ (modules ppx_noimpl test_utils)
+ (inline_tests)
+ (libraries str kxclib)
+ (preprocess (pps kxclib.ppx ppx_inline_test)))
+
