@@ -6,12 +6,13 @@ maintainer: "Haochen Xie <hx@kxc.io>"
 authors: "Haochen Xie <hx@kxc.io>"
 license: "MIT"
 homepage: "https://github.com/kxcteam/kxclib-ocaml"
+bug-reports: "https://github.com/kxcteam/kxclib-ocaml/issues"
 dev-repo: "git+https://github.com:kxcteam/kxclib-ocaml.git"
 depends: [
   "ocaml"
   "dune"
-  "ppxlib" { >= "0.2.1"}
-  "ppx_inline_test" {test}
+  "ppxlib" { >= "0.12"}
+  "ppx_inline_test" {with-test}
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]

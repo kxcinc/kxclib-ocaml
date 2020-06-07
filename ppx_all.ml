@@ -31,37 +31,45 @@ let rule_noimplfunc =
          | None -> [%expr fun _ -> failwith "noimpl"]))
   in Context_free.Rule.extension ext
 
-let transformer_include str =
-  let open Ppxlib.Parsetree in
-  let process_stri = function
-    | { pstr_desc = Pstr_attribute ({ txt = "include"; _ }, payload);
-        pstr_loc = _loc; } ->
-       let dir = _loc.loc_start.pos_fname |> Filename.dirname in
-       Ast_pattern.(
-        (parse
-           ~on_error:(fun _ -> failwith __LOC__)
-           (single_expr_payload (estring __))
-           _loc payload)
-          (fun original ->
-            let filename = Filename.concat dir original in
-            let buf = Lexing.from_channel (open_in filename) in
-            let parsed = Ocaml_common.Parse.implementation buf in
-            let module Conv = Migrate_parsetree.Convert
-                                (Migrate_parsetree.OCaml_current)
-                                (Ppxlib.Import_for_core.Ocaml) in
-            let (module B) = Ast_builder.make _loc in
-            let str = Conv.copy_structure parsed in
-            let attr label payload : Parsetree.structure_item =
-              ({ txt = label; loc = _loc }, payload) |> B.pstr_attribute in
-            let _filename : payload =
-              B.(PStr
-                   [%str
-                    { original    = [%e (estring original)] ;
-                      transformed = [%e (estring filename)] ; }]) in
-            [attr "including.starts" _filename]
-            @ str
-            @ [attr "including.ends" _filename]))
-    | x -> [x]
+let transformer_include : structure -> structure = fun str ->
+  let module WorkingOCamlVersion = Migrate_parsetree.OCaml_407 in
+  let module PpxlibOCamlVersion = Ppxlib_ast.Selected_ast in
+  let module Conv = Migrate_parsetree.Convert
+                      (PpxlibOCamlVersion)
+                      (WorkingOCamlVersion) in
+  let module Rev = Migrate_parsetree.Convert
+                     (WorkingOCamlVersion)
+                     (PpxlibOCamlVersion) in
+  let str = Conv.copy_structure str in
+  let open WorkingOCamlVersion.Ast.Parsetree in
+  let process_stri = fun stri ->
+    let _loc = stri.pstr_loc in
+    let open Ppxlib.Parsetree in
+    let str = Rev.copy_structure [stri] in
+    let on_error = fun () -> [stri] in
+    Ast_pattern.(
+      (parse ~on_error
+         ((pstr_attribute
+             (attribute
+                ~name:(string "include")
+                ~payload:(single_expr_payload (estring __))))
+          ^:: nil)
+         _loc str
+       (fun original ->
+         let dir = _loc.loc_start.pos_fname |> Filename.dirname in
+         let filename = Filename.concat dir original in
+         let buf = Lexing.from_channel (open_in filename) in
+         let parsed = Ppxlib.Parse.implementation buf in
+         let (module B) = Ast_builder.make _loc in
+         let attr label payload =
+           B.(attribute ~name:(Located.mk label) ~payload |> pstr_attribute) in
+         let _filename= B.(PStr [%str { original    = [%e (estring original)] ;
+                                        transformed = [%e (estring filename)] ; }]) in
+         let built =
+           [attr "including.starts" _filename]
+           @ parsed
+           @ [attr "including.ends" _filename]
+         in Conv.copy_structure built)))
   in
   let rec expander ({ pstr_desc; _ } as stri) =
     let process_mb mb : module_binding =
@@ -84,7 +92,7 @@ let transformer_include str =
                        Pstr_recmodule
                          (List.map process_mb mbs) } ]
     | _ -> process_stri stri in
-  str |> List.fmap expander
+    str |> List.fmap expander |> Rev.copy_structure
 
 let () =
   Driver.register_transformation
