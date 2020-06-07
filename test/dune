@@ -1,7 +1,8 @@
 (library
  (name kxctests)
- (modules ppx_noimpl test_utils)
+ (modules ppx_noimpl ppx_include test_utils)
  (inline_tests)
  (libraries str kxclib)
- (preprocess (pps kxclib.ppx ppx_inline_test)))
+ (preprocess (pps kxclib.ppx ppx_inline_test))
+ (preprocessor_deps (glob_files ppx_include_*.ml)))
 

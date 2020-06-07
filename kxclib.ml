@@ -31,6 +31,13 @@ let foldl = List.fold_left
 let foldr = List.fold_right
 (** {!List.fold_left} *)
 
+let debug fmt = Format.(
+    let ppf = err_formatter in
+    eprintf "[DEBUG:%s] " __FILE__;
+    kfprintf (fun _ -> eprintf "\n";
+                       pp_print_flush ppf ();
+                       flush stderr) ppf fmt)
+
 module List = struct
   include List
   let foldl = foldl
@@ -42,6 +49,9 @@ module List = struct
   let last list =
     foldl (fun _ x -> x) (List.hd list) list
   (** last element of list *)
+
+  (* XXX to be optimized *)
+  let fmap f l = map f l |> concat
 end
 
 module Array = struct
