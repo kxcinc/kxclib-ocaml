@@ -25,6 +25,8 @@ let (%) f g x = x |> g |> f
 let (|&>) list f = List.map f list
 (** list mapping *)
 
+let (&) = (@@)
+
 let foldl = List.fold_left
 (** {!List.fold_right} *)
 
