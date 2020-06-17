@@ -32,7 +32,7 @@ let rule_noimplfunc =
   in Context_free.Rule.extension ext
 
 let transformer_include : structure -> structure = fun str ->
-  let module WorkingOCamlVersion = Migrate_parsetree.OCaml_407 in
+  let module WorkingOCamlVersion = Migrate_parsetree.OCaml_410 in
   let module PpxlibOCamlVersion = Ppxlib_ast.Selected_ast in
   let module Conv = Migrate_parsetree.Convert
                       (PpxlibOCamlVersion)
@@ -74,10 +74,10 @@ let transformer_include : structure -> structure = fun str ->
   let rec expander ({ pstr_desc; _ } as stri) =
     let process_mb mb : module_binding =
       let rec process_mexpr mexpr = match mexpr.pmod_desc with
-        | Pmod_functor (loc, mty, mexpr) ->
+        | Pmod_functor (mty, mexpr) ->
            { mexpr with
              pmod_desc =
-               Pmod_functor (loc, mty, process_mexpr mexpr)}
+               Pmod_functor (mty, process_mexpr mexpr)}
         | Pmod_structure str ->
            { mexpr with
              pmod_desc = Pmod_structure (List.fmap expander str)}
