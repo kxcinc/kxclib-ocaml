@@ -1,6 +1,22 @@
 open Kxclib
 open Ppxlib
 
+let rule_panic =
+  let ext =
+    Extension.
+    (declare
+       "panic"
+       Context.expression
+       Ast_pattern.(alt_option (single_expr_payload (estring __)) (pstr nil))
+       (fun ~loc ~path:_ ->
+         let (module B) = Ast_builder.make loc in
+         function
+         | Some hints ->
+            [%expr failwith (Format.sprintf "panic at %s: %s" __LOC__
+                               [%e B.estring ("noimpl: "^hints)])]
+         | None -> [%expr failwith (Format.sprintf "panic at %s" __LOC__)]))
+  in Context_free.Rule.extension ext
+
 let rule_noimplval =
   let ext =
     Extension.
@@ -97,6 +113,6 @@ let transformer_include : structure -> structure = fun str ->
 let () =
   Driver.register_transformation
     ~rules:
-    [rule_noimplval; rule_noimplfunc]
+    [rule_noimplval; rule_noimplfunc; rule_panic]
     ~impl:transformer_include
     "kxclib_ppx_transformation"
