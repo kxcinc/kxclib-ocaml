@@ -1,17 +1,9 @@
-type ('a, 'b) either = Left of 'a | Right of 'b
-let left x = Left x
-let right x = Right x
-
 let inc n = n + 1
 let dec n = n - 1
 let refset x r = r := x
 let refupdate f r = r := f !r
 let incr = refupdate inc
 let decr = refupdate dec
-
-let iota = function
-  | 0 -> []
-  | k -> 0 :: (List.init (dec k) inc)
 
 let const c = fun _ -> c
 (** constant function *)
@@ -25,6 +17,9 @@ let (%) f g x = x |> g |> f
 let (|&>) list f = List.map f list
 (** list mapping *)
 
+let (|!>) list f = List.iter f list
+(** list iteration *)
+
 let (&) = (@@)
 
 let foldl = List.fold_left
@@ -33,15 +28,29 @@ let foldl = List.fold_left
 let foldr = List.fold_right
 (** {!List.fold_left} *)
 
-let debug fmt = Format.(
+let debug ?loc fmt = Format.(
     let ppf = err_formatter in
-    eprintf "[DEBUG:%s] " __FILE__;
+    let loc = match loc with
+      | Some loc -> loc | None -> "unknown" in
+    eprintf "[DEBUG:%s] " loc;
     kfprintf (fun _ -> eprintf "\n";
                        pp_print_flush ppf ();
                        flush stderr) ppf fmt)
 
+module Either = struct
+  type ('a, 'b) t = Left of 'a | Right of 'b
+  let left x = Left x
+  let right x = Right x
+end
+type ('a, 'b) either = ('a, 'b) Either.t
+
 module List = struct
   include List
+
+  let iota = function
+    | 0 -> []
+    | k -> 0 :: (List.init (dec k) inc)
+
   let foldl = foldl
   let foldr = foldr
   let count pred list =
@@ -54,6 +63,8 @@ module List = struct
 
   (* XXX to be optimized *)
   let fmap f l = map f l |> concat
+
+  let empty = function [] -> true | _ -> false
 end
 
 module Array = struct
