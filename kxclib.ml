@@ -28,14 +28,16 @@ let foldl = List.fold_left
 let foldr = List.fold_right
 (** {!List.fold_left} *)
 
-let debug ?loc fmt = Format.(
+(** also consider using [%debug] *)
+let debug ?label fmt = Format.(
     let ppf = err_formatter in
-    let loc = match loc with
-      | Some loc -> loc | None -> "unknown" in
-    eprintf "[DEBUG:%s] " loc;
-    kfprintf (fun _ -> eprintf "\n";
-                       pp_print_flush ppf ();
-                       flush stderr) ppf fmt)
+    let label = match label with
+      | Some label -> label | None -> "unknown" in
+    fprintf ppf "[DEBUG:%s] " label;
+    kfprintf (fun ppf ->
+               pp_print_newline ppf();
+               pp_print_flush ppf ())
+      ppf fmt)
 
 module Either = struct
   type ('a, 'b) t = Left of 'a | Right of 'b

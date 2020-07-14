@@ -17,6 +17,28 @@ let rule_panic =
          | None -> [%expr failwith (Format.sprintf "panic at %s" __LOC__)]))
   in Context_free.Rule.extension ext
 
+let rule_debug =
+  let ext =
+    Extension.
+    (declare
+       "debug"
+       Context.expression
+       Ast_pattern.(alt_option (single_expr_payload (estring __)) (pstr nil))
+       (fun ~loc ~path:_ label ->
+         let (module B) = Ast_builder.make loc in
+         let label = match label with
+           | Some label -> label | None -> __FILE__ in
+         B.([%expr Format.(
+           fun fmt ->
+           let ppf = err_formatter in
+           fprintf ppf "[DEBUG:%s] " [%e estring label];
+           kfprintf (fun ppf ->
+               pp_print_newline ppf();
+               pp_print_flush ppf ())
+             ppf fmt
+         )])))
+  in Context_free.Rule.extension ext
+
 let rule_noimplval =
   let ext =
     Extension.
@@ -113,6 +135,6 @@ let transformer_include : structure -> structure = fun str ->
 let () =
   Driver.register_transformation
     ~rules:
-    [rule_noimplval; rule_noimplfunc; rule_panic]
+    [rule_noimplval; rule_noimplfunc; rule_panic; rule_debug]
     ~impl:transformer_include
     "kxclib_ppx_transformation"
