@@ -61,8 +61,16 @@ module List = struct
     foldl (fun _ x -> x) (List.hd list) list
   (** last element of list *)
 
-  (* XXX to be optimized *)
-  let fmap f l = map f l |> concat
+  let fmap : ('x -> 'y list) -> 'x list -> 'y list = fun f l ->
+    let rec loop acc = function
+        | [] -> acc
+        | x :: r -> loop ((f x |> List.rev) :: acc) r in
+    let rec collect acc = function
+      | [] -> acc
+      | [] :: r' -> collect acc r'
+      | (h :: r) :: r' -> collect (h :: acc) (r :: r')
+    in
+    loop [] l |> collect []
 
   let empty = function [] -> true | _ -> false
 end
