@@ -71,6 +71,7 @@ module List = struct
 
   let foldl = foldl
   let foldr = foldr
+
   let count pred list =
     foldl (fun count x -> if pred x then inc count else count) 0 list
   (** [pred list] returns the number of elements [e] in [list] that satisfies [pred] *)
@@ -130,8 +131,25 @@ end
 
 module Hashtbl = struct
   include Hashtbl
+
   let rev : ('a, 'b) t -> ('b, 'a) t = fun orig ->
     to_seq orig |> Seq.map (fun (k,v) -> (v,k)) |> of_seq
-  (** [rev orig] reverse the key and value of [orig] *)
+  (** swap the key and value *)
 end
 
+module Timing = struct
+
+  (** time the execution of [f], returning the result
+        of [f] and store the measured time in [output] *)
+  let timefunc' output f =
+    let t = Unix.gettimeofday() in
+    let r = f () in
+    output := Unix.gettimeofday()-.t;
+    r
+
+  (** time the execution of [f], discarding the result of [f] *)
+  let timefunc f =
+    let time = ref 0. in
+    timefunc' time f; !time
+
+end
