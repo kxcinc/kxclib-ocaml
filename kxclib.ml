@@ -5,10 +5,10 @@ let refupdate f r = r := f !r
 let incr = refupdate inc
 let decr = refupdate dec
 
-let const c = fun _ -> c
+let constant c = fun _ -> c
 (** constant function *)
 
-let id x = x
+let identity x = x
 (** identity function *)
 
 let (%) f g x = x |> g |> f
