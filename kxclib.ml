@@ -142,9 +142,9 @@ module Timing = struct
   (** time the execution of [f], returning the result
         of [f] and store the measured time in [output] *)
   let timefunc' output f =
-    let t = Unix.gettimeofday() in
+    let t = Sys.time() in
     let r = f () in
-    output := Unix.gettimeofday()-.t;
+    output := Sys.time()-.t;
     r
 
   (** time the execution of [f], discarding the result of [f] *)
