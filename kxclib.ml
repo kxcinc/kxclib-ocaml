@@ -62,6 +62,14 @@ end = struct
 end
 type 'x queue = 'x Queue.t
 
+module Option = struct
+  include Option
+
+  let otherwise otherwise = function
+    | Some x -> Some x
+    | None -> otherwise
+end
+
 module List = struct
   include List
 
