@@ -11,6 +11,17 @@ let constant c = fun _ -> c
 let identity x = x
 (** identity function *)
 
+module Functionals = struct
+  let negate pred x = not (pred x) (** negate a predicate *)
+  let dig2nd f a b = f b a         (** [f] dig the second argument of [f] to be the first. aka [flip] *)
+  let dig3nd f a b c = f c a b     (** [f] dig the third argument of [f] to be the first *)
+  let flip = dig2nd                (** [f] flip the first arguments of [f]. aka [dig2nd] *)
+  let fix1st x f = f x             (** [x f] fix the first argument to [f] as [x] *)
+  let fix2nd y f x = f x y         (** [y f] fix the second argument to [f] as [y] *)
+  let fix3nd z f x y = f x y z     (** [z f] fix the third argument to [f] as [z] *)
+end
+module Fn = Functionals
+
 let (%) f g x = x |> g |> f
 (** function composition *)
 
@@ -38,6 +49,16 @@ let debug ?label fmt = Format.(
                pp_print_newline ppf();
                pp_print_flush ppf ())
       ppf fmt)
+
+let projected_compare proj a b =
+  compare (proj a) (proj b)
+
+let pp_int = Format.pp_print_int
+let pp_float = Format.pp_print_float
+let pp_string = Format.pp_print_string
+let pp_char = Format.pp_print_char
+let pp_bool = Format.pp_print_bool
+let pp_unit ppf () = pp_string ppf "unit"
 
 module Either = struct
   type ('a, 'b) t = Left of 'a | Right of 'b
@@ -68,38 +89,10 @@ module Option = struct
   let otherwise otherwise = function
     | Some x -> Some x
     | None -> otherwise
-end
 
-module List = struct
-  include List
-
-  let iota = function
-    | 0 -> []
-    | k -> 0 :: (List.init (dec k) inc)
-
-  let foldl = foldl
-  let foldr = foldr
-
-  let count pred list =
-    foldl (fun count x -> if pred x then inc count else count) 0 list
-  (** [pred list] returns the number of elements [e] in [list] that satisfies [pred] *)
-
-  let last list =
-    foldl (fun _ x -> x) (List.hd list) list
-  (** last element of list *)
-
-  let fmap : ('x -> 'y list) -> 'x list -> 'y list = fun f l ->
-    let rec loop acc = function
-        | [] -> acc
-        | x :: r -> loop ((f x |> List.rev) :: acc) r in
-    let rec collect acc = function
-      | [] -> acc
-      | [] :: r' -> collect acc r'
-      | (h :: r) :: r' -> collect (h :: acc) (r :: r')
-    in
-    loop [] l |> collect []
-
-  let empty = function [] -> true | _ -> false
+  let pp vpp ppf = Format.(function
+    | Some x -> fprintf ppf "Some(%a)" vpp x
+    | None -> fprintf ppf "None")
 end
 
 module Array = struct
@@ -135,6 +128,55 @@ module Array = struct
         , the [i]-th element will be returned
       - otherwise, the behavior is undefined
    *)
+
+  let to_function : 'a array -> (int -> 'a) =
+    fun arr idx -> arr.(idx)
+end
+
+module List = struct
+  include List
+
+  let iota = function
+    | 0 -> []
+    | k -> 0 :: (List.init (dec k) inc)
+
+  let foldl = foldl
+  let foldr = foldr
+
+  let make copies x = List.init copies (constant x)
+
+  let count pred list =
+    foldl (fun count x -> if pred x then inc count else count) 0 list
+  (** [pred list] returns the number of elements [e] in [list] that satisfies [pred] *)
+
+  let last list =
+    foldl (fun _ x -> x) (List.hd list) list
+  (** last element of list *)
+
+  let fmap : ('x -> 'y list) -> 'x list -> 'y list = fun f l ->
+    let rec loop acc = function
+        | [] -> acc
+        | x :: r -> loop ((f x |> List.rev) :: acc) r in
+    let rec collect acc = function
+      | [] -> acc
+      | [] :: r' -> collect acc r'
+      | (h :: r) :: r' -> collect (h :: acc) (r :: r')
+    in
+    loop [] l |> collect []
+
+  let empty = function [] -> true | _ -> false
+
+  let to_function : 'a list -> (int -> 'a) =
+    fun xs -> Array.(xs |> of_list |> to_function)
+
+  let to_hashtbl : ('k*'v) list -> ('k, 'v) Hashtbl.t =
+    fun xs -> Hashtbl.of_seq (to_seq xs)
+
+  let pp vpp ppf xs =
+    let open Format in
+    fprintf ppf "[ @[";
+    iter (fprintf ppf "%a;@;" vpp) xs;
+    fprintf ppf "]@]";
 end
 
 module Hashtbl = struct
@@ -143,6 +185,8 @@ module Hashtbl = struct
   let rev : ('a, 'b) t -> ('b, 'a) t = fun orig ->
     to_seq orig |> Seq.map (fun (k,v) -> (v,k)) |> of_seq
   (** swap the key and value *)
+
+  let to_function : ('a, 'b) t -> 'a -> 'b = Hashtbl.find
 end
 
 module Timing = struct
