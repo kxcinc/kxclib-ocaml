@@ -13,12 +13,21 @@ let identity x = x
 
 module Functionals = struct
   let negate pred x = not (pred x) (** negate a predicate *)
+  let both p g x = p x && g x
+  let either p g x = p x || g x
+
   let dig2nd f a b = f b a         (** [f] dig the second argument of [f] to be the first. aka [flip] *)
   let dig3nd f a b c = f c a b     (** [f] dig the third argument of [f] to be the first *)
   let flip = dig2nd                (** [f] flip the first arguments of [f]. aka [dig2nd] *)
   let fix1st x f = f x             (** [x f] fix the first argument to [f] as [x] *)
   let fix2nd y f x = f x y         (** [y f] fix the second argument to [f] as [y] *)
   let fix3nd z f x y = f x y z     (** [z f] fix the third argument to [f] as [z] *)
+
+  let ntimes n f x =
+    let rec loop acc = function
+      | 0 -> acc
+      | n -> loop (f acc) (n-1) in
+    loop x n
 end
 module Fn = Functionals
 
@@ -140,8 +149,18 @@ module List = struct
     | 0 -> []
     | k -> 0 :: (List.init (dec k) inc)
 
+  let range start end_exclusive = iota (end_exclusive - start) |&> (+) start
+
   let foldl = foldl
   let foldr = foldr
+
+  let take n l =
+    let rec loop acc = function
+      | 0,_ -> rev acc
+      | n, hd::tl -> loop (hd::acc) (n-1, tl)  in
+    loop [] (n, l)
+
+  let drop n l = Fn.ntimes n tl l
 
   let make copies x = List.init copies (constant x)
 
