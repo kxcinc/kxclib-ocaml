@@ -151,6 +151,20 @@ module List = struct
 
   let range start end_exclusive = iota (end_exclusive - start) |&> (+) start
 
+  let min cmp = function
+    | [] -> raise Not_found
+    | hd::l ->
+       let f acc x =
+         if cmp acc x > 0 then x else acc in
+       fold_left f hd l
+
+  let max cmp = function
+    | [] -> raise Not_found
+    | hd::l ->
+       let f acc x =
+         if cmp acc x < 0 then x else acc in
+       fold_left f hd l
+
   let foldl = foldl
   let foldr = foldr
 
@@ -182,6 +196,13 @@ module List = struct
       | (h :: r) :: r' -> collect (h :: acc) (r :: r')
     in
     loop [] l |> collect []
+
+  let interpolate y xs =
+    let rec loop acc = function
+      | x :: [] -> x :: acc
+      | [] -> acc
+      | x :: xs -> loop (y :: x :: acc) xs in
+    loop [] xs |> rev
 
   let empty = function [] -> true | _ -> false
 
