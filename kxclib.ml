@@ -212,11 +212,16 @@ module List = struct
   let to_hashtbl : ('k*'v) list -> ('k, 'v) Hashtbl.t =
     fun xs -> Hashtbl.of_seq (to_seq xs)
 
-  let pp vpp ppf xs =
+  let pp ?sep ?parens vpp ppf xs =
     let open Format in
-    fprintf ppf "[ @[";
-    iter (fprintf ppf "%a;@;" vpp) xs;
-    fprintf ppf "]@]";
+    let popen, pclose = match parens with
+      | Some parens -> parens
+      | None -> "[", "]" in
+    let sep = match sep with
+      | Some s -> s | None -> ";" in
+    fprintf ppf "%s @[" popen;
+    iter (fprintf ppf "%a%s@;" vpp |> Fn.fix2nd sep) xs;
+    fprintf ppf "%s@]" pclose
 end
 
 module Hashtbl = struct
