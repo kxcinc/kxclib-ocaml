@@ -106,6 +106,27 @@ end
 
 module Array = struct
   include Array
+
+  let min cmp arr = match length arr with
+    | 0 -> raise Not_found
+    | _ -> let cand = ref arr.(0) in
+           iter (fun x -> if cmp x !cand < 0 then cand := x) arr;
+           !cand
+
+  let max cmp arr = match length arr with
+    | 0 -> raise Not_found
+    | _ -> let cand = ref arr.(0) in
+           iter (fun x -> if cmp x !cand > 0 then cand := x) arr;
+           !cand
+
+  let first arr = match length arr with
+    | 0 -> raise Not_found
+    | _ -> arr.(0)
+
+  let last arr = match length arr with
+    | 0 -> raise Not_found
+    | n -> arr.(n-1)
+
   let update : ('a -> 'a) -> 'a array -> int -> unit = fun f arr idx ->
     arr.(idx) <- f arr.(idx)
   let update_each : (int -> 'a -> 'a) -> 'a array -> unit = fun f arr ->
