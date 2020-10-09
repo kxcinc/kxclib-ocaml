@@ -49,15 +49,21 @@ let foldr = List.fold_right
 (** {!List.fold_left} *)
 
 (** also consider using [%debug] *)
-let debug ?label fmt = Format.(
+let debug ?disabled ?label fmt = Format.(
+    let disabled = Option.value ~default:false disabled in
     let ppf = err_formatter in
     let label = match label with
       | Some label -> label | None -> "unknown" in
-    fprintf ppf "[DEBUG:%s] " label;
-    kfprintf (fun ppf ->
-               pp_print_newline ppf();
-               pp_print_flush ppf ())
-      ppf fmt)
+    if disabled then ikfprintf (constant ()) ppf fmt
+    else begin
+        fprintf ppf "[DEBUG:%s] " label;
+        kfprintf
+          (fun ppf ->
+            pp_print_newline ppf();
+            pp_print_flush ppf ())
+          ppf fmt
+      end)
+
 
 let projected_compare proj a b =
   compare (proj a) (proj b)
