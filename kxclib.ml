@@ -113,6 +113,23 @@ end
 module Array = struct
   include Array
 
+  (* TODO optimization - specialized version when [?f] not given *)
+  let mean : ?f:('x -> float) -> float t -> float =
+    fun ?f:(f=identity) arr ->
+    let len = Array.length arr in
+    if len = 0 then raise Not_found else
+    let rec labor left right = match right - left with
+      | 0 -> f arr.(left), 1
+      | 1 -> (f arr.(left) +. f arr.(right) ) /. 2., 2
+      | rlen ->
+         if rlen < 0 then 0., 0 else
+         let mid = left + (rlen / 2) in
+         let lv, lw = labor left mid
+         and rv, rw = labor (inc mid) right in
+         let (!) = float_of_int in
+         (lv *. !lw +.rv*. !rw) /. !(lw+rw), lw+rw in
+    labor 0 (len-1) |> fst
+
   let min cmp arr = match length arr with
     | 0 -> raise Not_found
     | _ -> let cand = ref arr.(0) in
