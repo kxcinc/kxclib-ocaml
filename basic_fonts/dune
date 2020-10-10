@@ -1,0 +1,12 @@
+(library
+ (name basic_fonts)
+ (public_name kxclib.basic_fonts)
+ (wrapped false)
+ (preprocess (pps kxclib_ppx)))
+
+(env
+ (dev
+  (flags (:standard -warn-error -A -g)))
+ (release
+  (ocamlopt_flags -O3)
+  (flags (:standard))))
