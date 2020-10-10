@@ -150,6 +150,9 @@ module Array = struct
     | 0 -> raise Not_found
     | n -> arr.(n-1)
 
+  let sorted cmp arr =
+    sort cmp arr; arr
+
   let update : ('a -> 'a) -> 'a array -> int -> unit = fun f arr idx ->
     arr.(idx) <- f arr.(idx)
   let update_each : (int -> 'a -> 'a) -> 'a array -> unit = fun f arr ->
@@ -194,6 +197,10 @@ module List = struct
     | k -> 0 :: (List.init (dec k) inc)
 
   let range start end_exclusive = iota (end_exclusive - start) |&> (+) start
+
+  let reduce f = function
+    | [] -> raise Not_found
+    | hd::tl -> foldl f hd tl
 
   let min cmp = function
     | [] -> raise Not_found
