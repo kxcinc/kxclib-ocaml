@@ -302,3 +302,51 @@ module Timing = struct
     timefunc' time f |> ignore; !time
 
 end
+
+module Simpleargs = struct
+  type optparser = string -> unit
+
+  let prefset r x = r := x
+  let prefsetv r v _ = r := v
+
+  let scanfparser fmt fn str = Scanf.(
+      sscanf str fmt fn)
+
+  let exactparser fmt (fn : unit -> unit) str = match str = fmt with
+    | true -> fn()
+    | false -> raise (Invalid_argument ("exactparser not matching: "^str^":"^fmt))
+
+  let parse_opts optparsers () =
+    let rec tryparse str = function
+      | [] -> raise (Invalid_argument ("usparsed option: "^str))
+      | p::ps -> try p str with _ -> tryparse str ps in
+    Array.to_list Sys.argv |> List.drop 1
+    |!> Fn.fix2nd optparsers tryparse
+
+  let parse_opts_args
+        ?argsource:(argsource=Sys.argv, 1)
+        ?optprefix:(optprefix="-")
+        ?optsep:(optsep="--")
+        optparsers () =
+    let source, startidx = argsource in
+    let optprefixlen = String.length optprefix in
+    let prefixed str =
+      if String.length str < optprefixlen then false
+      else (String.sub str 0 optprefixlen) = optprefix in
+    let argc = Array.length source in
+    let args = ref [] in
+    let rec tryparse str = function
+      | [] -> raise (Invalid_argument ("usparsed option: "^str))
+      | p::ps -> try p str with _ -> tryparse str ps in
+    let tryparse = Fn.fix2nd optparsers tryparse in
+    let rec loop n parseopt =
+      if n >= argc then List.rev !args
+      else begin
+          let arg = source.(n) in
+          if not parseopt then (refappend arg args; loop (inc n) parseopt)
+          else if arg == optsep then loop (inc n) true
+          else if prefixed arg then tryparse arg
+          else (refappend arg args; loop (inc n) parseopt)
+        end in
+    loop startidx false
+end
