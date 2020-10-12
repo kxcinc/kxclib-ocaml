@@ -2,6 +2,7 @@ let inc n = n + 1
 let dec n = n - 1
 let refset x r = r := x
 let refupdate f r = r := f !r
+let refappend x r = r := x :: !r
 let incr = refupdate inc
 let decr = refupdate dec
 
