@@ -6,7 +6,7 @@
 #include <zlib.h>
 
 namespace kxclib_fastpng {
-  int write_png_rgba(const char* filename, int width, int height, int32_t *buffer)
+  int write_png_rgba(const char* filename, int width, int height, int32_t *buffer, int compression_level)
   {
     int code = 0;
     FILE *fp = NULL;
@@ -49,7 +49,7 @@ namespace kxclib_fastpng {
 
     // configure png writing options
     png_set_filter(png_ptr, 0, PNG_FILTER_NONE);
-    png_set_compression_level(png_ptr, Z_DEFAULT_COMPRESSION);
+    png_set_compression_level(png_ptr, compression_level);
 
     // Write header (8 bit colour depth)
     png_set_IHDR(png_ptr, info_ptr, width, height,
@@ -105,12 +105,16 @@ struct cachedstr {
 extern "C" {
 
 CAMLprim
-value fastpng_libpng_write_rgba(value caml_filename, value ba) {
+value fastpng_libpng_write_rgba(value caml_filename, value ba, value fast_compression) {
   intnat *dims = Caml_ba_array_val(ba)->dim;
   intnat width = dims[0], height = dims[1];
   cachedstr filename(caml_filename);
   int32_t *data = (int32_t *)Caml_ba_data_val(ba);
-  kxclib_fastpng::write_png_rgba(filename.buff, width, height, data);
+  int compression_level =
+      Bool_val(fast_compression)
+      ? Z_NO_COMPRESSION
+      : Z_DEFAULT_COMPRESSION;
+  kxclib_fastpng::write_png_rgba(filename.buff, width, height, data, compression_level);
   return Val_unit;
 }
 

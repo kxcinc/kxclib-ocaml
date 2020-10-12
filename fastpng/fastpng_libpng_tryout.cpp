@@ -1,11 +1,12 @@
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
+#include <zlib.h>
 
 using namespace std;
 
 namespace kxclib_fastpng {
-  int write_png_rgba(const char *filename, int width, int height, int32_t *buffer);
+  int write_png_rgba(const char *filename, int width, int height, int32_t *buffer, int compression_level);
 }
 
 int main(int argc, char *argv[])
@@ -29,7 +30,7 @@ int main(int argc, char *argv[])
         buff[x*height+y] = color;
       }
 
-  return kxclib_fastpng::write_png_rgba("test.png", width, height, buff);
+  return kxclib_fastpng::write_png_rgba("test.png", width, height, buff, Z_DEFAULT_COMPRESSION);
 }
 
 // hack to make CMake happy
