@@ -299,6 +299,6 @@ module Timing = struct
   (** time the execution of [f], discarding the result of [f] *)
   let timefunc f =
     let time = ref 0. in
-    timefunc' time f; !time
+    timefunc' time f |> ignore; !time
 
 end
