@@ -1,0 +1,27 @@
+(library
+ (name fastpng)
+ (public_name kxclib.fastpng)
+ (libraries kxclib)
+ (modules kxclib_fastpng)
+ (wrapped false)
+ (foreign_stubs
+  (language cxx)
+  (names fastpng_libpng)
+  (flags -std=c++11 -fPIC))
+ (c_library_flags -lpng -lstdc++)
+ (preprocess (pps kxclib_ppx))
+ (flags (:standard -open Kxclib)))
+
+(executable
+ (name try_fastpng)
+ (libraries kxclib fastpng)
+ (modules try_fastpng)
+ (preprocess (pps kxclib_ppx))
+ (flags (:standard -open Kxclib)))
+
+(env
+ (dev
+  (flags (:standard -warn-error -A -g)))
+ (release
+  (ocamlopt_flags -O3)
+  (flags (:standard))))
