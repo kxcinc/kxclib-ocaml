@@ -29,6 +29,23 @@ module Functionals = struct
       | 0 -> acc
       | n -> loop (f acc) (n-1) in
     loop x n
+
+  let fixpoint ?maxn =
+    match maxn with
+    | None ->
+       fun f x ->
+       let rec loop (x,x') =
+         if x = x' then x
+         else loop (x', f x') in
+       loop (x, f x)
+    | Some 0 -> fun _ x -> x
+    | Some n ->
+       fun f x ->
+       let rec loop n (x,x') =
+         if n = 0 then x'
+         else if x = x' then x
+         else loop (pred n) (x', f x') in
+       loop (pred n) (x, f x)
 end
 module Fn = Functionals
 
