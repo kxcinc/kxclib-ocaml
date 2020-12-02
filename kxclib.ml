@@ -313,6 +313,31 @@ module Hashtbl = struct
   let to_function : ('a, 'b) t -> 'a -> 'b = Hashtbl.find
 end
 
+module String = struct
+  include String
+
+  (** [chop_prefix p s] returns [s] minus the prefix [p] wrapped in [Some],
+      or [None] if [s] does not start with [p] *)
+  let chop_prefix prefix =
+    let plen = length prefix in
+    fun str ->
+    let slen = length str in
+    if slen < plen
+    then None
+    else if (sub str 0 plen) = prefix then Some (sub str plen (slen-plen))
+    else None
+
+  (** [starts_with p s] returns whether [s] starts with a substring of [p] *)
+  let starts_with prefix str = chop_prefix prefix str |> Option.is_some
+
+  (** [ends_with p s] returns whether [s] ends with a substring of [p] *)
+  let ends_with postfix str =
+    let plen, slen = length postfix, length str in
+    if slen < plen then false
+    else (sub str (slen-plen) plen) = postfix
+
+end
+
 module Timing = struct
 
   (** time the execution of [f], returning the result
