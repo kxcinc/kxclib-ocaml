@@ -355,31 +355,35 @@ module Timing = struct
 
 end
 
-module Simpleargs = struct
+module ParseArgs = struct
   type optparser = string -> unit
 
   let prefset r x = r := x
   let prefsetv r v _ = r := v
 
-  let scanfparser fmt fn str = Scanf.(
+  let scanfparser fmt fn str : optparser = Scanf.(
       sscanf str fmt fn)
 
-  let exactparser fmt (fn : unit -> unit) str = match str = fmt with
-    | true -> fn()
-    | false -> raise (Invalid_argument ("exactparser not matching: "^str^":"^fmt))
+  let exactparser fmt (fn : unit -> unit) : optparser = function
+    | str when str = fmt -> fn ()
+    | str -> raise (Invalid_argument ("exactparser not matching: "^str^":"^fmt))
 
-  let parse_opts optparsers () =
+  let parse_opts
+        (optparsers : optparser list)
+        ?argsource:(argsource=Sys.argv, 1)
+        () =
     let rec tryparse str = function
       | [] -> raise (Invalid_argument ("usparsed option: "^str))
       | p::ps -> try p str with _ -> tryparse str ps in
-    Array.to_list Sys.argv |> List.drop 1
+    Array.to_list (fst argsource) |> List.drop (snd argsource)
     |!> Fn.fix2nd optparsers tryparse
 
   let parse_opts_args
-        ?argsource:(argsource=Sys.argv, 1)
         ?optprefix:(optprefix="-")
         ?optsep:(optsep="--")
-        optparsers () =
+        (optparsers : optparser list)
+        ?argsource:(argsource=Sys.argv, 1)
+        () =
     let source, startidx = argsource in
     let optprefixlen = String.length optprefix in
     let prefixed str =
@@ -396,9 +400,123 @@ module Simpleargs = struct
       else begin
           let arg = source.(n) in
           if not parseopt then (refappend arg args; loop (inc n) parseopt)
-          else if arg == optsep then loop (inc n) true
-          else if prefixed arg then tryparse arg
+          else if arg == optsep then loop (inc n) false
+          else if prefixed arg then (tryparse arg; loop (inc n) parseopt)
           else (refappend arg args; loop (inc n) parseopt)
         end in
-    loop startidx false
+    loop startidx true
+end
+
+module ArgOptions = struct
+
+  type _ named_option =
+    | IntOption : string -> int named_option
+    | FloatOption : string -> float named_option
+    | StringOption : string -> string named_option
+    | InChannelOption : string -> in_channel named_option
+    | OutChannelOption : string -> out_channel named_option
+    | InChannelOption' : string -> (in_channel*channel_desc) named_option
+    | OutChannelOption' : string -> (out_channel*channel_desc) named_option
+
+  and channel_desc = [ `StandardChannel | `FileChannel of string ]
+
+  let opt_of_named_option (type x) (opt : x named_option) = match opt with
+    | IntOption opt -> opt
+    | FloatOption opt -> opt
+    | StringOption opt -> opt
+    | InChannelOption opt -> opt
+    | OutChannelOption opt -> opt
+    | InChannelOption opt -> opt
+    | OutChannelOption opt -> opt
+
+  module type FeatureRequests = sig
+
+    val has_flag :
+      ?argsource:(string array*int) ->
+      ?prefix:string ->
+      string -> (** flag *)
+      bool
+    val get_option :
+      ?argsource:(string array*int) ->
+      ?optprefix:string ->
+      ?optsep:string ->
+      'x named_option ->
+      'x
+    val get_args :
+      ?argsource:(string array*int) ->
+      ?optsep:string ->
+      unit -> string list
+  end
+
+  let has_flag
+        ?argsource
+        ?prefix:(prefix="")
+        flag =
+    let store = ref false in
+    ParseArgs.(
+      parse_opts [
+          exactparser (prefix^flag) (fun () -> store := true);
+          (constant ())
+      ]) ?argsource ();
+    !store
+
+  let get_option
+        ?argsource
+        ?prefix:(prefix="")
+        ?optsep
+        (type x)
+      : x named_option -> x option =
+    let open ParseArgs in
+    let labor opt f =
+      let state = ref `Init in
+      let result = ref None in
+      let marker_raw = prefix^opt in
+      let marker_eq = marker_raw^"=" in
+      let par arg =
+        match !state with
+        | `Init when arg = marker_raw ->
+           state := `CaptureNext
+        | `Init ->
+           (match String.chop_prefix marker_eq arg with
+            | Some arg -> result := Some (f arg)
+            | None -> ())
+        | `CaptureNext -> (state := `Init; result := Some (f arg)) in
+      parse_opts_args ?argsource ~optprefix:"" ?optsep [par] () |> ignore;
+      match !state with
+      | `Init -> !result
+      | `CaptureNext -> invalid_arg ("no argument supplied to option "^opt) in
+    function
+    | IntOption opt ->
+       labor opt (fun arg -> Scanf.sscanf arg "%i%!" identity)
+    | FloatOption opt ->
+       labor opt (fun arg -> Scanf.sscanf arg "%g%!" identity)
+    | StringOption opt ->
+       labor opt identity
+    | InChannelOption opt ->
+       labor opt (function
+           | "-" -> stdin
+           | path -> open_in path)
+    | OutChannelOption opt ->
+       labor opt (function
+           | "-" -> stdout
+           | path -> open_out path)
+    | InChannelOption' opt ->
+       labor opt (function
+           | "-" -> stdin, `StandardChannel
+           | path -> open_in path, `FileChannel path)
+    | OutChannelOption' opt ->
+       labor opt (function
+           | "-" -> stdout, `StandardChannel
+           | path -> open_out path, `FileChannel path)
+
+  let get_option_exn
+        ?argsource
+        ?prefix
+        ?optsep
+        (type x)
+      : x named_option -> x = fun opt ->
+    match get_option ?argsource ?prefix ?optsep opt with
+    | None -> invalid_arg ("you have to provide option "^(opt_of_named_option opt))
+    | Some x -> x
+
 end
