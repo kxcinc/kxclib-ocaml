@@ -119,6 +119,14 @@ type 'x queue = 'x Queue.t
 module Option = struct
   include Option
 
+  let v default = function
+    | Some x -> x
+    | None -> default
+
+  let v' gen_default = function
+    | Some x -> x
+    | None -> gen_default()
+
   let otherwise otherwise = function
     | Some x -> Some x
     | None -> otherwise
