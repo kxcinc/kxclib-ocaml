@@ -301,6 +301,8 @@ module List = struct
     fprintf ppf "%s@]" pclose
 end
 
+let iota = List.iota
+
 module Hashtbl = struct
   include Hashtbl
 
