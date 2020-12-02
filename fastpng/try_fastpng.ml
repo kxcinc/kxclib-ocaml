@@ -6,7 +6,7 @@ let () =
     for j = 0 to (dec h) do
       let c = if i = j
               then Int32.(of_int 0xffccff |> logor (of_int 0x5f |> Fn.flip shift_left (8*3)))
-              else match j mod 3 with
+              else match  [@warning "-8"] j mod 3 with
                    | 0 -> pixel32_of_rgba 0 0 0xff 0xff
                    | 1 -> pixel32_of_rgba 0 0xff 0 0x8f
                    | 2 -> pixel32_of_rgba 0xff 0 0 0xff

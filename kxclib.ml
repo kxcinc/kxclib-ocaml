@@ -238,7 +238,7 @@ module List = struct
   let foldr = foldr
 
   let take n l =
-    let rec loop acc = function
+    let [@warning "-8"] rec loop acc = function
       | 0,_ -> rev acc
       | n, hd::tl -> loop (hd::acc) (n-1, tl)  in
     loop [] (n, l)
