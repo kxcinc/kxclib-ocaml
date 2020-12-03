@@ -442,6 +442,20 @@ module ArgOptions = struct
       ?optsep:string ->
       'x named_option ->
       'x
+    val get_option_d :
+      ?argsource:(string array*int) ->
+      ?optprefix:string ->
+      ?optsep:string ->
+      'x named_option ->
+      'x -> (** default value *)
+      'x
+    val get_option_d' :
+      ?argsource:(string array*int) ->
+      ?optprefix:string ->
+      ?optsep:string ->
+      'x named_option ->
+      (unit -> 'x) -> (** default value producer *)
+      'x
     val get_args :
       ?argsource:(string array*int) ->
       ?optsep:string ->
@@ -519,4 +533,23 @@ module ArgOptions = struct
     | None -> invalid_arg ("you have to provide option "^(opt_of_named_option opt))
     | Some x -> x
 
+  let get_option_d'
+        ?argsource
+        ?prefix
+        ?optsep
+        (type x)
+      : x named_option -> (unit -> x) -> x = fun opt vp ->
+    match get_option ?argsource ?prefix ?optsep opt with
+    | None -> vp()
+    | Some x -> x
+
+  let get_option_d
+        ?argsource
+        ?prefix
+        ?optsep
+        (type x)
+      : x named_option -> x -> x = fun opt v ->
+    match get_option ?argsource ?prefix ?optsep opt with
+    | None -> v
+    | Some x -> x
 end
