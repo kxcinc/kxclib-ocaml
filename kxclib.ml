@@ -303,6 +303,188 @@ module Timing = struct
 
 end
 
+module Datetime0 : sig
+
+  (** all according to proleptic Gregorian Calender *)
+
+  val leap_year : int -> bool
+  val daycount_of_month : leap:bool -> int -> int
+  val day_of_year : int -> int -> int -> int
+
+  module type NormalizedTimestamp = sig
+    (** timezone not taking into consideration *)
+
+    module Conf : sig
+      val epoch_year : int
+      (** the epoch would be at January 1st 00:00:00.0 in [epoch_year] *)
+
+      val subsecond_resolution : int
+      (** e.g. sec-resolution use [1] and millisec-resolution use [1000] *)
+
+      val min_year : int (** min-year supported *)
+      val max_year : int (** max-year supported *)
+    end
+
+    val normalize : ?subsec:int ->
+                    ?tzoffset:(int*int) ->
+                    int*int*int ->
+                    int*int*int ->
+                    int
+    (** [normalize
+         ?tzoffset:(tzhour, tzmin)
+         ?subsec (yy, mm, dd) (hour, min, sec)]
+        calculates the normalized timestamp *)
+  end
+  module EpochNormalizedTimestamp (Conf : sig
+               (** see NormalizedTimestamp *)
+
+               val epoch_year : int
+               val subsecond_resolution : int
+             end) : NormalizedTimestamp
+
+  module UnixTimestmapSecRes : NormalizedTimestamp
+  module UnixTimestmapMilliRes : NormalizedTimestamp
+  module UnixTimestmapNanoRes : NormalizedTimestamp
+
+end = struct
+
+  let sum = List.foldl (+) 0
+
+  let days_of_months_nonleap =
+    List.to_function @@
+    [ 0;
+      31; 28; 31; 30; 31; 30;
+      31; 31; 30; 31; 30; 31; ]
+  let days_of_months_leap =
+    List.to_function @@
+    [ 0;
+      31; 29; 31; 30; 31; 30;
+      31; 31; 30; 31; 30; 31; ]
+  let days_of_months_subsum_nonleap =
+    List.(
+      iota 13
+      |&> (fun x -> iota x |&> days_of_months_nonleap |> sum)
+      |> to_function)
+  let days_of_months_subsum_leap =
+    let sum = List.foldl (+) 0 in
+    List.(
+      iota 13
+      |&> (fun x -> iota x |&> days_of_months_leap |> sum)
+      |> to_function)
+
+  let daycount_of_month ~leap =
+    let table =
+      if leap
+      then days_of_months_leap
+      else days_of_months_nonleap in
+    fun mm -> table mm
+
+  let leap_year yy =
+    let div x = yy mod x = 0 in
+    if not (div 4) then false
+    else if not (div 100) then true
+    else if div 400 then false
+    else true
+
+  let day_of_year yy =
+    let table = match leap_year yy with
+      | false -> days_of_months_subsum_nonleap
+      | true  -> days_of_months_subsum_leap in
+    fun mm dd -> table mm + dd
+
+  module type NormalizedTimestamp = sig
+    module Conf : sig
+      val epoch_year : int
+      val subsecond_resolution : int
+      val min_year : int
+      val max_year : int
+    end
+    val normalize : ?subsec:int ->
+                    ?tzoffset:(int*int) ->
+                    int*int*int ->
+                    int*int*int ->
+                    int
+    (** [normalize yy mm dd ?subsec hour min sec] calculates the normalized timestamp *)
+  end
+
+  (* XXX tests *)
+  module EpochNormalizedTimestamp (Conf : sig
+               val epoch_year : int
+               val subsecond_resolution : int
+             end) = struct
+    module Conf = struct
+      include Conf
+      let min_year = Conf.epoch_year
+      let max_year =
+        let span =
+          (pred Int.max_int)
+          / (366*24*60*60*subsecond_resolution) in
+        span-1+min_year
+    end open Conf
+
+    let yearcount_leaping ymin ymax =
+      let roundup div = fun x ->
+        if x mod div = 0 then x
+        else div*(succ (x/div)) in
+      let ncat div =
+        let span = ymax - (roundup div ymin) in
+        if span < 0 then 0
+        else succ (span/div) in
+      let ncat4 = ncat 4 in
+      let ncat100 = ncat 100 in
+      let ncat400 = ncat 400 in
+      ncat4 - ncat100 + ncat400
+
+    let normalize ?subsec ?tzoffset (yy, mm, dd) (hour, min, sec) =
+      let subsec = Option.(value ~default:0 subsec) in
+      if yy < min_year || yy > max_year then
+        invalid_arg Format.(asprintf "%s.normalize - timestamp cannot be handled: \
+                                     %d-%d-%d %02d:%02d:%02d (subsec: %d/%d) - \
+                                     year out of range (%d-%d)"
+                              "/kxclib.ml/.Datetime0.EpochNormalizedTimestamp"
+                              yy mm dd hour min sec
+                              subsec subsecond_resolution
+                              min_year max_year);
+      if subsec >= subsecond_resolution then
+        invalid_arg Format.(sprintf "%s.normalize - subsec out of range (%d-%d)"
+                              "/kxclib.ml/.Datetime0.EpochNormalizedTimestamp"
+                              0 (pred subsecond_resolution));
+      let days_past_years =
+        let ymin, ymax = epoch_year, pred yy in
+        let leaping = yearcount_leaping ymin ymax in
+        let nonleaping = ymax-ymin+1-leaping in
+        leaping*366+nonleaping*365 in
+      let doy = day_of_year yy mm dd in
+      let hour, min = match tzoffset with
+        | None -> hour, min
+        | Some (tzhour, tzmin) -> hour+tzhour, min+tzmin in
+      let nts =
+        sec + min*60 + hour*60*60
+        + (days_past_years + doy)*24*60*60 in
+      let nts = nts * subsecond_resolution + subsec in
+      nts
+  end
+
+  module UnixTimestmapSecRes =
+    EpochNormalizedTimestamp(struct
+        let epoch_year = 1970
+        let subsecond_resolution = 1
+      end)
+
+  module UnixTimestmapMilliRes =
+    EpochNormalizedTimestamp(struct
+        let epoch_year = 1970
+        let subsecond_resolution = 1000
+      end)
+
+  module UnixTimestmapNanoRes =
+    EpochNormalizedTimestamp(struct
+        let epoch_year = 1970
+        let subsecond_resolution = 1000*1000*1000
+      end)
+
+end
+
 module Simpleargs = struct
   type optparser = string -> unit
 
