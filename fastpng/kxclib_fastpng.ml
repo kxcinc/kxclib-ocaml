@@ -20,7 +20,6 @@ let pixel32_of_rgba r g b a =
 let rgba_of_pixel32 p =
   Int32.(
     let (>>) = shift_right_logical in
-    let (!) = of_int in
     let (/|) = logand in
     let mask = (Int32.of_int 0xff) in
     (p >> (8*3)) /| mask,
