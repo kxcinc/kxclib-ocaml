@@ -543,7 +543,7 @@ module ParseArgs = struct
   let prefset r x = r := x
   let prefsetv r v _ = r := v
 
-  let scanfparser fmt fn str : optparser = Scanf.(
+  let scanfparser fmt fn : optparser = fun str -> Scanf.(
       sscanf str fmt fn)
 
   let exactparser fmt (fn : unit -> unit) : optparser = function
