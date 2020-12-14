@@ -552,4 +552,22 @@ module ArgOptions = struct
     match get_option ?argsource ?prefix ?optsep opt with
     | None -> v
     | Some x -> x
+
+  let get_absolute_args
+        ?optsep:(optsep="--")
+        ?argsource:(argsource=Sys.argv, 1)
+        () =
+    let source, startidx = argsource in
+    let argc = Array.length source in
+    let args = ref [] in
+    let rec loop n record_arg =
+      if n >= argc then List.rev !args
+      else begin
+          let arg = source.(n) in
+          if record_arg then (refappend arg args; loop (succ n) record_arg)
+          else if arg = optsep then loop (succ n) true
+          else loop (succ n) record_arg
+        end in
+    loop startidx false
+
 end
