@@ -400,7 +400,7 @@ module ParseArgs = struct
       else begin
           let arg = source.(n) in
           if not parseopt then (refappend arg args; loop (inc n) parseopt)
-          else if arg == optsep then loop (inc n) false
+          else if arg = optsep then loop (inc n) false
           else if prefixed arg then (tryparse arg; loop (inc n) parseopt)
           else (refappend arg args; loop (inc n) parseopt)
         end in
