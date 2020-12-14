@@ -338,6 +338,46 @@ module String = struct
 
 end
 
+module IoPervasives = struct
+
+  let with_input_file path f =
+    let ch = open_in path in
+    let r =
+      try f ch
+      with e -> close_in ch; raise e in
+    close_in ch; r
+
+  let with_output_file path f =
+    let ch = open_out path in
+    let r =
+      try f ch
+      with e -> close_out ch; raise e in
+    close_out ch; r
+
+  let slurp_input ?buf ic =
+    let buf = match buf with
+      | None -> Bytes.make 4096 '\000'
+      | Some buf -> buf in
+    let result = ref "" in
+    let rec loop len =
+      match input ic buf 0 len with
+      | 0 -> result
+      | rlen ->
+         result := !result^(Bytes.sub_string buf 0 rlen);
+         loop len in
+    !(loop (Bytes.length buf))
+
+  let slurp_stdin ?buf () = slurp_input ?buf stdin
+
+  (* optimization *)
+  let slurp_file path =
+    with_input_file path slurp_input
+
+  let spit_file path str =
+    with_output_file path (Fn.flip output_string str)
+
+end include IoPervasives
+
 module Timing = struct
 
   (** time the execution of [f], returning the result
