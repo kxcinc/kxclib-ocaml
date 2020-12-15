@@ -58,6 +58,30 @@ module Functionals = struct
 end
 module Fn = Functionals
 
+module MonadOps(M : sig
+             type _ t
+             val pure : 'x -> 'x t
+             val bind : 'x t -> ('x -> 'y t) -> 'y t
+           end) = struct
+  let pure x = M.pure x
+  let (>>=) = M.bind
+  let (>>) : 'x M.t -> 'y M.t -> 'y M.t =
+    fun ma mb -> ma >>= fun _ -> mb
+  let (>|=) : 'x M.t -> ('x -> 'y) -> 'y M.t =
+    fun ma f -> ma >>= fun x -> pure (f x)
+
+  let sequence_list ms =
+    List.fold_left (fun acc m ->
+        acc >>= fun acc ->
+        m >>= fun x ->
+        x :: acc |> pure
+      ) (pure []) ms >>= fun xs ->
+    List.rev xs |> pure
+
+  let (>>=*) : 'x M.t list -> ('x list -> 'y M.t) -> 'y M.t =
+    fun ms af -> sequence_list ms >>= af
+end
+
 let (%) f g x = x |> g |> f
 (** function composition *)
 
@@ -128,6 +152,8 @@ type 'x queue = 'x Queue.t
 module Option = struct
   include Option
 
+  let pure = some
+
   let v default = function
     | Some x -> x
     | None -> default
@@ -143,6 +169,13 @@ module Option = struct
   let pp vpp ppf = Format.(function
     | Some x -> fprintf ppf "Some(%a)" vpp x
     | None -> fprintf ppf "None")
+
+  let fmap f = function
+    | None -> None
+    | Some v -> (
+      match f v with
+      | None -> None
+      | Some v -> v)
 end
 
 module Array = struct
@@ -308,6 +341,9 @@ module List = struct
     fprintf ppf "%s @[" popen;
     iter (fprintf ppf "%a%s@;" vpp |> Fn.fix2nd sep) xs;
     fprintf ppf "%s@]" pclose
+
+  let bind ma af = fmap af ma
+  let pure x = [x]
 end
 
 let iota = List.iota
