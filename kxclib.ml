@@ -12,6 +12,12 @@ let constant c = fun _ -> c
 let identity x = x
 (** identity function *)
 
+let failwith' fmt =
+  Format.kasprintf (failwith) fmt
+
+let invalid_arg' fmt =
+  Format.kasprintf (invalid_arg) fmt
+
 module Functionals = struct
   let negate pred x = not (pred x) (** negate a predicate *)
   let both p g x = p x && g x
@@ -22,7 +28,10 @@ module Functionals = struct
   let flip = dig2nd                (** [f] flip the first arguments of [f]. aka [dig2nd] *)
   let fix1st x f = f x             (** [x f] fix the first argument to [f] as [x] *)
   let fix2nd y f x = f x y         (** [y f] fix the second argument to [f] as [y] *)
-  let fix3nd z f x y = f x y z     (** [z f] fix the third argument to [f] as [z] *)
+  let fix3rd z f x y = f x y z     (** [z f] fix the third argument to [f] as [z] *)
+
+  let tap f x =
+    f x; x
 
   let ntimes n f x =
     let rec loop acc = function
