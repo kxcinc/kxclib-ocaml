@@ -381,6 +381,17 @@ module String = struct
     if slen < plen then false
     else (sub str (slen-plen) plen) = postfix
 
+  (** [chop_prefix p s] returns [s] minus the suffix [p] wrapped in [Some],
+      or [None] if [s] does not end with [p] *)
+  let chop_suffix suffix =
+    let plen = length suffix in
+    fun str ->
+    let slen = length str in
+    if slen < plen then None
+    else if (sub str (slen-plen) plen) = suffix then (
+      Some (sub str 0 (slen-plen))
+    ) else None
+
 end
 
 module IoPervasives = struct
