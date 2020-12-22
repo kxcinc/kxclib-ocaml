@@ -133,6 +133,12 @@ module Either = struct
 end
 type ('a, 'b) either = ('a, 'b) Either.t
 
+module ResultWithErrmsg = struct
+  type 'x t = ('x, string) result
+  let bind : 'x t -> ('x -> 'y t) -> 'y t = Result.bind
+  let pure : 'x -> 'x t = Result.ok
+end
+
 module Queue : sig
   type 'x t
   val empty : 'x t
