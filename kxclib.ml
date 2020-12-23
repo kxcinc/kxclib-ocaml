@@ -133,6 +133,19 @@ module Either = struct
 end
 type ('a, 'b) either = ('a, 'b) Either.t
 
+module Result = struct
+  include Result
+
+  (** NB - returning only the first error *)
+  let concat : ('x, 'e) result list -> ('x list, 'e) result =
+    fun rs ->
+    let rec loop acc = function
+      | [] -> Ok acc
+      | Ok x :: rest -> loop (x :: acc) rest
+      | Error e :: _ -> Error e in
+    loop [] (List.rev rs)
+end
+
 module ResultWithErrmsg = struct
   type 'x t = ('x, string) result
   let bind : 'x t -> ('x -> 'y t) -> 'y t = Result.bind
