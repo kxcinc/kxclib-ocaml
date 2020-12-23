@@ -150,6 +150,12 @@ module ResultWithErrmsg = struct
   type 'x t = ('x, string) result
   let bind : 'x t -> ('x -> 'y t) -> 'y t = Result.bind
   let pure : 'x -> 'x t = Result.ok
+  let protect' : handler:(exn -> string) -> ('x -> 'y) -> ('x -> 'y t) =
+    fun ~handler f x ->
+    try Ok (f x)
+    with exn -> Error (handler exn)
+  let protect : ('x -> 'y) -> ('x -> 'y t) =
+    fun f -> protect' ~handler:Printexc.to_string f
 end
 
 module Queue : sig
