@@ -24,7 +24,7 @@ module Functionals = struct
   let either p g x = p x || g x
 
   let dig2nd f a b = f b a         (** [f] dig the second argument of [f] to be the first. aka [flip] *)
-  let dig3nd f a b c = f c a b     (** [f] dig the third argument of [f] to be the first *)
+  let dig3rd f a b c = f c a b     (** [f] dig the third argument of [f] to be the first *)
   let flip = dig2nd                (** [f] flip the first arguments of [f]. aka [dig2nd] *)
   let fix1st x f = f x             (** [x f] fix the first argument to [f] as [x] *)
   let fix2nd y f x = f x y         (** [y f] fix the second argument to [f] as [y] *)
