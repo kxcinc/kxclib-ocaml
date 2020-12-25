@@ -1,9 +1,8 @@
 (library
- (name kxclib)
- (public_name kxclib)
- (wrapped false)
- (modules kxclib)
- (libraries)
+ (name kxclib_ppx)
+ (public_name kxclib.ppx)
+ (kind ppx_rewriter)
+ (libraries ppxlib kxclib)
  (preprocess (pps ppxlib.metaquot)))
 
 (env

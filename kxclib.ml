@@ -729,8 +729,8 @@ module ArgOptions = struct
     | StringOption opt -> opt
     | InChannelOption opt -> opt
     | OutChannelOption opt -> opt
-    | InChannelOption opt -> opt
-    | OutChannelOption opt -> opt
+    | InChannelOption' opt -> opt
+    | OutChannelOption' opt -> opt
 
   module type FeatureRequests = sig
 
