@@ -1,10 +1,8 @@
-let inc n = n + 1
-let dec n = n - 1
 let refset x r = r := x
 let refupdate f r = r := f !r
 let refappend x r = r := x :: !r
-let incr = refupdate inc
-let decr = refupdate dec
+let incr = refupdate succ
+let decr = refupdate pred
 
 let constant c = fun _ -> c
 (** constant function *)
@@ -55,8 +53,75 @@ module Functionals = struct
          else if x = x' then x
          else loop (pred n) (x', f x') in
        loop (pred n) (x, f x)
+
+  let converge' judge f =
+    let rec loop n (x, x') =
+      match judge n x x' with
+      | true  -> Ok x'
+      | false -> loop (succ n) (x', f x') in
+    fun x -> loop 1 (x, f x)
+
+  let converge judge f x =
+    converge' (fun _ x x' -> judge x x') f x
+
+  module BasicInfix = struct
+    (** function composition 1 *)
+    let (%) : ('y -> 'z) -> ('x -> 'y) -> ('x -> 'z) =
+      fun f g x -> x |> g |> f
+
+    (** function composition 2 *)
+    let (&>) : ('x -> 'y) -> ('y -> 'z) -> ('x -> 'z) =
+      fun g f x -> x |> g |> f
+
+    let (//) : ('a -> 'x) -> ('b -> 'y) -> ('a*'b -> 'x*'y) =
+      fun fa fb (a, b) -> fa a, fb b
+
+    let (/>) : 'a*'b -> ('b -> 'c) -> 'a*'c =
+      fun (a, b) f -> a, f b
+
+    let (/<) : 'a*'b -> ('a -> 'c) -> 'c*'b =
+      fun (a, b) f -> f a, b
+
+    (** uncurry *)
+    let (!!) : ('a -> 'b -> 'x) -> ('a*'b -> 'x) =
+      fun f -> fun (a, b) -> f a b
+
+    (** curry *)
+    let (^^) : ('a*'b -> 'x) -> ('a -> 'b -> 'x) =
+      fun f -> fun a b -> f (a, b)
+  end
+
+  module Infix = BasicInfix
 end
 module Fn = Functionals
+include Functionals.BasicInfix
+
+module PipeOps(S : sig
+             type _ t
+             val map : ('x -> 'y) -> 'x t -> 'y t
+             val fold_left : ('acc -> 'x -> 'acc) -> 'acc -> 'x t -> 'acc
+             val filter : ('x -> bool) -> 'x t -> 'x t
+             val filter_map : ('x -> 'x option) -> 'x t -> 'x t
+           end) = struct
+  open S
+
+  (** piping map *)
+  let (|&>) : 'x t -> ('x -> 'y) -> 'y t = fun xs f -> map f xs
+
+  (** piping iter *)
+  let (|!>) : 'x t -> ('x -> unit) -> unit =
+    fun xs f -> xs |&> (f &> ignore) |> ignore
+
+  (** piping fold_left *)
+  let (|@>) : ('acc*('acc -> 'x -> 'acc)) -> 'x t -> 'acc =
+    fun (z, f) -> fold_left f z
+
+  (** piping filter *)
+  let (|?>) : 'x t -> ('x -> bool) -> 'x t = fun xs f -> filter f xs
+
+  (** piping filter map *)
+  let (|&?>) : 'x t -> ('x -> 'y option) -> 'y t = fun xs f -> filter_map f xs
+end
 
 module MonadOps(M : sig
              type _ t
@@ -81,17 +146,6 @@ module MonadOps(M : sig
   let (>>=*) : 'x M.t list -> ('x list -> 'y M.t) -> 'y M.t =
     fun ms af -> sequence_list ms >>= af
 end
-
-let (%) f g x = x |> g |> f
-(** function composition *)
-
-let (|&>) list f = List.map f list
-(** list mapping *)
-
-let (|!>) list f = List.iter f list
-(** list iteration *)
-
-let (&) = (@@)
 
 let foldl = List.fold_left
 (** {!List.fold_right} *)
@@ -203,8 +257,24 @@ module Option = struct
       | Some v -> v)
 end
 
+module Seq = struct
+  include Seq
+  include PipeOps(Seq)
+end
+
 module Array = struct
   include Array
+
+  let filter f arr =
+    arr |> to_seq |> Seq.filter f |> of_seq
+  let filter_map f arr =
+    arr |> to_seq |> Seq.filter_map f |> of_seq
+
+  include PipeOps(struct
+              include Array
+              let filter = filter
+              let filter_map = filter_map
+            end)
 
   (* TODO optimization - specialized version when [?f] not given *)
   let mean : ?f:('x -> float) -> float t -> float =
@@ -218,7 +288,7 @@ module Array = struct
          if rlen < 0 then 0., 0 else
          let mid = left + (rlen / 2) in
          let lv, lw = labor left mid
-         and rv, rw = labor (inc mid) right in
+         and rv, rw = labor (succ mid) right in
          let (!) = float_of_int in
          (lv *. !lw +.rv*. !rw) /. !(lw+rw), lw+rw in
     labor 0 (len-1) |> fst
@@ -283,11 +353,12 @@ module Array = struct
 end
 
 module List = struct
+  include PipeOps(List)
   include List
 
   let iota = function
     | 0 -> []
-    | k -> 0 :: (List.init (dec k) inc)
+    | k -> 0 :: (List.init (pred k) succ)
 
   let range start end_exclusive = iota (end_exclusive - start) |&> (+) start
 
@@ -312,10 +383,19 @@ module List = struct
   let foldl = foldl
   let foldr = foldr
 
+  let hd = function
+    | [] -> raise Not_found
+    | h :: _ -> h
+
+  let tl = function
+    | [] -> raise Not_found
+    | _ :: tail -> tail
+
   let take n l =
-    let [@warning "-8"] rec loop acc = function
-      | 0,_ -> rev acc
-      | n, hd::tl -> loop (hd::acc) (n-1, tl)  in
+    let rec loop acc = function
+      | 0, _ -> rev acc
+      | n, hd::tl -> loop (hd::acc) (n-1, tl)
+      | _ -> raise Not_found in
     loop [] (n, l)
 
   let drop n l = Fn.ntimes n tl l
@@ -323,7 +403,7 @@ module List = struct
   let make copies x = List.init copies (constant x)
 
   let count pred list =
-    foldl (fun count x -> if pred x then inc count else count) 0 list
+    foldl (fun count x -> if pred x then succ count else count) 0 list
   (** [pred list] returns the number of elements [e] in [list] that satisfies [pred] *)
 
   let last list =
@@ -371,6 +451,8 @@ module List = struct
   let pure x = [x]
 end
 
+include PipeOps(List)
+
 let iota = List.iota
 
 module Hashtbl = struct
@@ -416,7 +498,6 @@ module String = struct
     else if (sub str (slen-plen) plen) = suffix then (
       Some (sub str 0 (slen-plen))
     ) else None
-
 end
 
 module IoPervasives = struct
@@ -702,10 +783,10 @@ module ParseArgs = struct
       if n >= argc then List.rev !args
       else begin
           let arg = source.(n) in
-          if not parseopt then (refappend arg args; loop (inc n) parseopt)
-          else if arg = optsep then loop (inc n) false
-          else if prefixed arg then (tryparse arg; loop (inc n) parseopt)
-          else (refappend arg args; loop (inc n) parseopt)
+          if not parseopt then (refappend arg args; loop (succ n) parseopt)
+          else if arg = optsep then loop (succ n) false
+          else if prefixed arg then (tryparse arg; loop (succ n) parseopt)
+          else (refappend arg args; loop (succ n) parseopt)
         end in
     loop startidx true
 end
