@@ -99,6 +99,7 @@ include Functionals.BasicInfix
 module PipeOps(S : sig
              type _ t
              val map : ('x -> 'y) -> 'x t -> 'y t
+             val iter : ('x -> unit) -> 'x t -> unit
              val fold_left : ('acc -> 'x -> 'acc) -> 'acc -> 'x t -> 'acc
              val filter : ('x -> bool) -> 'x t -> 'x t
              val filter_map : ('x -> 'x option) -> 'x t -> 'x t
@@ -110,7 +111,7 @@ module PipeOps(S : sig
 
   (** piping iter *)
   let (|!>) : 'x t -> ('x -> unit) -> unit =
-    fun xs f -> xs |&> (f &> ignore) |> ignore
+    fun xs f -> iter f xs
 
   (** piping fold_left *)
   let (|@>) : ('acc*('acc -> 'x -> 'acc)) -> 'x t -> 'acc =
