@@ -180,6 +180,18 @@ let pp_char = Format.pp_print_char
 let pp_bool = Format.pp_print_bool
 let pp_unit ppf () = pp_string ppf "unit"
 
+let pp_multiline ppf str =
+  let open Format in
+  let rec loop = function
+    | [line] -> pp_string ppf line
+    | line :: rest ->
+       pp_string ppf line;
+       pp_force_newline ppf ();
+       loop rest
+    | [] -> () in
+  String.split_on_char '\n' str
+  |> loop
+
 module Either = struct
   type ('a, 'b) t = Left of 'a | Right of 'b
   let left x = Left x
@@ -255,6 +267,10 @@ module Option = struct
       match f v with
       | None -> None
       | Some v -> v)
+
+  let of_bool = function
+    | true -> Some ()
+    | false -> None
 end
 
 module Seq = struct
