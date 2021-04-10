@@ -445,6 +445,13 @@ module List = struct
       | x :: xs -> loop (y :: x :: acc) xs in
     loop [] xs |> rev
 
+  let filteri p l =
+    let rec aux i acc = function
+      | [] -> rev acc
+      | x::l -> aux (i + 1) (if p i x then x::acc else acc) l
+    in
+    aux 0 [] l
+
   let empty = function [] -> true | _ -> false
 
   let to_function : 'a list -> (int -> 'a) =
