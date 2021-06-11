@@ -3,8 +3,7 @@
  (public_name kxclib)
  (wrapped false)
  (modules kxclib)
- (libraries)
- (preprocess (pps ppxlib.metaquot)))
+ (libraries))
 
 (env
  (dev

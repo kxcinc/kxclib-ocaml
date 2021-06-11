@@ -1,8 +1,7 @@
 (library
  (name basic_fonts)
  (public_name kxclib.basic_fonts)
- (wrapped false)
- (preprocess (pps kxclib_ppx)))
+ (wrapped false))
 
 (env
  (dev
