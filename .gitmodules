@@ -1,0 +1,6 @@
+[submodule "vendors/ocaml-migrate-parsetree"]
+	path = vendors/ocaml-migrate-parsetree
+	url = https://github.com/ocaml-ppx/ocaml-migrate-parsetree.git
+[submodule "vendors/ppxlib"]
+	path = vendors/ppxlib
+	url = https://github.com/ocaml-ppx/ppxlib.git

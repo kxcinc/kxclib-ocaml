@@ -12,3 +12,5 @@
  (release
   (ocamlopt_flags -O3)
   (flags (:standard))))
+
+(vendored_dirs vendors)
