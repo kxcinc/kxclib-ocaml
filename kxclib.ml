@@ -1,6 +1,7 @@
 let refset x r = r := x
 let refupdate f r = r := f !r
 let refappend x r = r := x :: !r
+let refpop r = match !r with h::t -> r:=t; h | [] -> raise Not_found
 let incr = refupdate succ
 let decr = refupdate pred
 
@@ -15,6 +16,9 @@ let failwith' fmt =
 
 let invalid_arg' fmt =
   Format.kasprintf (invalid_arg) fmt
+
+let printf fmt = Format.printf fmt
+let sprintf fmt = Format.asprintf fmt
 
 module Functionals = struct
   let negate pred x = not (pred x) (** negate a predicate *)
