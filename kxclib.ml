@@ -158,15 +158,14 @@ let foldl = List.fold_left
 let foldr = List.fold_right
 (** {!List.fold_left} *)
 
-(** also consider using [%debug] *)
 let debug ?disabled ?label fmt = Format.(
     let disabled = Option.value ~default:false disabled in
     let ppf = err_formatter in
-    let label = match label with
-      | Some label -> label | None -> "unknown" in
     if disabled then ikfprintf (constant ()) ppf fmt
     else begin
-        fprintf ppf "[DEBUG:%s] " label;
+        (match label with
+         | Some label -> fprintf ppf "[DEBUG:%s] " label
+         | None -> fprintf ppf "[DEBUG] " );
         kfprintf
           (fun ppf ->
             pp_print_newline ppf();
