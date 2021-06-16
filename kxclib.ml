@@ -277,6 +277,13 @@ end
 module Seq = struct
   include Seq
   include PipeOps(Seq)
+
+  let from : (unit -> 'x option) -> 'x t =
+    fun f ->
+    let rec next() = match f() with
+    | None -> Nil
+    | Some x -> Cons (x, next) in
+    next
 end
 
 module Array = struct
@@ -367,6 +374,18 @@ module Array = struct
 
   let to_function : 'a array -> (int -> 'a) =
     fun arr idx -> arr.(idx)
+end
+
+module Stream = struct
+  include Stream
+
+  let to_list_rev stream =
+    let result = ref [] in
+    Stream.iter (fun value -> result := value :: !result) stream;
+    !result
+
+  let to_list stream =
+    to_list_rev stream |> List.rev
 end
 
 module List = struct
@@ -522,6 +541,9 @@ module String = struct
     else if (sub str (slen-plen) plen) = suffix then (
       Some (sub str 0 (slen-plen))
     ) else None
+
+  let to_list str =
+    to_seq str |> List.of_seq
 end
 
 module IoPervasives = struct
