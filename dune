@@ -3,16 +3,7 @@
  (public_name kxclib)
  (wrapped false)
  (modules kxclib)
- (libraries)
- (preprocess (pps ppxlib.metaquot)))
-
-(library
- (name kxclib_ppx)
- (modules ppx_all)
- (public_name kxclib.ppx)
- (kind ppx_rewriter)
- (libraries ppxlib kxclib)
- (preprocess (pps ppxlib.metaquot)))
+ (libraries))
 
 (env
  (dev
@@ -20,3 +11,5 @@
  (release
   (ocamlopt_flags -O3)
   (flags (:standard))))
+
+(vendored_dirs vendors)

@@ -2,8 +2,8 @@ let () =
   let open Kxclib_fastpng in
   let w, h = 9, 12 in
   let ba = create_rgba_buffer w h in
-  for i = 0 to (dec w) do
-    for j = 0 to (dec h) do
+  for i = 0 to (pred w) do
+    for j = 0 to (pred h) do
       let c = if i = j
               then Int32.(of_int 0xffccff |> logor (of_int 0x5f |> Fn.flip shift_left (8*3)))
               else match  [@warning "-8"] j mod 3 with

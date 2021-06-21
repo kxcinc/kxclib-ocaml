@@ -1,10 +1,9 @@
-let inc n = n + 1
-let dec n = n - 1
 let refset x r = r := x
 let refupdate f r = r := f !r
 let refappend x r = r := x :: !r
-let incr = refupdate inc
-let decr = refupdate dec
+let refpop r = match !r with h::t -> r:=t; h | [] -> raise Not_found
+let incr = refupdate succ
+let decr = refupdate pred
 
 let constant c = fun _ -> c
 (** constant function *)
@@ -18,17 +17,36 @@ let failwith' fmt =
 let invalid_arg' fmt =
   Format.kasprintf (invalid_arg) fmt
 
+let printf fmt = Format.printf fmt
+let sprintf fmt = Format.asprintf fmt
+
+let (%) f g x = x |> g |> f
+(** function composition *)
+
 module Functionals = struct
-  let negate pred x = not (pred x) (** negate a predicate *)
+  let negate pred x = not (pred x)
+  (** negate a predicate *)
+
   let both p g x = p x && g x
   let either p g x = p x || g x
 
-  let dig2nd f a b = f b a         (** [f] dig the second argument of [f] to be the first. aka [flip] *)
-  let dig3nd f a b c = f c a b     (** [f] dig the third argument of [f] to be the first *)
-  let flip = dig2nd                (** [f] flip the first arguments of [f]. aka [dig2nd] *)
-  let fix1st x f = f x             (** [x f] fix the first argument to [f] as [x] *)
-  let fix2nd y f x = f x y         (** [y f] fix the second argument to [f] as [y] *)
-  let fix3rd z f x y = f x y z     (** [z f] fix the third argument to [f] as [z] *)
+  let dig2nd f a b = f b a
+  (** [f] dig the second argument of [f] to be the first. aka [flip] *)
+
+  let dig3rd f a b c = f c a b
+  (** [f] dig the third argument of [f] to be the first *)
+
+  let flip = dig2nd
+  (** [f] flip the first arguments of [f]. aka [dig2nd] *)
+
+  let fix1st x f = f x
+  (** [x f] fix the first argument to [f] as [x] *)
+
+  let fix2nd y f x = f x y
+  (** [y f] fix the second argument to [f] as [y] *)
+
+  let fix3rd z f x y = f x y z
+  (** [z f] fix the third argument to [f] as [z] *)
 
   let tap f x =
     f x; x
@@ -55,8 +73,76 @@ module Functionals = struct
          else if x = x' then x
          else loop (pred n) (x', f x') in
        loop (pred n) (x, f x)
+
+  let converge' judge f =
+    let rec loop n (x, x') =
+      match judge n x x' with
+      | true  -> Ok x'
+      | false -> loop (succ n) (x', f x') in
+    fun x -> loop 1 (x, f x)
+
+  let converge judge f x =
+    converge' (fun _ x x' -> judge x x') f x
+
+  module BasicInfix = struct
+    (** function composition 1 *)
+    let (%) : ('y -> 'z) -> ('x -> 'y) -> ('x -> 'z) =
+      fun f g x -> x |> g |> f
+
+    (** function composition 2 *)
+    let (&>) : ('x -> 'y) -> ('y -> 'z) -> ('x -> 'z) =
+      fun g f x -> x |> g |> f
+
+    let (//) : ('a -> 'x) -> ('b -> 'y) -> ('a*'b -> 'x*'y) =
+      fun fa fb (a, b) -> fa a, fb b
+
+    let (/>) : 'a*'b -> ('b -> 'c) -> 'a*'c =
+      fun (a, b) f -> a, f b
+
+    let (/<) : 'a*'b -> ('a -> 'c) -> 'c*'b =
+      fun (a, b) f -> f a, b
+
+    (** uncurry *)
+    let (!!) : ('a -> 'b -> 'x) -> ('a*'b -> 'x) =
+      fun f -> fun (a, b) -> f a b
+
+    (** curry *)
+    let (^^) : ('a*'b -> 'x) -> ('a -> 'b -> 'x) =
+      fun f -> fun a b -> f (a, b)
+  end
+
+  module Infix = BasicInfix
 end
 module Fn = Functionals
+include Functionals.BasicInfix
+
+module PipeOps(S : sig
+             type _ t
+             val map : ('x -> 'y) -> 'x t -> 'y t
+             val iter : ('x -> unit) -> 'x t -> unit
+             val fold_left : ('acc -> 'x -> 'acc) -> 'acc -> 'x t -> 'acc
+             val filter : ('x -> bool) -> 'x t -> 'x t
+             val filter_map : ('x -> 'x option) -> 'x t -> 'x t
+           end) = struct
+  open S
+
+  (** piping map *)
+  let (|&>) : 'x t -> ('x -> 'y) -> 'y t = fun xs f -> map f xs
+
+  (** piping iter *)
+  let (|!>) : 'x t -> ('x -> unit) -> unit =
+    fun xs f -> iter f xs
+
+  (** piping fold_left *)
+  let (|@>) : ('acc*('acc -> 'x -> 'acc)) -> 'x t -> 'acc =
+    fun (z, f) -> fold_left f z
+
+  (** piping filter *)
+  let (|?>) : 'x t -> ('x -> bool) -> 'x t = fun xs f -> filter f xs
+
+  (** piping filter map *)
+  let (|&?>) : 'x t -> ('x -> 'y option) -> 'y t = fun xs f -> filter_map f xs
+end
 
 module MonadOps(M : sig
              type _ t
@@ -82,39 +168,26 @@ module MonadOps(M : sig
     fun ms af -> sequence_list ms >>= af
 end
 
-let (%) f g x = x |> g |> f
-(** function composition *)
-
-let (|&>) list f = List.map f list
-(** list mapping *)
-
-let (|!>) list f = List.iter f list
-(** list iteration *)
-
-let (&) = (@@)
-
 let foldl = List.fold_left
 (** {!List.fold_right} *)
 
 let foldr = List.fold_right
 (** {!List.fold_left} *)
 
-(** also consider using [%debug] *)
 let debug ?disabled ?label fmt = Format.(
     let disabled = Option.value ~default:false disabled in
     let ppf = err_formatter in
-    let label = match label with
-      | Some label -> label | None -> "unknown" in
     if disabled then ikfprintf (constant ()) ppf fmt
     else begin
-        fprintf ppf "[DEBUG:%s] " label;
+        (match label with
+         | Some label -> fprintf ppf "[DEBUG:%s] " label
+         | None -> fprintf ppf "[DEBUG] " );
         kfprintf
           (fun ppf ->
             pp_print_newline ppf();
             pp_print_flush ppf ())
           ppf fmt
       end)
-
 
 let projected_compare proj a b =
   compare (proj a) (proj b)
@@ -125,6 +198,18 @@ let pp_string = Format.pp_print_string
 let pp_char = Format.pp_print_char
 let pp_bool = Format.pp_print_bool
 let pp_unit ppf () = pp_string ppf "unit"
+
+let pp_multiline ppf str =
+  let open Format in
+  let rec loop = function
+    | [line] -> pp_string ppf line
+    | line :: rest ->
+       pp_string ppf line;
+       pp_force_newline ppf ();
+       loop rest
+    | [] -> () in
+  String.split_on_char '\n' str
+  |> loop
 
 module Either = struct
   type ('a, 'b) t = Left of 'a | Right of 'b
@@ -201,10 +286,37 @@ module Option = struct
       match f v with
       | None -> None
       | Some v -> v)
+
+  let of_bool = function
+    | true -> Some ()
+    | false -> None
+end
+
+module Seq = struct
+  include Seq
+  include PipeOps(Seq)
+
+  let from : (unit -> 'x option) -> 'x t =
+    fun f ->
+    let rec next() = match f() with
+    | None -> Nil
+    | Some x -> Cons (x, next) in
+    next
 end
 
 module Array = struct
   include Array
+
+  let filter f arr =
+    arr |> to_seq |> Seq.filter f |> of_seq
+  let filter_map f arr =
+    arr |> to_seq |> Seq.filter_map f |> of_seq
+
+  include PipeOps(struct
+              include Array
+              let filter = filter
+              let filter_map = filter_map
+            end)
 
   (* TODO optimization - specialized version when [?f] not given *)
   let mean : ?f:('x -> float) -> float t -> float =
@@ -218,7 +330,7 @@ module Array = struct
          if rlen < 0 then 0., 0 else
          let mid = left + (rlen / 2) in
          let lv, lw = labor left mid
-         and rv, rw = labor (inc mid) right in
+         and rv, rw = labor (succ mid) right in
          let (!) = float_of_int in
          (lv *. !lw +.rv*. !rw) /. !(lw+rw), lw+rw in
     labor 0 (len-1) |> fst
@@ -282,12 +394,25 @@ module Array = struct
     fun arr idx -> arr.(idx)
 end
 
+module Stream = struct
+  include Stream
+
+  let to_list_rev stream =
+    let result = ref [] in
+    Stream.iter (fun value -> result := value :: !result) stream;
+    !result
+
+  let to_list stream =
+    to_list_rev stream |> List.rev
+end
+
 module List = struct
+  include PipeOps(List)
   include List
 
   let iota = function
     | 0 -> []
-    | k -> 0 :: (List.init (dec k) inc)
+    | k -> 0 :: (List.init (pred k) succ)
 
   let range start end_exclusive = iota (end_exclusive - start) |&> (+) start
 
@@ -312,18 +437,29 @@ module List = struct
   let foldl = foldl
   let foldr = foldr
 
-  let take n l =
-    let [@warning "-8"] rec loop acc = function
-      | 0,_ -> rev acc
-      | n, hd::tl -> loop (hd::acc) (n-1, tl)  in
+  let hd = function
+    | [] -> raise Not_found
+    | h :: _ -> h
+
+  let tl = function
+    | [] -> raise Not_found
+    | _ :: tail -> tail
+
+  let take' n l =
+    let rec loop acc = function
+      | 0, r -> rev acc, r
+      | n, hd::tl -> loop (hd::acc) (n-1, tl)
+      | _ -> raise Not_found in
     loop [] (n, l)
+
+  let take n l = take' n l |> fst
 
   let drop n l = Fn.ntimes n tl l
 
   let make copies x = List.init copies (constant x)
 
   let count pred list =
-    foldl (fun count x -> if pred x then inc count else count) 0 list
+    foldl (fun count x -> if pred x then succ count else count) 0 list
   (** [pred list] returns the number of elements [e] in [list] that satisfies [pred] *)
 
   let last list =
@@ -348,6 +484,13 @@ module List = struct
       | x :: xs -> loop (y :: x :: acc) xs in
     loop [] xs |> rev
 
+  let filteri p l =
+    let rec aux i acc = function
+      | [] -> rev acc
+      | x::l -> aux (i + 1) (if p i x then x::acc else acc) l
+    in
+    aux 0 [] l
+
   let empty = function [] -> true | _ -> false
 
   let to_function : 'a list -> (int -> 'a) =
@@ -370,6 +513,8 @@ module List = struct
   let bind ma af = fmap af ma
   let pure x = [x]
 end
+
+include PipeOps(List)
 
 let iota = List.iota
 
@@ -417,6 +562,8 @@ module String = struct
       Some (sub str 0 (slen-plen))
     ) else None
 
+  let to_list str =
+    to_seq str |> List.of_seq
 end
 
 module IoPervasives = struct
@@ -476,13 +623,199 @@ module Timing = struct
 
 end
 
+module Datetime0 : sig
+
+  (** all according to proleptic Gregorian Calender *)
+
+  val leap_year : int -> bool
+  val daycount_of_month : leap:bool -> int -> int
+  val day_of_year : int -> int -> int -> int
+
+  module type NormalizedTimestamp = sig
+    (** timezone not taking into consideration *)
+
+    module Conf : sig
+      val epoch_year : int
+      (** the epoch would be at January 1st 00:00:00.0 in [epoch_year] *)
+
+      val subsecond_resolution : int
+      (** e.g. sec-resolution use [1] and millisec-resolution use [1000] *)
+
+      val min_year : int
+      (** min-year supported *)
+
+      val max_year : int
+      (** max-year supported *)
+
+    end
+
+    val normalize : ?subsec:int ->
+                    ?tzoffset:(int*int) ->
+                    int*int*int ->
+                    int*int*int ->
+                    int
+    (** [normalize
+         ?tzoffset:(tzhour, tzmin)
+         ?subsec (yy, mm, dd) (hour, min, sec)]
+        calculates the normalized timestamp *)
+  end
+  module EpochNormalizedTimestamp (Conf : sig
+               (** see NormalizedTimestamp *)
+
+               val epoch_year : int
+               val subsecond_resolution : int
+             end) : NormalizedTimestamp
+
+  module UnixTimestmapSecRes : NormalizedTimestamp
+  module UnixTimestmapMilliRes : NormalizedTimestamp
+  module UnixTimestmapNanoRes : NormalizedTimestamp
+
+end = struct
+
+  let sum = List.foldl (+) 0
+
+  let days_of_months_nonleap =
+    List.to_function @@
+    [ 0;
+      31; 28; 31; 30; 31; 30;
+      31; 31; 30; 31; 30; 31; ]
+  let days_of_months_leap =
+    List.to_function @@
+    [ 0;
+      31; 29; 31; 30; 31; 30;
+      31; 31; 30; 31; 30; 31; ]
+  let days_of_months_subsum_nonleap =
+    List.(
+      iota 13
+      |&> (fun x -> iota x |&> days_of_months_nonleap |> sum)
+      |> to_function)
+  let days_of_months_subsum_leap =
+    let sum = List.foldl (+) 0 in
+    List.(
+      iota 13
+      |&> (fun x -> iota x |&> days_of_months_leap |> sum)
+      |> to_function)
+
+  let daycount_of_month ~leap =
+    let table =
+      if leap
+      then days_of_months_leap
+      else days_of_months_nonleap in
+    fun mm -> table mm
+
+  let leap_year yy =
+    let div x = yy mod x = 0 in
+    if not (div 4) then false
+    else if not (div 100) then true
+    else if div 400 then false
+    else true
+
+  let day_of_year yy =
+    let table = match leap_year yy with
+      | false -> days_of_months_subsum_nonleap
+      | true  -> days_of_months_subsum_leap in
+    fun mm dd -> table mm + dd
+
+  module type NormalizedTimestamp = sig
+    module Conf : sig
+      val epoch_year : int
+      val subsecond_resolution : int
+      val min_year : int
+      val max_year : int
+    end
+    val normalize : ?subsec:int ->
+                    ?tzoffset:(int*int) ->
+                    int*int*int ->
+                    int*int*int ->
+                    int
+    (** [normalize yy mm dd ?subsec hour min sec] calculates the normalized timestamp *)
+  end
+
+  (* XXX tests *)
+  module EpochNormalizedTimestamp (Conf : sig
+               val epoch_year : int
+               val subsecond_resolution : int
+             end) = struct
+    module Conf = struct
+      include Conf
+      let min_year = Conf.epoch_year
+      let max_year =
+        let span =
+          (pred Int.max_int)
+          / (366*24*60*60*subsecond_resolution) in
+        span-1+min_year
+    end open Conf
+
+    let yearcount_leaping ymin ymax =
+      let roundup div = fun x ->
+        if x mod div = 0 then x
+        else div*(succ (x/div)) in
+      let ncat div =
+        let span = ymax - (roundup div ymin) in
+        if span < 0 then 0
+        else succ (span/div) in
+      let ncat4 = ncat 4 in
+      let ncat100 = ncat 100 in
+      let ncat400 = ncat 400 in
+      ncat4 - ncat100 + ncat400
+
+    let normalize ?subsec ?tzoffset (yy, mm, dd) (hour, min, sec) =
+      let subsec = Option.(value ~default:0 subsec) in
+      if yy < min_year || yy > max_year then
+        invalid_arg Format.(asprintf "%s.normalize - timestamp cannot be handled: \
+                                     %d-%d-%d %02d:%02d:%02d (subsec: %d/%d) - \
+                                     year out of range (%d-%d)"
+                              "/kxclib.ml/.Datetime0.EpochNormalizedTimestamp"
+                              yy mm dd hour min sec
+                              subsec subsecond_resolution
+                              min_year max_year);
+      if subsec >= subsecond_resolution then
+        invalid_arg Format.(sprintf "%s.normalize - subsec out of range (%d-%d)"
+                              "/kxclib.ml/.Datetime0.EpochNormalizedTimestamp"
+                              0 (pred subsecond_resolution));
+      let days_past_years =
+        let ymin, ymax = epoch_year, pred yy in
+        let leaping = yearcount_leaping ymin ymax in
+        let nonleaping = ymax-ymin+1-leaping in
+        leaping*366+nonleaping*365 in
+      let doy = day_of_year yy mm dd in
+      let hour, min = match tzoffset with
+        | None -> hour, min
+        | Some (tzhour, tzmin) -> hour+tzhour, min+tzmin in
+      let nts =
+        sec + min*60 + hour*60*60
+        + (days_past_years + doy)*24*60*60 in
+      let nts = nts * subsecond_resolution + subsec in
+      nts
+  end
+
+  module UnixTimestmapSecRes =
+    EpochNormalizedTimestamp(struct
+        let epoch_year = 1970
+        let subsecond_resolution = 1
+      end)
+
+  module UnixTimestmapMilliRes =
+    EpochNormalizedTimestamp(struct
+        let epoch_year = 1970
+        let subsecond_resolution = 1000
+      end)
+
+  module UnixTimestmapNanoRes =
+    EpochNormalizedTimestamp(struct
+        let epoch_year = 1970
+        let subsecond_resolution = 1000*1000*1000
+      end)
+
+end
+
 module ParseArgs = struct
   type optparser = string -> unit
 
   let prefset r x = r := x
   let prefsetv r v _ = r := v
 
-  let scanfparser fmt fn str : optparser = Scanf.(
+  let scanfparser fmt fn : optparser = fun str -> Scanf.(
       sscanf str fmt fn)
 
   let exactparser fmt (fn : unit -> unit) : optparser = function
@@ -520,10 +853,10 @@ module ParseArgs = struct
       if n >= argc then List.rev !args
       else begin
           let arg = source.(n) in
-          if not parseopt then (refappend arg args; loop (inc n) parseopt)
-          else if arg = optsep then loop (inc n) false
-          else if prefixed arg then (tryparse arg; loop (inc n) parseopt)
-          else (refappend arg args; loop (inc n) parseopt)
+          if not parseopt then (refappend arg args; loop (succ n) parseopt)
+          else if arg = optsep then loop (succ n) false
+          else if prefixed arg then (tryparse arg; loop (succ n) parseopt)
+          else (refappend arg args; loop (succ n) parseopt)
         end in
     loop startidx true
 end
@@ -547,15 +880,15 @@ module ArgOptions = struct
     | StringOption opt -> opt
     | InChannelOption opt -> opt
     | OutChannelOption opt -> opt
-    | InChannelOption opt -> opt
-    | OutChannelOption opt -> opt
+    | InChannelOption' opt -> opt
+    | OutChannelOption' opt -> opt
 
   module type FeatureRequests = sig
 
     val has_flag :
       ?argsource:(string array*int) ->
       ?prefix:string ->
-      string -> (** flag *)
+      string (** flag *) ->
       bool
     val get_option :
       ?argsource:(string array*int) ->
@@ -568,14 +901,14 @@ module ArgOptions = struct
       ?optprefix:string ->
       ?optsep:string ->
       'x named_option ->
-      'x -> (** default value *)
+      'x (** default value *) ->
       'x
     val get_option_d' :
       ?argsource:(string array*int) ->
       ?optprefix:string ->
       ?optsep:string ->
       'x named_option ->
-      (unit -> 'x) -> (** default value producer *)
+      (unit -> 'x) (** default value producer *) ->
       'x
     val get_args :
       ?argsource:(string array*int) ->
