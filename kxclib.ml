@@ -21,16 +21,29 @@ let printf fmt = Format.printf fmt
 let sprintf fmt = Format.asprintf fmt
 
 module Functionals = struct
-  let negate pred x = not (pred x) (** negate a predicate *)
+  let negate pred x = not (pred x)
+  (** negate a predicate *)
+
   let both p g x = p x && g x
   let either p g x = p x || g x
 
-  let dig2nd f a b = f b a         (** [f] dig the second argument of [f] to be the first. aka [flip] *)
-  let dig3rd f a b c = f c a b     (** [f] dig the third argument of [f] to be the first *)
-  let flip = dig2nd                (** [f] flip the first arguments of [f]. aka [dig2nd] *)
-  let fix1st x f = f x             (** [x f] fix the first argument to [f] as [x] *)
-  let fix2nd y f x = f x y         (** [y f] fix the second argument to [f] as [y] *)
-  let fix3rd z f x y = f x y z     (** [z f] fix the third argument to [f] as [z] *)
+  let dig2nd f a b = f b a
+  (** [f] dig the second argument of [f] to be the first. aka [flip] *)
+
+  let dig3rd f a b c = f c a b
+  (** [f] dig the third argument of [f] to be the first *)
+
+  let flip = dig2nd
+  (** [f] flip the first arguments of [f]. aka [dig2nd] *)
+
+  let fix1st x f = f x
+  (** [x f] fix the first argument to [f] as [x] *)
+
+  let fix2nd y f x = f x y
+  (** [y f] fix the second argument to [f] as [y] *)
+
+  let fix3rd z f x y = f x y z
+  (** [z f] fix the third argument to [f] as [z] *)
 
   let tap f x =
     f x; x
@@ -624,8 +637,12 @@ module Datetime0 : sig
       val subsecond_resolution : int
       (** e.g. sec-resolution use [1] and millisec-resolution use [1000] *)
 
-      val min_year : int (** min-year supported *)
-      val max_year : int (** max-year supported *)
+      val min_year : int
+      (** min-year supported *)
+
+      val max_year : int
+      (** max-year supported *)
+
     end
 
     val normalize : ?subsec:int ->
@@ -867,7 +884,7 @@ module ArgOptions = struct
     val has_flag :
       ?argsource:(string array*int) ->
       ?prefix:string ->
-      string -> (** flag *)
+      string (** flag *) ->
       bool
     val get_option :
       ?argsource:(string array*int) ->
@@ -880,14 +897,14 @@ module ArgOptions = struct
       ?optprefix:string ->
       ?optsep:string ->
       'x named_option ->
-      'x -> (** default value *)
+      'x (** default value *) ->
       'x
     val get_option_d' :
       ?argsource:(string array*int) ->
       ?optprefix:string ->
       ?optsep:string ->
       'x named_option ->
-      (unit -> 'x) -> (** default value producer *)
+      (unit -> 'x) (** default value producer *) ->
       'x
     val get_args :
       ?argsource:(string array*int) ->

@@ -1,7 +1,10 @@
 module type BitmapFont1 = sig
   val font_name      : string
   val font_license   : string option
-  val glyph_dimension : int*int (** pixels in width*height *)
+
+  val glyph_dimension : int*int
+  (** pixels in width*height *)
+
   val glyph_exists   : char -> bool
   val glyph_table    : char -> (int*int) array
 end
@@ -61,7 +64,7 @@ module MakeDrawingUtils1(Font : BitmapFont1) : DrawingUtils
     draw_char_measured ?scale ~dotfunc x y c |> ignore
 
   let draw_string_measured ?scale:(scale=1) ~dotfunc x y str =
-    let cw, ch = glyph_dimension in
+    let cw, _ch = glyph_dimension in
     let width = cw*scale in
     let offset = ref x in
     let shift() = let x = !offset in offset := x + width; x in
