@@ -301,6 +301,7 @@ module Seq = struct
     | Some x -> Cons (x, next) in
     next
 end
+type 'x seq = 'x Seq.t
 
 module Array = struct
   include Array
