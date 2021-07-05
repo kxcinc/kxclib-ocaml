@@ -704,8 +704,8 @@ end = struct
     let div x = yy mod x = 0 in
     if not (div 4) then false
     else if not (div 100) then true
-    else if div 400 then false
-    else true
+    else if div 400 then true
+    else false
 
   let day_of_year yy =
     let table = match leap_year yy with
