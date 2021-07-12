@@ -1,9 +1,11 @@
-let refset x r = r := x
-let refupdate f r = r := f !r
-let refappend x r = r := x :: !r
+let refset r x = r := x
+let refupdate r f = r := f !r
+let refappend r x = r := x :: !r
+let refupdate' f r = r := f !r
+let refappend' x r = r := x :: !r
 let refpop r = match !r with h::t -> r:=t; h | [] -> raise Not_found
-let incr = refupdate succ
-let decr = refupdate pred
+let incr = refupdate' succ
+let decr = refupdate' pred
 
 let constant c = fun _ -> c
 (** constant function *)
@@ -19,6 +21,8 @@ let invalid_arg' fmt =
 
 let printf fmt = Format.printf fmt
 let sprintf fmt = Format.asprintf fmt
+
+let to_string_of_pp pp = sprintf "%a" pp
 
 module Functionals = struct
   let negate pred x = not (pred x)
@@ -244,15 +248,26 @@ end
 module Queue : sig
   type 'x t
   val empty : 'x t
-  val add : 'x t -> 'x -> 'x t
-  val take : 'x t -> ('x * 'x t) option
+  val is_empty : 'x t -> bool
+  val push : 'x -> 'x t -> 'x t
+  val push_front : 'x -> 'x t -> 'x t
+  val pop : 'x t -> ('x * 'x t) option
+  val peek : 'x t -> ('x * 'x t) option
 end = struct
   type 'x t = 'x list*'x list
   let empty = [], []
-  let add (r,u) x = (x :: r, u)
-  let rec take (r,u) = match u, r with
+  let is_empty = function
+    | [], [] -> true
+    | _ -> false
+  let push x (r,u) = (x :: r, u)
+  let push_front x (r,u) = (r, x :: u)
+  let rec pop (r,u) = match u, r with
     | hd :: rest, _ -> Some (hd, (r, rest))
-    | [], (_ :: _) -> take ([], List.rev r)
+    | [], (_ :: _) -> pop ([], List.rev r)
+    | [], [] -> None
+  let rec peek (r,u as q) = match u, r with
+    | hd :: rest, _ -> Some (hd, q)
+    | [], (_ :: _) -> peek ([], List.rev r)
     | [], [] -> None
 end
 type 'x queue = 'x Queue.t
@@ -850,10 +865,10 @@ module ParseArgs = struct
       if n >= argc then List.rev !args
       else begin
           let arg = source.(n) in
-          if not parseopt then (refappend arg args; loop (succ n) parseopt)
+          if not parseopt then (refappend args arg; loop (succ n) parseopt)
           else if arg = optsep then loop (succ n) false
           else if prefixed arg then (tryparse arg; loop (succ n) parseopt)
-          else (refappend arg args; loop (succ n) parseopt)
+          else (refappend args arg; loop (succ n) parseopt)
         end in
     loop startidx true
 end
@@ -1015,7 +1030,7 @@ module ArgOptions = struct
       if n >= argc then List.rev !args
       else begin
           let arg = source.(n) in
-          if record_arg then (refappend arg args; loop (succ n) record_arg)
+          if record_arg then (refappend args arg; loop (succ n) record_arg)
           else if arg = optsep then loop (succ n) true
           else loop (succ n) record_arg
         end in
