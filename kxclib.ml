@@ -233,10 +233,15 @@ module Result = struct
     loop [] (List.rev rs)
 end
 
-module ResultWithErrmsg = struct
-  type 'x t = ('x, string) result
+module ResultOf(E : sig type err end) = struct
+  type err = E.err
+  type 'x t = ('x, err) result
   let bind : 'x t -> ('x -> 'y t) -> 'y t = Result.bind
   let pure : 'x -> 'x t = Result.ok
+end
+
+module ResultWithErrmsg = struct
+  include ResultOf(struct type err = string end)
   let protect' : handler:(exn -> string) -> ('x -> 'y) -> ('x -> 'y t) =
     fun ~handler f x ->
     try Ok (f x)
