@@ -337,6 +337,15 @@ module Array = struct
               let filter_map = filter_map
             end)
 
+  let of_list_of_length len list =
+    let cell = ref list in
+    init len (fun _ ->
+        match !cell with
+        | hd :: tl ->
+           cell := tl;
+           hd
+        | [] -> raise Not_found)
+
   (* TODO optimization - specialized version when [?f] not given *)
   let mean : ?f:('x -> float) -> float t -> float =
     fun ?f:(f=identity) arr ->
