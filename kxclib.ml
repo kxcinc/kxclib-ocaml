@@ -412,6 +412,18 @@ module Array = struct
       - otherwise, the behavior is undefined
    *)
 
+  let swap arr idx1 idx2 =
+    let tmp = arr.(idx2) in
+    arr.(idx2) <- arr.(idx1);
+    arr.(idx1) <- tmp
+
+  let shuffle : ?rng:(int (* bound_exclusive *) -> int) -> 'x array -> unit =
+    fun ?rng:(rng=Random.int) arr ->
+    let len = Array.length arr in
+    for i = len-1 downto 1 do
+      swap arr i (rng (succ i))
+    done
+
   let to_function : 'a array -> (int -> 'a) =
     fun arr idx -> arr.(idx)
 end
