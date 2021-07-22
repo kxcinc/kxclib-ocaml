@@ -7,6 +7,15 @@ let refpop r = match !r with h::t -> r:=t; h | [] -> raise Not_found
 let incr = refupdate' succ
 let decr = refupdate' pred
 
+let refupdate'_and_get f r = r := f !r; !r
+let get_and_refupdate' f r = let x = !r in r := f !r; x
+
+let incr_and_get = refupdate'_and_get succ
+let decr_and_get = refupdate'_and_get pred
+
+let get_and_incr = get_and_refupdate' succ
+let get_and_decr = get_and_refupdate' pred
+
 let constant c = fun _ -> c
 (** constant function *)
 
@@ -52,11 +61,23 @@ module Functionals = struct
   let tap f x =
     f x; x
 
+  let reptill judge f x =
+    let rec loop y =
+      if judge y then y
+      else loop (f x) in
+    loop (f x)
+
   let ntimes n f x =
     let rec loop acc = function
       | 0 -> acc
       | n -> loop (f acc) (n-1) in
     loop x n
+
+  let dotill judge f x =
+    let rec loop y =
+      if judge y then y
+      else loop (f y) in
+    loop (f x)
 
   let fixpoint ?maxn =
     match maxn with
@@ -320,6 +341,19 @@ module Seq = struct
     | None -> Nil
     | Some x -> Cons (x, next) in
     next
+
+  let iota until_exclusive =
+    let counter = ref 0 in
+    from (fun() ->
+        let x = !counter in
+        if x = until_exclusive
+        then None
+        else (
+          incr counter;
+          Some x
+        )
+      )
+
 end
 type 'x seq = 'x Seq.t
 
