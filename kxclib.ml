@@ -842,25 +842,29 @@ end = struct
 end
 
 module ParseArgs = struct
-  type optparser = string -> unit
+  type optparser = string -> [`Process_next of bool]
 
   let prefset r x = r := x
   let prefsetv r v _ = r := v
 
-  let scanfparser fmt fn : optparser = fun str -> Scanf.(
-      sscanf str fmt fn)
+  let scanfparser fmt fn : optparser = fun str ->
+    Scanf.ksscanf str (fun _ _ -> `Process_next true) fmt fn;
+    `Process_next false
 
   let exactparser fmt (fn : unit -> unit) : optparser = function
-    | str when str = fmt -> fn ()
-    | str -> raise (Invalid_argument ("exactparser not matching: "^str^":"^fmt))
+    | str when str = fmt -> fn (); `Process_next false
+    | str -> `Process_next true
 
   let parse_opts
         (optparsers : optparser list)
         ?argsource:(argsource=Sys.argv, 1)
         () =
     let rec tryparse str = function
-      | [] -> raise (Invalid_argument ("usparsed option: "^str))
-      | p::ps -> try p str with _ -> tryparse str ps in
+      | [] -> raise (Invalid_argument ("unparsed option: "^str))
+      | p::ps ->
+         match (p : optparser) str with
+         | `Process_next true -> tryparse str ps
+         | `Process_next false -> () in
     Array.to_list (fst argsource) |> List.drop (snd argsource)
     |!> Fn.fix2nd optparsers tryparse
 
@@ -878,9 +882,11 @@ module ParseArgs = struct
     let argc = Array.length source in
     let args = ref [] in
     let rec tryparse str = function
-      | [] -> raise (Invalid_argument ("usparsed option: "^str))
-      (* FIXME - error report in optparser *)
-      | p::ps -> try p str with _ -> tryparse str ps in
+      | [] -> raise (Invalid_argument ("unparsed option: "^str))
+      | p::ps ->
+         match p str with
+         | `Process_next true -> tryparse str ps
+         | `Process_next false -> () in
     let tryparse = Fn.fix2nd optparsers tryparse in
     let rec loop n parseopt =
       if n >= argc then List.rev !args
@@ -957,7 +963,7 @@ module ArgOptions = struct
     ParseArgs.(
       parse_opts [
           exactparser (prefix^flag) (fun () -> store := true);
-          (constant ())
+          (constant (`Process_next false))
       ]) ?argsource ();
     !store
 
@@ -976,13 +982,14 @@ module ArgOptions = struct
       let par arg =
         match !state with
         | `Init when arg = marker_raw ->
-           state := `CaptureNext
+           state := `CaptureNext;
+           `Process_next true
         | `Init ->
            (match String.chop_prefix marker_eq arg with
-            | Some arg -> result := Some (f arg)
-            | None -> ())
-        | `CaptureNext -> (state := `Init; result := Some (f arg)) in
-      parse_opts_args ?argsource ~optprefix:"" ?optsep [par] () |> ignore;
+            | Some arg -> result := Some (f arg); `Process_next false
+            | None -> `Process_next true)
+        | `CaptureNext -> (state := `Init; result := Some (f arg)); `Process_next false in
+      parse_opts_args ?argsource ~optprefix:"" ?optsep [par; constant (`Process_next false)] () |> ignore;
       match !state with
       | `Init -> !result
       | `CaptureNext -> invalid_arg ("no argument supplied to option "^opt) in
