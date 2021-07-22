@@ -1068,6 +1068,17 @@ module FmtPervasives = struct
   let eprintf fmt = Format.eprintf fmt
 
   module Fmt = struct
+
+    let stdout_ppf = Format.std_formatter
+    let stderr_ppf = Format.err_formatter
+    let null_ppf = Format.formatter_of_out_functions {
+          out_string = (fun _ _ _ -> ());
+          out_flush = (fun _ -> ());
+          out_newline = (fun _ -> ());
+          out_spaces = (fun _ -> ());
+          out_indent = (fun _ -> ());
+        }
+
     let colored ?style ?color_mode:(m=`Fg) color ppf fmt =
       if !color_enabled then (
         let code_table = function
