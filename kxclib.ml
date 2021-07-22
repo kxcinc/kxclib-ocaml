@@ -879,6 +879,7 @@ module ParseArgs = struct
     let args = ref [] in
     let rec tryparse str = function
       | [] -> raise (Invalid_argument ("usparsed option: "^str))
+      (* FIXME - error report in optparser *)
       | p::ps -> try p str with _ -> tryparse str ps in
     let tryparse = Fn.fix2nd optparsers tryparse in
     let rec loop n parseopt =
