@@ -28,11 +28,6 @@ let failwith' fmt =
 let invalid_arg' fmt =
   Format.kasprintf (invalid_arg) fmt
 
-let printf fmt = Format.printf fmt
-let sprintf fmt = Format.asprintf fmt
-
-let to_string_of_pp pp = sprintf "%a" pp
-
 module Functionals = struct
   let negate pred x = not (pred x)
   (** negate a predicate *)
@@ -196,43 +191,8 @@ let foldl = List.fold_left
 let foldr = List.fold_right
 (** {!List.fold_left} *)
 
-let debug ?disabled ?label fmt = Format.(
-    let disabled = Option.value ~default:false disabled in
-    let ppf = err_formatter in
-    if disabled then ikfprintf (constant ()) ppf fmt
-    else begin
-        (match label with
-         | Some label -> fprintf ppf "[DEBUG:%s] " label
-         | None -> fprintf ppf "[DEBUG] " );
-        kfprintf
-          (fun ppf ->
-            pp_print_newline ppf();
-            pp_print_flush ppf ())
-          ppf fmt
-      end)
-
-
 let projected_compare proj a b =
   compare (proj a) (proj b)
-
-let pp_int = Format.pp_print_int
-let pp_float = Format.pp_print_float
-let pp_string = Format.pp_print_string
-let pp_char = Format.pp_print_char
-let pp_bool = Format.pp_print_bool
-let pp_unit ppf () = pp_string ppf "unit"
-
-let pp_multiline ppf str =
-  let open Format in
-  let rec loop = function
-    | [line] -> pp_string ppf line
-    | line :: rest ->
-       pp_string ppf line;
-       pp_force_newline ppf ();
-       loop rest
-    | [] -> () in
-  String.split_on_char '\n' str
-  |> loop
 
 module Either = struct
   type ('a, 'b) t = Left of 'a | Right of 'b
@@ -445,7 +405,7 @@ module Array = struct
 
       more specifically,
       - when [pred] yields [false] for every element, [Not_found] is raised
-      - when there exists [i >= 0] such that 
+      - when there exists [i >= 0] such that
       {v     forall k <= i. (pred arr.(k)) = true
 /\  forall k >  i, (pred arr.(k)) = false v}
         , the [i]-th element will be returned
@@ -1083,5 +1043,141 @@ module ArgOptions = struct
           else loop (succ n) record_arg
         end in
     loop startidx false
+
+end
+
+module FmtPervasives = struct
+  type ppf = Format.formatter
+
+  let color_enabled = ref true
+
+  let printf fmt = Format.printf fmt
+  let sprintf fmt = Format.asprintf fmt
+  let eprintf fmt = Format.eprintf fmt
+
+  module Fmt = struct
+    let colored ?style ?color_mode:(m=`Fg) color ppf fmt =
+      if !color_enabled then (
+        let code_table = function
+          (* `Color -> (fg_code, bg_code) *)
+          | `Black -> 30, 40
+          | `Red -> 31, 41
+          | `Green -> 32, 42
+          | `Yellow -> 33, 43
+          | `Blue -> 34, 44
+          | `Magenta -> 35, 45
+          | `Cyan -> 36, 46
+          | `White -> 37, 47
+
+          | `Bright_black -> 90, 100
+          | `Bright_red -> 91, 101
+          | `Bright_green -> 92, 102
+          | `Bright_yellow -> 93, 103
+          | `Bright_blue -> 94, 104
+          | `Bright_magenta -> 95, 105
+          | `Bright_cyan -> 96, 106
+        in
+        let style_table = function
+          | `Bold -> 1
+          | `Thin -> 2
+          | `Italic -> 3
+          | `Underline -> 4
+        in
+        let esc x = "\027"^x in
+        let reset = "[0m" in
+        let color_code =
+          code_table color
+          |> (match m with `Fg -> fst | `Bg -> snd)
+          |> sprintf "[%dm" in
+        let style_code = style |> function
+                                 | None -> None
+                                 | Some s -> style_table s |> sprintf "[%dm" |> Option.some in
+
+        (* start *)
+        Format.fprintf ppf "@<0>%s"
+          ((esc color_code)^(style_code |> Option.map esc |> Option.v ""));
+
+        (* contents *)
+        Format.kfprintf (fun ppf ->
+            (* end *)
+            Format.fprintf ppf "@<0>%s" (esc reset))
+          ppf
+
+          (* contents *)
+          fmt
+      ) else Format.fprintf ppf fmt
+  end
+
+  let to_string_of_pp pp = sprintf "%a" pp
+
+  let pp_int = Format.pp_print_int
+  let pp_float = Format.pp_print_float
+  let pp_string = Format.pp_print_string
+  let pp_char = Format.pp_print_char
+  let pp_bool = Format.pp_print_bool
+  let pp_unit ppf () = pp_string ppf "unit"
+
+  let pp_multiline ppf str =
+    let open Format in
+    let rec loop = function
+      | [line] -> pp_string ppf line
+      | line :: rest ->
+         pp_string ppf line;
+         pp_force_newline ppf ();
+         loop rest
+      | [] -> () in
+    String.split_on_char '\n' str
+    |> loop
+
+  let pp_exn ppf exn =
+    Printexc.to_string exn
+    |> Format.pp_print_string ppf
+
+  let pp_full_exn' ppf (exn, bt) =
+    Format.fprintf ppf "@<2>%s@[<hov>@\n%a@]"
+      (Printexc.to_string exn)
+      pp_multiline
+      Printexc.(bt |> raw_backtrace_to_string)
+
+  let pp_full_exn ppf exn =
+    pp_full_exn' ppf (exn, Printexc.(get_raw_backtrace()))
+
+end include FmtPervasives
+
+module Log0 = struct
+
+  open Format
+
+  module Internals = struct
+    let timestamp_func = ref (constant None)
+    let logging_formatter = ref err_formatter
+  end open Internals
+
+  module LoggingConfig = struct
+    let install_timestamp_function func = timestamp_func := func
+    let set_logging_formatter ppf = logging_formatter := ppf
+    let get_logging_formatter() = !logging_formatter
+  end
+
+  let logr fmt = fprintf !logging_formatter fmt
+
+  let log ~label
+        ?header_style:(style=None)
+        ?header_color:(color=`Magenta)
+        fmt =
+    let header = match !timestamp_func() with
+      | None -> sprintf "[%s]" label
+      | Some ts -> sprintf "[%s :%.3f]" label ts in
+    let pp_header ppf =
+      Fmt.colored ?style color ppf "%s" in
+    logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
+    kfprintf (fun ppf -> fprintf  ppf "@]@.")
+      !logging_formatter fmt
+
+  let verbose fmt = log fmt ~label:"VERBOSE" ~header_style:(Some `Thin) ~header_color:`Bright_cyan
+  let info fmt = log fmt ~label:"INFO" ~header_style:(Some `Bold) ~header_color:`Bright_cyan
+  let warn fmt = log fmt ~label:"WARN" ~header_style:(Some `Bold) ~header_color:`Yellow
+  let debug fmt = log fmt ~label:"DEBUG" ~header_style:(Some `Bold) ~header_color:`Magenta
+  let error fmt = log fmt ~label:"ERROR" ~header_style:(Some `Bold) ~header_color:`Red
 
 end
