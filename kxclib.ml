@@ -1139,6 +1139,10 @@ module FmtPervasives = struct
       ) else Format.fprintf ppf fmt
   end
 
+  let condformat cond fmtfunc fmt =
+    if cond then fmtfunc fmt
+    else Format.ifprintf Fmt.null_ppf fmt
+
   let to_string_of_pp pp = sprintf "%a" pp
 
   let pp_int = Format.pp_print_int
@@ -1192,23 +1196,33 @@ module Log0 = struct
 
   let logr fmt = fprintf !logging_formatter fmt
 
-  let log ~label
+  let log ~label ?modul
         ?header_style:(style=None)
         ?header_color:(color=`Magenta)
         fmt =
+    let header = match modul with
+      | None -> label
+      | Some m -> label^":"^m in
     let header = match !timestamp_func() with
-      | None -> sprintf "[%s]" label
-      | Some ts -> sprintf "[%s :%.3f]" label ts in
+      | None -> sprintf "[%s]" header
+      | Some ts -> sprintf "[%s :%.3f]" header ts in
     let pp_header ppf =
       Fmt.colored ?style color ppf "%s" in
     logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
     kfprintf (fun ppf -> fprintf  ppf "@]@.")
       !logging_formatter fmt
 
-  let verbose fmt = log fmt ~label:"VERBOSE" ~header_style:(Some `Thin) ~header_color:`Bright_cyan
-  let info fmt = log fmt ~label:"INFO" ~header_style:(Some `Bold) ~header_color:`Bright_cyan
-  let warn fmt = log fmt ~label:"WARN" ~header_style:(Some `Bold) ~header_color:`Yellow
-  let debug fmt = log fmt ~label:"DEBUG" ~header_style:(Some `Bold) ~header_color:`Magenta
-  let error fmt = log fmt ~label:"ERROR" ~header_style:(Some `Bold) ~header_color:`Red
+  let verbose ?modul fmt = log ?modul fmt ~label:"VERBOSE" ~header_style:(Some `Thin) ~header_color:`Bright_cyan
+  let info ?modul fmt = log ?modul fmt ~label:"INFO" ~header_style:(Some `Bold) ~header_color:`Bright_cyan
+  let warn ?modul fmt = log ?modul fmt ~label:"WARN" ~header_style:(Some `Bold) ~header_color:`Yellow
+  let debug ?modul fmt = log ?modul fmt ~label:"DEBUG" ~header_style:(Some `Bold) ~header_color:`Magenta
+  let error ?modul fmt = log ?modul fmt ~label:"ERROR" ~header_style:(Some `Bold) ~header_color:`Red
+
+  module Pervasives = struct
+    let debug ?modul fmt = debug ?modul fmt
+    let info ?modul fmt = info ?modul fmt
+  end
 
 end
+
+include Log0.Pervasives
