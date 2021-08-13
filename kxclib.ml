@@ -314,6 +314,21 @@ module Seq = struct
         )
       )
 
+  let enum start =
+    let counter = ref start in
+    from (fun () ->
+        get_and_incr counter |> Option.some
+      )
+
+  let rec limited quota orig() =
+    if quota > 0 then (
+      let open Seq in
+      match orig() with
+      | Nil -> Nil
+      | Cons (x, next) ->
+         Cons (x, limited (pred quota) next)
+    ) else Nil
+
 end
 type 'x seq = 'x Seq.t
 
@@ -1071,6 +1086,7 @@ module FmtPervasives = struct
 
   let color_enabled = ref true
 
+  let fprintf ppf fmt = Format.fprintf ppf fmt
   let printf fmt = Format.printf fmt
   let sprintf fmt = Format.asprintf fmt
   let eprintf fmt = Format.eprintf fmt
@@ -1151,6 +1167,8 @@ module FmtPervasives = struct
   let pp_char = Format.pp_print_char
   let pp_bool = Format.pp_print_bool
   let pp_unit ppf () = pp_string ppf "unit"
+  let pp_ref_address ppf (r : 'x ref) =
+    fprintf ppf "%#x" (2*(Obj.magic r))
 
   let pp_multiline ppf str =
     let open Format in
