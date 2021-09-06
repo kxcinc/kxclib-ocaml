@@ -496,6 +496,29 @@ module Stream = struct
 
   let to_list stream =
     to_list_rev stream |> List.rev
+
+  let hd stream =
+    let open Stream in
+    try next stream with
+    | Failure -> raise Not_found
+
+  let tl stream =
+    let open Stream in
+    let _ = try next stream with
+    | Failure -> raise Not_found in
+    stream
+
+  let take n stream =
+    let open Stream in
+    let m_lst =
+      try npeek n stream with
+      | Failure -> raise Not_found
+      | Error msg -> failwith msg in
+    match List.length m_lst with
+    | m when m = n -> of_list m_lst
+    | _ -> raise Not_found
+
+  let drop n s = Fn.ntimes n tl s
 end
 
 module List = struct
