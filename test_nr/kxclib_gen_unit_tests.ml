@@ -24,6 +24,14 @@ let seq_iteri_0 =
   seq_iteri 3 [|"Hello 0.0!"; "Hello 1.1!"; "Hello 2.2!"|]
 
 
+let seq_range start end_exclusive expected () =
+  let actual = Seq.range start end_exclusive |> Array.of_seq in
+  check (array int) "seq_range" actual expected
+
+
+let seq_range_0 = seq_range 3 7 [|3; 4; 5; 6|]
+
+
 let () =
   Printexc.record_backtrace true;
   run "Datecode_unit_tests" [
@@ -32,5 +40,8 @@ let () =
       ];
       "seq_iteri", [
           test_case "seq_iteri_0" `Quick seq_iteri_0
+      ];
+      "seq_range", [
+          test_case "seq_range_0" `Quick seq_range_0
       ]
     ]
