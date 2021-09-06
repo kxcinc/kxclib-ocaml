@@ -1,11 +1,20 @@
 let refset r x = r := x
+(** [refset r x] sets [x] to ref [r]. *)
 let refupdate r f = r := f !r
+(** [refupdate r f] updates referent of [r] by [f]. *)
 let refappend r x = r := x :: !r
+(** [refappend r x] appends [x] to referent of [r]. *)
 let refupdate' f r = r := f !r
+(** [refupdate' f r] is equivalent to [refupdate r f]. *)
 let refappend' x r = r := x :: !r
+(** [refappend' x r] is equivalent to [refappend r x]. *)
 let refpop r = match !r with h::t -> r:=t; h | [] -> raise Not_found
+(** [refpop r] pop first item of the list referred to by [r]. *)
+(** {b Raises} [Not_found] if the list is empty. *)
 let incr = refupdate' succ
+(** [incr r] increases the referent of [r] by one. *)
 let decr = refupdate' pred
+(** [decr r] decreases the referent of [r] by one. *)
 
 let refupdate'_and_get f r = r := f !r; !r
 let get_and_refupdate' f r = let x = !r in r := f !r; x
@@ -61,18 +70,21 @@ module Functionals = struct
       if judge y then y
       else loop (f x) in
     loop (f x)
+  (** [reptill judge f x] evaluates [f x] repeatedly till [judge (f x)] holds. *)
 
   let ntimes n f x =
     let rec loop acc = function
       | 0 -> acc
       | n -> loop (f acc) (n-1) in
     loop x n
+  (** [ntimes n f x] applies [f] ntimes to [x]. *)
 
   let dotill judge f x =
     let rec loop y =
       if judge y then y
       else loop (f y) in
     loop (f x)
+  (** [dotill judge f x] applies [f] to [x] repeatedly till [judge x] holds. *)
 
   let fixpoint ?maxn =
     match maxn with
@@ -90,6 +102,9 @@ module Functionals = struct
          else if x = x' then x
          else loop (pred n) (x', f x') in
        loop (pred n) (x, f x)
+  (** [fixpoint f] try to resolve the fixpoint of f. *)
+  (** [maxn], an optional argument, limits the number of iterations *)
+  (** to find the fix point. *)
 
   let converge' judge f =
     let rec loop n (x, x') =
