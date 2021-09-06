@@ -314,6 +314,9 @@ module Seq = struct
         )
       )
 
+  let range start end_exclusive =
+    iota (end_exclusive - start) |&> (+) start
+
   let enum start =
     let counter = ref start in
     from (fun () ->
