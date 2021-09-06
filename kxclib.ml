@@ -329,6 +329,12 @@ module Seq = struct
          Cons (x, limited (pred quota) next)
     ) else Nil
 
+  let iteri f s =
+    let rec h i = function
+      | Nil -> ()
+      | Cons(x, rest) -> f i x; h (i + 1) (rest()) in
+    s() |> h 0
+
 end
 type 'x seq = 'x Seq.t
 
