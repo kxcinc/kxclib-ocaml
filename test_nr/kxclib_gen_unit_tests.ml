@@ -45,6 +45,27 @@ let seq_make_2 = seq_make (array int) 0 2 [||]
 (* let seq_make_2 = seq_make (array float) 0 3.14 [||] *)
 
 
+let seq_take tstbl n org_lst expected_lst () =
+  let actual = List.to_seq org_lst |> Seq.take n in
+  let actual_lst = List.of_seq actual in
+  check tstbl "seq_take" actual_lst expected_lst
+
+
+let seq_take_0 = seq_take (list int) 2 [2; 3; 4] [2; 3]
+let seq_take_1 = seq_take (list string) 0 ["A"; "B"; "C"] []
+
+
+let seq_drop tstbl n org_lst expected_lst () =
+  let actual = List.to_seq org_lst |> Seq.drop n in
+  let actual_lst = List.of_seq actual in
+  check tstbl "seq_drop" actual_lst expected_lst
+
+
+let seq_drop_0 = seq_drop (list int) 2 [2; 3; 4] [4]
+let seq_drop_1 = seq_drop (list string) 0 ["A"; "B"; "C"] ["A"; "B"; "C"]
+let seq_drop_2 = seq_drop (list string) 3 ["A"; "B"; "C"] []
+
+
 let () =
   Printexc.record_backtrace true;
   run "Datecode_unit_tests" [
@@ -61,5 +82,14 @@ let () =
           test_case "seq_make_0" `Quick seq_make_0;
           test_case "seq_make_1" `Quick seq_make_1;
           test_case "seq_make_2" `Quick seq_make_2
+      ];
+      "seq_take", [
+          test_case "seq_take_0" `Quick seq_take_0;
+          test_case "seq_take_1" `Quick seq_take_1
+      ];
+      "seq_drop", [
+          test_case "seq_drop_0" `Quick seq_drop_0;
+          test_case "seq_drop_1" `Quick seq_drop_1;
+          test_case "seq_drop_2" `Quick seq_drop_2
       ]
     ]
