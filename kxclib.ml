@@ -338,6 +338,16 @@ module Seq = struct
       | Cons(x, rest) -> f i x; h (i + 1) (rest()) in
     s() |> h 0
 
+  let make n x =
+    match n with
+    | _ when n < 0 -> failwith "panic"
+    | _ ->
+       let rec h i () =
+         match i with
+         | 0 -> Nil
+         | _ -> Cons(x, h (i - 1)) in
+       h n
+
 end
 type 'x seq = 'x Seq.t
 
