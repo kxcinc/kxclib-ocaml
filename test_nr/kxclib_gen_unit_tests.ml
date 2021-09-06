@@ -32,6 +32,19 @@ let seq_range start end_exclusive expected () =
 let seq_range_0 = seq_range 3 7 [|3; 4; 5; 6|]
 
 
+let seq_make tstbl n x expected () =
+  let actual = Seq.make n x |> Array.of_seq in
+  check tstbl "seq_make" actual expected
+
+
+let seq_make_0 = seq_make (array int) 5 2 [|2; 2; 2; 2; 2|]
+let seq_make_1 = seq_make (array string) 1 "Hi" [|"Hi"|]
+let seq_make_2 = seq_make (array int) 0 2 [||]
+
+(* ??? なんでだめなんでしょう ??? *)
+(* let seq_make_2 = seq_make (array float) 0 3.14 [||] *)
+
+
 let () =
   Printexc.record_backtrace true;
   run "Datecode_unit_tests" [
@@ -43,5 +56,10 @@ let () =
       ];
       "seq_range", [
           test_case "seq_range_0" `Quick seq_range_0
+      ];
+      "seq_make", [
+          test_case "seq_make_0" `Quick seq_make_0;
+          test_case "seq_make_1" `Quick seq_make_1;
+          test_case "seq_make_2" `Quick seq_make_2
       ]
     ]
