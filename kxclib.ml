@@ -338,6 +338,30 @@ module Seq = struct
       | Cons(x, rest) -> f i x; h (i + 1) (rest()) in
     s() |> h 0
 
+  let hd s =
+    match s() with
+    | Nil -> raise Not_found
+    | Cons(x, _) -> x
+
+  let tl s =
+    match s() with
+    | Nil -> raise Not_found
+    | Cons(_, t) -> t
+
+  let take n s =
+    match n with
+    | _ when n < 0 -> failwith "panic"
+    | _ ->
+       let rec h n t () =
+         match n, (t()) with
+         | 0, _ -> Nil
+         | _, Nil -> failwith "panic"
+         | _, Cons(x, u) ->
+            Cons(x, h (n - 1) u) in
+       h n s
+
+  let drop n s = Fn.ntimes n tl s
+
   let make n x =
     match n with
     | _ when n < 0 -> failwith "panic"
