@@ -1,0 +1,5 @@
+(tests
+ (names option_tests)
+ (libraries alcotest qcheck kxclib)
+ (flags (:standard
+          -open Kxclib)))
