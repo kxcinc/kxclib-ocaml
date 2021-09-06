@@ -314,7 +314,8 @@ module Seq = struct
         )
       )
 
-  let range start end_exclusive =
+  let range ?include_endpoint:(ie=false) start end_ =
+    let end_exclusive = if ie then succ end_ else end_ in
     iota (end_exclusive - start) |&> (+) start
 
   let enum start =
@@ -529,7 +530,9 @@ module List = struct
     | 0 -> []
     | k -> 0 :: (List.init (pred k) succ)
 
-  let range start end_exclusive = iota (end_exclusive - start) |&> (+) start
+  let range ?include_endpoint:(ie=false) start end_ =
+    let end_exclusive = if ie then succ end_ else end_ in
+    iota (end_exclusive - start) |&> (+) start
 
   let reduce f = function
     | [] -> raise Not_found
