@@ -667,10 +667,30 @@ module Hashtbl = struct
   (** swap the key and value *)
 
   let to_function : ('a, 'b) t -> 'a -> 'b = Hashtbl.find
+
+  (** [make n genfunc] creates a hashtable of [n] elements with entries
+      [{ (fst (genfunc 0))  |-> (snd (genfunc 0))
+       , (fst (genfunc 1))  |-> (snd (genfunc 1))
+         ...
+       , (fst (genfunc (n-1)))  |-> (snd (genfunc (n-1)))
+       }]  *)
+  let make ?random : int -> (int -> 'a * 'b) -> ('a, 'b) Hashtbl.t =
+    fun n genfunc ->
+    let table = Hashtbl.create ?random n in
+    Seq.iota n |> Seq.map genfunc |> Hashtbl.add_seq table;
+    table
+
 end
 
 module String = struct
   include String
+
+
+  (** [empty str] returns true when str is of zero length *)
+  let empty str = length str = 0
+
+  (** [empty_trimmed str] returns true when str is of zero length after being trimmed *)
+  let empty_trimmed str = length (trim str) = 0
 
   (** [chop_prefix p s] returns [s] minus the prefix [p] wrapped in [Some],
       or [None] if [s] does not start with [p] *)
