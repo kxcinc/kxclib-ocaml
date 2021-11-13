@@ -2,6 +2,7 @@ open Alcotest
 
 
 let sprintf fmt = Format.asprintf fmt
+let float_testable = float 0.0001
 
 
 let trivial () =
@@ -40,9 +41,7 @@ let seq_make tstbl n x expected () =
 let seq_make_0 = seq_make (array int) 5 2 [|2; 2; 2; 2; 2|]
 let seq_make_1 = seq_make (array string) 1 "Hi" [|"Hi"|]
 let seq_make_2 = seq_make (array int) 0 2 [||]
-
-(* ??? なんでだめなんでしょう ??? *)
-(* let seq_make_2 = seq_make (array float) 0 3.14 [||] *)
+let seq_make_3 = seq_make (array float_testable) 0 3.14 ([||])
 
 
 let seq_take tstbl n org_lst expected_lst () =
@@ -102,7 +101,8 @@ let () =
       "seq_make", [
           test_case "seq_make_0" `Quick seq_make_0;
           test_case "seq_make_1" `Quick seq_make_1;
-          test_case "seq_make_2" `Quick seq_make_2
+          test_case "seq_make_2" `Quick seq_make_2;
+          test_case "seq_make_3" `Quick seq_make_3;
       ];
       "seq_take", [
           test_case "seq_take_0" `Quick seq_take_0;

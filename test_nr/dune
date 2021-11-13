@@ -1,6 +1,5 @@
 (tests
  (names kxclib_gen_unit_tests)
  (libraries alcotest kxclib)
- ; (preprocess (pps ppx_sexp_conv ppx_deriving_yojson))
  (flags (:standard
           -open Kxclib)))
