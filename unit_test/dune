@@ -1,0 +1,5 @@
+(tests
+ (names baselib_unit_tests)
+ (libraries alcotest kxclib)
+ (flags (:standard
+          -open Kxclib)))

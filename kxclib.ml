@@ -1,11 +1,27 @@
 let refset r x = r := x
+(** [refset r x] sets [x] to ref [r]. *)
+
 let refupdate r f = r := f !r
+(** [refupdate r f] updates referent of [r] by [f]. *)
+
 let refappend r x = r := x :: !r
+(** [refappend r x] appends [x] to referent of [r]. *)
+
 let refupdate' f r = r := f !r
+(** [refupdate' f r] is equivalent to [refupdate r f]. *)
+
 let refappend' x r = r := x :: !r
+(** [refappend' x r] is equivalent to [refappend r x]. *)
+
 let refpop r = match !r with h::t -> r:=t; h | [] -> raise Not_found
+(** [refpop r] pop first item of the list referred to by [r].
+    {b Raises} [Not_found] if the list is empty. *)
+
 let incr = refupdate' succ
+(** [incr r] increases the referent of [r] by one. *)
+
 let decr = refupdate' pred
+(** [decr r] decreases the referent of [r] by one. *)
 
 let refupdate'_and_get f r = r := f !r; !r
 let get_and_refupdate' f r = let x = !r in r := f !r; x
@@ -61,18 +77,21 @@ module Functionals = struct
       if judge y then y
       else loop (f x) in
     loop (f x)
+  (** [reptill judge f x] evaluates [f x] repeatedly till [judge (f x)] holds. *)
 
   let ntimes n f x =
     let rec loop acc = function
       | 0 -> acc
       | n -> loop (f acc) (n-1) in
     loop x n
+  (** [ntimes n f x] applies [f] ntimes to [x]. *)
 
   let dotill judge f x =
     let rec loop y =
       if judge y then y
       else loop (f y) in
     loop (f x)
+  (** [dotill judge f x] applies [f] to [x] repeatedly till [judge x] holds. *)
 
   let fixpoint ?maxn =
     match maxn with
@@ -90,6 +109,9 @@ module Functionals = struct
          else if x = x' then x
          else loop (pred n) (x', f x') in
        loop (pred n) (x, f x)
+  (** [fixpoint f] try to resolve the fixpoint of f.
+      [maxn], an optional argument, limits the number of iterations
+      to find the fix point. *)
 
   let converge' judge f =
     let rec loop n (x, x') =
@@ -252,7 +274,7 @@ end = struct
     | [], (_ :: _) -> pop ([], List.rev r)
     | [], [] -> None
   let rec peek (r,u as q) = match u, r with
-    | hd :: rest, _ -> Some (hd, q)
+    | hd :: _, _ -> Some (hd, q)
     | [], (_ :: _) -> peek ([], List.rev r)
     | [], [] -> None
 end
@@ -314,6 +336,10 @@ module Seq = struct
         )
       )
 
+  let range ?include_endpoint:(ie=false) start end_ =
+    let end_exclusive = if ie then succ end_ else end_ in
+    iota (end_exclusive - start) |&> (+) start
+
   let enum start =
     let counter = ref start in
     from (fun () ->
@@ -328,6 +354,46 @@ module Seq = struct
       | Cons (x, next) ->
          Cons (x, limited (pred quota) next)
     ) else Nil
+
+  let iteri f s =
+    let rec h i = function
+      | Nil -> ()
+      | Cons(x, rest) -> f i x; h (i + 1) (rest()) in
+    s() |> h 0
+
+  let hd s =
+    match s() with
+    | Nil -> raise Not_found
+    | Cons(x, _) -> x
+
+  let tl s =
+    match s() with
+    | Nil -> raise Not_found
+    | Cons(_, t) -> t
+
+  let take n s =
+    match n with
+    | _ when n < 0 -> failwith "panic"
+    | _ ->
+       let rec h n t () =
+         match n, (t()) with
+         | 0, _ -> Nil
+         | _, Nil -> failwith "panic"
+         | _, Cons(x, u) ->
+            Cons(x, h (n - 1) u) in
+       h n s
+
+  let drop n s = Fn.ntimes n tl s
+
+  let make n x =
+    match n with
+    | _ when n < 0 -> failwith "panic"
+    | _ ->
+       let rec h i () =
+         match i with
+         | 0 -> Nil
+         | _ -> Cons(x, h (i - 1)) in
+       h n
 
 end
 type 'x seq = 'x Seq.t
@@ -453,6 +519,29 @@ module Stream = struct
 
   let to_list stream =
     to_list_rev stream |> List.rev
+
+  let hd stream =
+    let open Stream in
+    try next stream with
+    | Failure -> raise Not_found
+
+  let drop1 stream =
+    let open Stream in
+    let _ = try next stream with
+    | Failure -> raise Not_found in
+    stream
+
+  let take n stream =
+    let open Stream in
+    let m_lst =
+      try npeek n stream with
+      | Failure -> raise Not_found
+      | Error msg -> failwith msg in
+    match List.length m_lst with
+    | m when m = n -> m_lst
+    | _ -> raise Not_found
+
+  let drop n s = Fn.ntimes n drop1 s
 end
 
 module List = struct
@@ -463,7 +552,12 @@ module List = struct
     | 0 -> []
     | k -> 0 :: (List.init (pred k) succ)
 
-  let range start end_exclusive = iota (end_exclusive - start) |&> (+) start
+  let range =
+    let helper start end_ = iota (end_ - start) |&> (+) start in
+    fun ?include_endpoint:(ie=false) ->
+    if ie then (fun start end_ -> helper start (succ end_))
+    else (fun start end_ -> helper start end_)
+      
 
   let reduce f = function
     | [] -> raise Not_found
@@ -868,7 +962,7 @@ module ParseArgs = struct
 
   let exactparser fmt (fn : unit -> unit) : optparser = function
     | str when str = fmt -> fn (); `Process_next false
-    | str -> `Process_next true
+    | _ -> `Process_next true
 
   let parse_opts
         (optparsers : optparser list)
