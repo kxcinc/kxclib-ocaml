@@ -68,7 +68,7 @@ let seq_drop_2 = seq_drop (list string) 3 ["A"; "B"; "C"] []
 
 let stream_take tstbl n org_lst expected_lst () =
   let actual = Stream.of_list org_lst |> Stream.take n in
-  let actual_lst = Stream.to_list actual in
+  let actual_lst = actual in
   check tstbl "stream_take" actual_lst expected_lst
 
 

@@ -267,7 +267,7 @@ end = struct
     | [], (_ :: _) -> pop ([], List.rev r)
     | [], [] -> None
   let rec peek (r,u as q) = match u, r with
-    | hd :: rest, _ -> Some (hd, q)
+    | hd :: _, _ -> Some (hd, q)
     | [], (_ :: _) -> peek ([], List.rev r)
     | [], [] -> None
 end
@@ -518,7 +518,7 @@ module Stream = struct
     try next stream with
     | Failure -> raise Not_found
 
-  let tl stream =
+  let drop1 stream =
     let open Stream in
     let _ = try next stream with
     | Failure -> raise Not_found in
@@ -531,10 +531,10 @@ module Stream = struct
       | Failure -> raise Not_found
       | Error msg -> failwith msg in
     match List.length m_lst with
-    | m when m = n -> of_list m_lst
+    | m when m = n -> m_lst
     | _ -> raise Not_found
 
-  let drop n s = Fn.ntimes n tl s
+  let drop n s = Fn.ntimes n drop1 s
 end
 
 module List = struct
@@ -545,9 +545,12 @@ module List = struct
     | 0 -> []
     | k -> 0 :: (List.init (pred k) succ)
 
-  let range ?include_endpoint:(ie=false) start end_ =
-    let end_exclusive = if ie then succ end_ else end_ in
-    iota (end_exclusive - start) |&> (+) start
+  let range =
+    let helper start end_ = iota (end_ - start) |&> (+) start in
+    fun ?include_endpoint:(ie=false) ->
+    if ie then (fun start end_ -> helper start (succ end_))
+    else (fun start end_ -> helper start end_)
+      
 
   let reduce f = function
     | [] -> raise Not_found
@@ -952,7 +955,7 @@ module ParseArgs = struct
 
   let exactparser fmt (fn : unit -> unit) : optparser = function
     | str when str = fmt -> fn (); `Process_next false
-    | str -> `Process_next true
+    | _ -> `Process_next true
 
   let parse_opts
         (optparsers : optparser list)
