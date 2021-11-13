@@ -237,7 +237,8 @@ end = struct
   let read_string0 fd n
         ?buf:(buf=Bytes.create n)
         ?auto_retry:(retry=true)
-        ?retry_delay:(delay=0.000010 (* 10us *) ) =
+        ?retry_delay:(delay=0.000010 (* 10us *) )
+        () =
     let rec loop readn =
       Lwt_unix.read fd buf readn (n - readn)(* read fd buf readn *) >>= function
       | 0 -> failwith' "panic @Serial_unix.Lwt.read: EOF reached"
@@ -250,7 +251,7 @@ end = struct
       | m -> failwith' "panic @Serial_unix.Lwt.read: m=%d" m
     in loop 0
 
-  let read_string fd ?buf ?auto_retry ?retry_delay n = read_string0 ?buf ?auto_retry ?retry_delay fd n
+  let read_string fd ?buf ?auto_retry ?retry_delay n = read_string0 ?buf ?auto_retry ?retry_delay fd n ()
 
   let read_single ?buf ?auto_retry ?retry_delay fd =
     read_string fd ?buf ?auto_retry ?retry_delay 1
@@ -270,7 +271,7 @@ end = struct
     and proc = function
       | `ReadBulk (st, n) -> loop st (`Bulk n)
       | `ReadChar st -> loop st `Single
-      | `Pause (st, delay, next) ->
+      | `Pause (_st, delay, next) ->
          Lwt_unix.sleep delay >>= fun() ->
          proc next
       | `Finish x -> ret x
