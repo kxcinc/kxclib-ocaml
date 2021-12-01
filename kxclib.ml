@@ -1291,7 +1291,12 @@ module FmtPervasives = struct
     if cond then fmtfunc fmt
     else Format.ifprintf Fmt.null_ppf fmt
 
+  let pp_of_to_string to_string ppf x =
+    Format.pp_print_string ppf (to_string x)
   let to_string_of_pp pp = sprintf "%a" pp
+
+  let pps to_string = pp_of_to_string to_string
+  let spp pp = to_string_of_pp pp
 
   let pp_int = Format.pp_print_int
   let pp_float = Format.pp_print_float
