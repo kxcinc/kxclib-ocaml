@@ -44,6 +44,18 @@ let failwith' fmt =
 let invalid_arg' fmt =
   Format.kasprintf (invalid_arg) fmt
 
+let iotaf n func =
+  let rec loop acc = function
+    | m when m = n -> acc
+    | m -> loop (func m :: acc) (succ m) in
+  loop [] 0 |> List.rev
+
+let iotaf' n func =
+  let rec loop = function
+    | m when m = n -> ()
+    | m -> func m; loop (succ m) in
+  loop 0
+
 module Functionals = struct
   let negate pred x = not (pred x)
   (** negate a predicate *)
