@@ -740,6 +740,9 @@ module String = struct
 
   let to_list str =
     to_seq str |> List.of_seq
+
+  let of_list = List.to_seq &> of_seq
+  let of_array = Array.to_seq &> of_seq
 end
 
 module IoPervasives = struct
