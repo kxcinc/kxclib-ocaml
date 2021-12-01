@@ -81,6 +81,9 @@ module Functionals = struct
   let fix3rd z f x y = f x y z
   (** [z f] fix the third argument to [f] as [z] *)
 
+  let fix1st' x f = fun _ -> f x
+  (** [x f] fix the first argument to [f] as [x], but still accept (and ignore) the fixed argument *)
+
   let tap f x =
     f x; x
 
