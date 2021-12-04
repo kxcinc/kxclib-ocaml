@@ -24,6 +24,13 @@ let packet_reader st0 func =
   { pr_initst = st0;
     pr_func = !!func }
 
+module Dangerous = struct
+
+  let file_descr_of_device_descr : device_descr -> Unix.file_descr =
+    fun dev -> dev.fd
+
+end
+
 module PrivateUnix = struct
   include Unix
 

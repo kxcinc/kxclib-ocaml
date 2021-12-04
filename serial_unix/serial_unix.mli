@@ -3,6 +3,8 @@ type device_attr = Unix.terminal_io
 
 type device_descr
 
+module Dangerous : sig val file_descr_of_device_descr : device_descr -> Unix.file_descr end
+
 type ('st, 'ret) packet_reader = {
     pr_initst : 'st;
     pr_func :
