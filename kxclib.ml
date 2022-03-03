@@ -176,7 +176,7 @@ module PipeOps(S : sig
              val iter : ('x -> unit) -> 'x t -> unit
              val fold_left : ('acc -> 'x -> 'acc) -> 'acc -> 'x t -> 'acc
              val filter : ('x -> bool) -> 'x t -> 'x t
-             val filter_map : ('x -> 'x option) -> 'x t -> 'x t
+             val filter_map : ('x -> 'y option) -> 'x t -> 'y t
            end) = struct
   open S
 
@@ -225,8 +225,8 @@ end
 let foldl = List.fold_left
 (** {!List.fold_right} *)
 
-let foldr = List.fold_right
-(** {!List.fold_left} *)
+let foldr f z l = List.fold_right f l z
+(** {!List.fold_left} but arg pos exchanged *)
 
 let projected_compare proj a b =
   compare (proj a) (proj b)
