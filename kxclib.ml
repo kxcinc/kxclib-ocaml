@@ -56,6 +56,8 @@ let iotaf' n func =
     | m -> func m; loop (succ m) in
   loop 0
 
+type exn = Printexc.t
+
 module Functionals = struct
   let negate pred x = not (pred x)
   (** negate a predicate *)
@@ -326,7 +328,11 @@ module Option = struct
   let of_bool = function
     | true -> Some ()
     | false -> None
+
+  let some_if cond x = if cond then Some x else None
 end
+let some = Option.some
+let none = Option.none
 
 module Seq = struct
   include Seq
