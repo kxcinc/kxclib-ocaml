@@ -149,6 +149,9 @@ module Functionals = struct
     let (&>) : ('x -> 'y) -> ('y -> 'z) -> ('x -> 'z) =
       fun g f x -> x |> g |> f
 
+    (** piping with tapping *)
+    let (|->) : 'x -> ('x -> unit) -> 'x = fun x f -> (f x); x
+
     let (//) : ('a -> 'x) -> ('b -> 'y) -> ('a*'b -> 'x*'y) =
       fun fa fb (a, b) -> fa a, fb b
 
@@ -185,9 +188,17 @@ module PipeOps(S : sig
   (** piping map *)
   let (|&>) : 'x t -> ('x -> 'y) -> 'y t = fun xs f -> map f xs
 
+  (** piping map to snd *)
+  let (|+&>) : 'x t -> ('x -> 'y) -> ('x*'y) t =
+    fun xs f -> map (fun x -> x, f x) xs
+
   (** piping iter *)
   let (|!>) : 'x t -> ('x -> unit) -> unit =
     fun xs f -> iter f xs
+
+  (** piping and iter-tapping *)
+  let (|-!>) : 'x t -> ('x -> unit) -> 'x t =
+    fun xs f -> iter f xs; xs
 
   (** piping fold_left *)
   let (|@>) : ('acc*('acc -> 'x -> 'acc)) -> 'x t -> 'acc =
@@ -198,6 +209,10 @@ module PipeOps(S : sig
 
   (** piping filter map *)
   let (|&?>) : 'x t -> ('x -> 'y option) -> 'y t = fun xs f -> filter_map f xs
+
+  (** piping filter map to snd *)
+  let (|+&?>) : 'x t -> ('x -> 'y option) -> ('x*'y) t =
+    fun xs f -> filter_map (fun x -> match f x with Some y -> Some (x, y) | None -> None) xs
 end
 
 module MonadOps(M : sig
