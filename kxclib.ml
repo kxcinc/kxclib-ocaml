@@ -201,8 +201,8 @@ module PipeOps(S : sig
     fun xs f -> iter f xs; xs
 
   (** piping fold_left *)
-  let (|@>) : ('acc*('acc -> 'x -> 'acc)) -> 'x t -> 'acc =
-    fun (z, f) -> fold_left f z
+  let (|@>) : 'x t -> ('acc*('acc*'x -> 'acc)) -> 'acc =
+    fun xs (z, f) -> fold_left (fun acc x -> f (acc, x)) z xs
 
   (** piping filter *)
   let (|?>) : 'x t -> ('x -> bool) -> 'x t = fun xs f -> filter f xs
@@ -348,6 +348,8 @@ module Option = struct
 end
 let some = Option.some
 let none = Option.none
+let (>?) o f = Option.map f o
+let (>>?) o f = Option.bind o f
 
 module Seq = struct
   include Seq
