@@ -596,6 +596,55 @@ module List = struct
     if ie then (fun start end_ -> helper start (succ end_))
     else (fun start end_ -> helper start end_)
       
+  let dedup l =
+    let set = Hashtbl.create (List.length l) in
+    l |?> (fun x ->
+      if Hashtbl.mem set x then false
+      else (Hashtbl.add set x true; true))
+
+  let update_assoc : 'k -> ('v option -> 'v option) -> ('k*'v) list -> ('k*'v) list
+    = fun k func l ->
+    let l', updated =
+      l |> fold_left (fun (acc, updated) (key, v as ent) ->
+               match updated, k = key with
+               | false, true -> (
+                 match func (some v) with
+                 | Some v' -> (key, v') :: acc, true
+                 | None -> acc, true)
+               | _ -> ent :: acc, updated
+             ) ([], false) in
+    if not updated then (
+      match func none with
+      | None -> l
+      | Some v -> (k, v) :: l
+    ) else rev l'
+
+  let update_assq : 'k -> ('v option -> 'v option) -> ('k*'v) list -> ('k*'v) list
+    = fun k func l ->
+    let l', updated =
+      l |> fold_left (fun (acc, updated) (key, v as ent) ->
+               match updated, k == key with
+               | false, true -> (
+                 match func (some v) with
+                 | Some v' -> (key, v') :: acc, true
+                 | None -> acc, true)
+               | _ -> ent :: acc, updated
+             ) ([], false) in
+    if not updated then (
+      match func none with
+      | None -> l
+      | Some v -> (k, v) :: l
+    ) else rev l'
+
+  let unzip l =
+    List.fold_left
+      (fun (l,s) (x,y) -> (x::l,y::s))
+      ([],[]) (List.rev l)
+
+  let unzip3 l =
+    List.fold_left
+      (fun (l1,l2,l3) (x1,x2,x3) -> (x1::l1,x2::l2,x3::l3))
+      ([],[],[]) (List.rev l)
 
   let reduce f = function
     | [] -> raise Not_found
