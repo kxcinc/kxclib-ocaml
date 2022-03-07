@@ -636,6 +636,15 @@ module List = struct
       | Some v -> (k, v) :: l
     ) else rev l'
 
+  let group_by : ('x -> 'k) -> 'x t -> ('k*'x t) t =
+    fun kf l ->
+    l |> fold_left (fun acc x ->
+             let k = kf x in
+             update_assoc k (function
+                 | Some xs -> x :: xs |> some
+                 | None -> some [x]) acc)
+           []
+
   let unzip l =
     List.fold_left
       (fun (l,s) (x,y) -> (x::l,y::s))
@@ -1378,6 +1387,30 @@ module FmtPervasives = struct
   let pp_unit ppf () = pp_string ppf "unit"
   let pp_ref_address ppf (r : 'x ref) =
     fprintf ppf "%#x" (2*(Obj.magic r))
+
+  (** print integer with thousand separator *)
+  let pp_integer_sep' ~padding ppf x =
+    let rec loop acc x =
+      if x > 0 then loop ((x mod 1000) :: acc) (x / 1000)
+      else acc in
+    let chunks = loop [] (abs x) in
+    let chunks = match chunks with
+      | [x] -> [string_of_int x]
+      | h :: r -> string_of_int h :: (r |&> sprintf "%03d")
+      | [] -> ["0"] in
+    if x < 0 then pp_char ppf '-';
+    let str = String.concat "," chunks in
+    (match padding with
+     | None -> ()
+     | Some (0, _) -> ()
+     | Some (d, pad) ->
+        let d = d + (Float.ceil (float_of_int d /. 3.) |> int_of_float) - 1 in
+        let slen = String.length str in
+        if d > slen
+        then Fn.ntimes (d-slen) (fun() -> pp_char ppf pad) ());
+    pp_string ppf str
+
+  let pp_integer_sep ppf = pp_integer_sep' ~padding:None ppf
 
   let pp_multiline ppf str =
     let open Format in
