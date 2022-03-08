@@ -145,9 +145,17 @@ module Functionals = struct
     let (%) : ('y -> 'z) -> ('x -> 'y) -> ('x -> 'z) =
       fun f g x -> x |> g |> f
 
+    (** function composition 1, on second argument *)
+    let (%%) : ('a -> 'y -> 'z) -> ('x -> 'y) -> ('a -> 'x -> 'z) =
+      fun f g x y -> f x (g y)
+
     (** function composition 2 *)
     let (&>) : ('x -> 'y) -> ('y -> 'z) -> ('x -> 'z) =
       fun g f x -> x |> g |> f
+
+    (** function composition 2, arity=2 *)
+    let (&&>) : ('x -> 'y -> 'z) -> ('z -> 'r) -> ('x -> 'y -> 'r) =
+      fun g f x y -> g x y |> f
 
     (** piping with tapping *)
     let (|->) : 'x -> ('x -> unit) -> 'x = fun x f -> (f x); x
