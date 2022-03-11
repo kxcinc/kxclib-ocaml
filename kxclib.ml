@@ -169,12 +169,20 @@ module Functionals = struct
     let (/<) : 'a*'b -> ('a -> 'c) -> 'c*'b =
       fun (a, b) f -> f a, b
 
+    (** lift to snd *)
+    let (?>) : ('b -> 'c) -> ('a*'b -> 'a*'c) =
+      fun f -> fun (a, b) -> a, f b
+
+    (** lift to fst *)
+    let (?<) : ('a -> 'c) -> ('a*'b -> 'c*'b) =
+      fun f -> fun (a, b) -> f a, b
+
     (** uncurry *)
     let (!!) : ('a -> 'b -> 'x) -> ('a*'b -> 'x) =
       fun f -> fun (a, b) -> f a b
 
     (** curry *)
-    let (^^) : ('a*'b -> 'x) -> ('a -> 'b -> 'x) =
+    let (!?) : ('a*'b -> 'x) -> ('a -> 'b -> 'x) =
       fun f -> fun a b -> f (a, b)
   end
 
@@ -1563,7 +1571,7 @@ end = struct
     | `Intlit x -> `num (float_of_string x)
     | `Float x -> `num x
     | `String x -> `str x
-    | `Assoc x -> `obj (x |&> (identity // of_yojson))
+    | `Assoc x -> `obj (x |&> ?>of_yojson)
     | `List x -> `arr (x |&> of_yojson)
     | `Tuple x -> `arr (x |&> of_yojson)
     | `Variant (t, Some x) -> `arr [`str t; of_yojson x]
@@ -1580,6 +1588,6 @@ end = struct
       else `Float x)
     | `str x -> `String x
     | `arr x -> `List (x |&> to_yojson)
-    | `obj x -> `Assoc (x |&> (identity // to_yojson))
+    | `obj x -> `Assoc (x |&> ?>to_yojson)
 end
 
