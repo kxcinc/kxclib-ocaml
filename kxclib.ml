@@ -1534,6 +1534,24 @@ module Json : sig
     ] as 't)
   val of_yojson : yojson -> jv
   val to_yojson : jv -> yojson
+
+  type jsonm = jsonm_token seq
+  and jsonm_token = [
+    | `Null
+    | `Bool of bool
+    | `String of string
+    | `Float of float
+    | `Name of string
+    | `As
+    | `Ae
+    | `Os
+    | `Oe
+    ]
+  type 'loc jsonm' = ('loc*jsonm_token) seq
+
+  val of_jsonm' : 'loc jsonm' -> (jv, 'loc) result
+  val of_jsonm : jsonm -> jv option
+  val to_jsonm : jv -> jsonm
 end = struct
   type jv = [
     | `null
@@ -1589,5 +1607,22 @@ end = struct
     | `str x -> `String x
     | `arr x -> `List (x |&> to_yojson)
     | `obj x -> `Assoc (x |&> ?>to_yojson)
-end
 
+  type jsonm = jsonm_token seq
+  and jsonm_token = [
+    | `Null
+    | `Bool of bool
+    | `String of string
+    | `Float of float
+    | `Name of string
+    | `As
+    | `Ae
+    | `Os
+    | `Oe
+    ]
+  type 'loc jsonm' = ('loc*jsonm_token) seq
+
+  let of_jsonm' = failwith "noimpl: of_jsonm'"
+  let of_jsonm = failwith "noimpl: of_jsonm"
+  let to_jsonm = failwith "noimpl: to_jsonm"
+end
