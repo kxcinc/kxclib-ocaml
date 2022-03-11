@@ -1494,3 +1494,92 @@ module Log0 = struct
 end
 
 include Log0.Pervasives
+
+module Json : sig
+  type jv = [
+    | `null
+    | `bool of bool
+    | `num of float
+    | `str of string
+    | `arr of jv list
+    | `obj of (string*jv) list
+    ]
+  type legacy = [
+    | `arr of jv list
+    | `obj of (string*jv) list
+    ]
+  val of_legacy : legacy -> jv
+  val to_legacy : jv -> legacy option
+
+  (** Yojson.Safe.t *)
+  type yojson = ([
+    | `Null
+    | `Bool of bool
+    | `Int of int
+    | `Intlit of string
+    | `Float of float
+    | `String of string
+    | `Assoc of (string * 't) list
+    | `List of 't list
+    | `Tuple of 't list
+    | `Variant of string * 't option
+    ] as 't)
+  val of_yojson : yojson -> jv
+  val to_yojson : jv -> yojson
+end = struct
+  type jv = [
+    | `null
+    | `bool of bool
+    | `num of float
+    | `str of string
+    | `arr of jv list
+    | `obj of (string*jv) list
+    ]
+  type legacy = [
+    | `arr of jv list
+    | `obj of (string*jv) list
+    ]
+  type yojson = ([
+    | `Null
+    | `Bool of bool
+    | `Int of int
+    | `Intlit of string
+    | `Float of float
+    | `String of string
+    | `Assoc of (string * 't) list
+    | `List of 't list
+    | `Tuple of 't list
+    | `Variant of string * 't option
+    ] as 't)
+  let of_legacy x = (x :> jv)
+  let to_legacy : jv -> legacy option = function
+    | #legacy as x -> Some x
+    | _ -> None
+  let rec of_yojson : yojson -> jv =
+    function
+    | `Null -> `null
+    | `Bool x -> `bool x
+    | `Int x -> `num (float_of_int x)
+    | `Intlit x -> `num (float_of_string x)
+    | `Float x -> `num x
+    | `String x -> `str x
+    | `Assoc x -> `obj (x |&> (identity // of_yojson))
+    | `List x -> `arr (x |&> of_yojson)
+    | `Tuple x -> `arr (x |&> of_yojson)
+    | `Variant (t, Some x) -> `arr [`str t; of_yojson x]
+    | `Variant (t, None) -> `str t
+  let rec to_yojson : jv -> yojson =
+    function
+    | `null -> `Null
+    | `bool x -> `Bool x
+    | `num x -> (
+      if Float.is_integer x
+         && (x <= (Int.max_int |> float_of_int))
+         && (x >= (Int.min_int |> float_of_int))
+      then (`Int (Float.to_int x))
+      else `Float x)
+    | `str x -> `String x
+    | `arr x -> `List (x |&> to_yojson)
+    | `obj x -> `Assoc (x |&> (identity // to_yojson))
+end
+
