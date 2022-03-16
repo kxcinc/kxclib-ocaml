@@ -1738,11 +1738,13 @@ end = struct
     | `num x -> Seq.return (`Float x)
     | `str x -> Seq.return (`String x)
     | `arr xs ->
-      List.fold_right (fun x seq ->
-          Seq.append (to_jsonm x) seq)
-        xs Seq.empty
+      Seq.cons `As
+        (List.fold_right (fun x seq ->
+             Seq.append (to_jsonm x) seq)
+            xs (Seq.return `Ae))
     | `obj xs ->
-      List.fold_right (fun (name, x) seq ->
-          Seq.append (Seq.cons (`Name name) (to_jsonm x)) seq)
-        xs Seq.empty
+      Seq.cons `Os
+        (List.fold_right (fun (name, x) seq ->
+            Seq.append (Seq.cons (`Name name) (to_jsonm x)) seq)
+            xs (Seq.return `Oe))
 end
