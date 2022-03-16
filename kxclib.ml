@@ -1562,9 +1562,9 @@ module Json : sig
     ]
   type 'loc jsonm' = ('loc*jsonm_token) seq
 
+  val of_jsonm' : 'loc jsonm' -> (jv, 'loc) result
   val of_jsonm : jsonm -> jv option
   val to_jsonm : jv -> jsonm
-  val of_jsonm' : 'loc jsonm' -> (jv, 'loc) result
 end = struct
   type jv = [
     | `null
@@ -1667,68 +1667,82 @@ end = struct
     ]
   type 'loc jsonm' = ('loc*jsonm_token) seq
 
-  let of_jsonm : jsonm -> jv option = fun jsonm ->
-    let (>>=) = Option.bind in
-    let of_jsonm_token : jsonm_token -> jv option = function
-    | `Null -> Some `null
-    | `Bool x -> Some (`bool x)
-    | `String x -> Some (`str x)
-    | `Float x -> Some (`num x)
-    | _ -> None in
-    let rec collect_arr : jsonm -> (jv * jsonm) option = fun jsonm ->
-      let rec aux : jsonm -> jv list option -> (jv * jsonm) option =
-        fun seq acc_opt ->
-        acc_opt >>= fun acc ->
+  let of_jsonm' : 'loc jsonm' -> (jv, 'loc) result = fun jsonm' ->
+    let (>>=) = Result.bind in
+    let of_jsonm'_token : 'loc * jsonm_token -> (jv, 'loc) result = function
+      | _, `Null -> Ok `null
+      | _, `Bool x -> Ok (`bool x)
+      | _, `String x -> Ok (`str x)
+      | _, `Float x -> Ok (`num x)
+      | loc, _ -> Error loc in
+    let rec collect_arr : 'loc jsonm' -> ((jv * 'loc jsonm'), 'loc) result = fun jsonm' ->
+      let rec aux : 'loc jsonm' -> (jv list, 'loc) result -> ((jv * 'loc jsonm'), 'loc) result = fun seq acc ->
+        acc >>= fun acc ->
         match seq () with
-        | Seq.Nil -> None
-        | Seq.Cons (`Ae, rest) ->
-          Some (`arr (List.rev acc), rest)
-        | Seq.Cons (`As, rest) ->
+        | Seq.Nil -> raise End_of_file
+        | Seq.Cons ((_, `Ae), rest) ->
+          Ok (`arr (List.rev acc), rest)
+        | Seq.Cons ((_, `As), rest) ->
           collect_arr rest >>= fun (arr, rest) ->
-          aux rest (Some (arr :: acc))
-        | Seq.Cons (`Os, rest) ->
+          aux rest (Ok (arr :: acc))
+        | Seq.Cons ((_, `Os), rest) ->
           collect_obj rest >>= fun (obj, rest) ->
-          aux rest (Some (obj :: acc))
-        | Seq.Cons (tok, rest) ->
-          of_jsonm_token tok >>= fun x ->
-          aux rest (Some (x :: acc)) in
-      aux jsonm (Some [])
-    and collect_obj : jsonm -> (jv * jsonm) option = fun jsonm ->
-      let rec aux : jsonm -> (string * jv) list option -> (jv * jsonm) option =
-        fun seq acc_opt ->
-          acc_opt >>= fun acc ->
+          aux rest (Ok (obj :: acc))
+        | Seq.Cons (tok', rest) ->
+          of_jsonm'_token tok' >>= fun x ->
+          aux rest (Ok (x :: acc)) in
+      aux jsonm' (Ok [])
+    and collect_obj : 'loc jsonm' -> ((jv * 'loc jsonm'), 'loc) result = fun jsonm' ->
+      let rec aux : 'loc jsonm' -> ((string * jv) list, 'loc) result -> ((jv * 'loc jsonm'), 'loc) result = fun seq acc ->
+          acc >>= fun acc ->
           match seq () with
-          | Seq.Nil -> None
-          | Seq.Cons (`Oe, rest) ->
-            Some (`obj (List.rev acc), rest)
-          | Seq.Cons (`Name name, rest) -> begin match rest () with
-              | Seq.Nil -> None
-              | Seq.Cons (`As, rest) ->
+          | Seq.Nil -> raise End_of_file
+          | Seq.Cons ((_, `Oe), rest) ->
+            Ok (`obj (List.rev acc), rest)
+          | Seq.Cons ((_, `Name name), rest) -> begin match rest () with
+              | Seq.Nil -> raise End_of_file
+              | Seq.Cons ((_, `As), rest) ->
                 collect_arr rest >>= fun (arr, rest) ->
-                aux rest (Some ((name, arr) :: acc))
-              | Seq.Cons (`Os, rest) ->
+                aux rest (Ok ((name, arr) :: acc))
+              | Seq.Cons ((_, `Os), rest) ->
                 collect_obj rest >>= fun (obj, rest) ->
-                aux rest (Some ((name, obj) :: acc))
-              | Seq.Cons (tok, rest) ->
-                of_jsonm_token tok >>= fun x ->
-                aux rest (Some ((name, x) :: acc))
+                aux rest (Ok ((name, obj) :: acc))
+              | Seq.Cons (tok', rest) ->
+                of_jsonm'_token tok' >>= fun x ->
+                aux rest (Ok ((name, x) :: acc))
             end
-          | _ -> None in
-      aux jsonm (Some []) in
-    match jsonm () with
-    | Seq.Cons (tok, seq) when seq () = Seq.Nil ->
-      of_jsonm_token tok
-    | Seq.Cons (`As, seq) ->
-      collect_arr seq >>= fun (arr, rest) -> begin match rest () with
-        | Seq.Nil -> Some arr
-        | _ -> None
+          | Seq.Cons ((loc, _), _) -> Error loc in
+      aux jsonm' (Ok []) in
+    match jsonm' () with
+    | Seq.Cons (tok', rest) when rest () = Seq.Nil ->
+      of_jsonm'_token tok'
+    | Seq.Cons ((loc, `As), rest) ->
+      collect_arr rest >>= fun (arr, rest) -> begin match rest () with
+        | Seq.Nil -> Ok arr
+        | _ -> Error loc
       end
-    | Seq.Cons (`Os, seq) ->
-      collect_obj seq >>= fun (obj, rest) -> begin match rest () with
-        | Seq.Nil -> Some obj
-        | _ -> None
+    | Seq.Cons ((loc, `Os), rest) ->
+      collect_obj rest >>= fun (obj, rest) -> begin match rest () with
+        | Seq.Nil -> Ok obj
+        | _ -> Error loc
       end
-    | _ -> None
-  let to_jsonm = failwith "noimpl: to_jsonm"
-  let of_jsonm' = failwith "noimpl: of_jsonm'"
+    | Seq.Cons ((loc, _), _) -> Error loc
+    | Seq.Nil -> raise End_of_file
+  let of_jsonm : jsonm -> jv option = fun jsonm ->
+    Seq.map (fun tok -> ((), tok)) jsonm
+    |> of_jsonm'
+    |> Result.to_option
+  let rec to_jsonm : jv -> jsonm = function
+    | `null -> Seq.return `Null
+    | `bool x -> Seq.return (`Bool x)
+    | `num x -> Seq.return (`Float x)
+    | `str x -> Seq.return (`String x)
+    | `arr xs ->
+      List.fold_right (fun x seq ->
+          Seq.append (to_jsonm x) seq)
+        xs Seq.empty
+    | `obj xs ->
+      List.fold_right (fun (name, x) seq ->
+          Seq.append (Seq.cons (`Name name) (to_jsonm x)) seq)
+        xs Seq.empty
 end
