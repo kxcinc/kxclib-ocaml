@@ -1545,8 +1545,8 @@ module Json : sig
       | `Assoc of (string * 't) list
       | `List of 't list
     ] as 't)
-  val of_yojson' : yojson' -> jv
-  val to_yojson' : jv -> yojson'
+  val yojson_basic_of_safe : yojson -> yojson'
+  val yojson_safe_of_basic : yojson' -> yojson
 
   type jsonm = jsonm_token seq
   and jsonm_token = [
@@ -1630,6 +1630,25 @@ end = struct
       | `Assoc of (string * 't) list
       | `List of 't list
     ] as 't)
+  let rec yojson_basic_of_safe : yojson -> yojson' = fun yojson ->
+    match yojson with
+    | `Null -> `Null
+    | `Bool x -> `Bool x
+    | `Int x -> `Int x
+    | `Intlit x -> `Int (int_of_string x)
+    | `Float x -> `Float x
+    | `String x -> `String x
+    | `Assoc xs -> `Assoc (List.map (fun (n, x) -> (n, yojson_basic_of_safe x)) xs)
+    | `List xs -> `List (List.map yojson_basic_of_safe xs)
+    | `Tuple xs -> `List (List.map yojson_basic_of_safe xs)
+    | `Variant (c, x_opt) ->
+      begin match Option.map yojson_basic_of_safe x_opt with
+        | None -> `List [`String c]
+        | Some x -> `List [`String c; x]
+      end
+  let yojson_safe_of_basic : yojson' -> yojson = fun x ->
+    (x :> yojson)
+
   let rec of_yojson' : yojson' -> jv =
     function
     | `Null -> `null
