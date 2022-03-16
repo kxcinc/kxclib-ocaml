@@ -1535,6 +1535,19 @@ module Json : sig
   val of_yojson : yojson -> jv
   val to_yojson : jv -> yojson
 
+  (** Yojson.Basic.t *)
+  type yojson' = ([
+      | `Null
+      | `Bool of bool
+      | `Int of int
+      | `Float of float
+      | `String of string
+      | `Assoc of (string * 't) list
+      | `List of 't list
+    ] as 't)
+  val of_yojson' : yojson' -> jv
+  val to_yojson' : jv -> yojson'
+
   type jsonm = jsonm_token seq
   and jsonm_token = [
     | `Null
@@ -1607,6 +1620,38 @@ end = struct
     | `str x -> `String x
     | `arr x -> `List (x |&> to_yojson)
     | `obj x -> `Assoc (x |&> ?>to_yojson)
+
+  type yojson' = ([
+      | `Null
+      | `Bool of bool
+      | `Int of int
+      | `Float of float
+      | `String of string
+      | `Assoc of (string * 't) list
+      | `List of 't list
+    ] as 't)
+  let rec of_yojson' : yojson' -> jv =
+    function
+    | `Null -> `null
+    | `Bool x -> `bool x
+    | `Int x -> `num (float_of_int x)
+    | `Float x -> `num x
+    | `String x -> `str x
+    | `Assoc x -> `obj (x |&> ?>of_yojson')
+    | `List x -> `arr (x |&> of_yojson')
+  let rec to_yojson' : jv -> yojson' =
+    function
+    | `null -> `Null
+    | `bool x -> `Bool x
+    | `num x -> (
+        if Float.is_integer x
+           && (x <= (Int.max_int |> float_of_int))
+           && (x >= (Int.min_int |> float_of_int))
+        then (`Int (Float.to_int x))
+        else `Float x)
+    | `str x -> `String x
+    | `arr x -> `List (x |&> to_yojson')
+    | `obj x -> `Assoc (x |&> ?>to_yojson')
 
   type jsonm = jsonm_token seq
   and jsonm_token = [
