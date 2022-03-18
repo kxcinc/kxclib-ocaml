@@ -1561,9 +1561,16 @@ module Json : sig
     | `Oe
     ]
   type 'loc jsonm' = ('loc*jsonm_token) seq
+  type 'loc jsonm_pe (* pe = parsing_error *) = [
+    | `empty_document
+    | `premature_end of 'loc
+    (** with loc of the starting token of the inner-most structure (viz. array/object) *)
+    | `expecting_value_at of 'loc
+    | `unexpected_token_at of 'loc*jsonm_token
+    ]
 
-  val of_jsonm' : 'loc jsonm' -> (jv, 'loc) result
-  val of_jsonm : jsonm -> jv option
+  val of_jsonm' : 'loc jsonm' -> (jv * 'loc jsonm', 'loc jsonm_pe) result
+  val of_jsonm : jsonm -> (jv * jsonm) option
   val to_jsonm : jv -> jsonm
 end = struct
   type jv = [
@@ -1661,74 +1668,87 @@ end = struct
     | `Os
     | `Oe
     ]
+  type atomic_jsonm_token = [
+    | `Null
+    | `Bool of bool
+    | `String of string
+    | `Float of float
+    ]
+  type value_starting_jsonm_token = [
+    | atomic_jsonm_token
+    | `As | `Os
+    ]
   type 'loc jsonm' = ('loc*jsonm_token) seq
 
-  let of_jsonm' : 'loc jsonm' -> (jv, 'loc) result = fun jsonm' ->
-    let (>>=) = Result.bind in
-    let of_jsonm'_token : 'loc * jsonm_token -> (jv, 'loc) result = function
-      | _, `Null -> Ok `null
-      | _, `Bool x -> Ok (`bool x)
-      | _, `String x -> Ok (`str x)
-      | _, `Float x -> Ok (`num x)
-      | loc, _ -> Error loc in
-    let rec collect_arr : 'loc jsonm' -> ((jv * 'loc jsonm'), 'loc) result = fun jsonm' ->
-      let rec aux : 'loc jsonm' -> (jv list, 'loc) result -> ((jv * 'loc jsonm'), 'loc) result = fun seq acc ->
-        acc >>= fun acc ->
-        match seq () with
-        | Seq.Nil -> raise End_of_file
-        | Seq.Cons ((_, `Ae), rest) ->
-          Ok (`arr (List.rev acc), rest)
-        | Seq.Cons ((_, `As), rest) ->
-          collect_arr rest >>= fun (arr, rest) ->
-          aux rest (Ok (arr :: acc))
-        | Seq.Cons ((_, `Os), rest) ->
-          collect_obj rest >>= fun (obj, rest) ->
-          aux rest (Ok (obj :: acc))
-        | Seq.Cons (tok', rest) ->
-          of_jsonm'_token tok' >>= fun x ->
-          aux rest (Ok (x :: acc)) in
-      aux jsonm' (Ok [])
-    and collect_obj : 'loc jsonm' -> ((jv * 'loc jsonm'), 'loc) result = fun jsonm' ->
-      let rec aux : 'loc jsonm' -> ((string * jv) list, 'loc) result -> ((jv * 'loc jsonm'), 'loc) result = fun seq acc ->
-          acc >>= fun acc ->
-          match seq () with
-          | Seq.Nil -> raise End_of_file
-          | Seq.Cons ((_, `Oe), rest) ->
-            Ok (`obj (List.rev acc), rest)
-          | Seq.Cons ((_, `Name name), rest) -> begin match rest () with
-              | Seq.Nil -> raise End_of_file
-              | Seq.Cons ((_, `As), rest) ->
-                collect_arr rest >>= fun (arr, rest) ->
-                aux rest (Ok ((name, arr) :: acc))
-              | Seq.Cons ((_, `Os), rest) ->
-                collect_obj rest >>= fun (obj, rest) ->
-                aux rest (Ok ((name, obj) :: acc))
-              | Seq.Cons (tok', rest) ->
-                of_jsonm'_token tok' >>= fun x ->
-                aux rest (Ok ((name, x) :: acc))
-            end
-          | Seq.Cons ((loc, _), _) -> Error loc in
-      aux jsonm' (Ok []) in
-    match jsonm' () with
-    | Seq.Cons (tok', rest) when rest () = Seq.Nil ->
-      of_jsonm'_token tok'
-    | Seq.Cons ((loc, `As), rest) ->
-      collect_arr rest >>= fun (arr, rest) -> begin match rest () with
-        | Seq.Nil -> Ok arr
-        | _ -> Error loc
-      end
-    | Seq.Cons ((loc, `Os), rest) ->
-      collect_obj rest >>= fun (obj, rest) -> begin match rest () with
-        | Seq.Nil -> Ok obj
-        | _ -> Error loc
-      end
-    | Seq.Cons ((loc, _), _) -> Error loc
-    | Seq.Nil -> raise End_of_file
-  let of_jsonm : jsonm -> jv option = fun jsonm ->
+  type 'loc jsonm_pe (* pe = parsing_error *) = [
+    | `empty_document
+    | `premature_end of 'loc
+    (** with loc of the starting token of the inner-most structure (viz. array/object) *)
+    | `expecting_value_at of 'loc
+    | `unexpected_token_at of 'loc*jsonm_token
+    ]
+
+  let of_jsonm' : 'loc jsonm' -> (jv*'loc jsonm', 'loc jsonm_pe) result =
+    fun input ->
+    let (>>=) m f = Result.bind m f in
+    let jv_of_atom : atomic_jsonm_token -> jv = function
+      | `Null -> `null
+      | `Bool x -> `bool x
+      | `String x -> `str x
+      | `Float x -> `num x
+      | _ -> . in
+    let with_next
+          (sloc : 'loc)
+          (next : 'loc jsonm')
+          (kont : 'loc -> 'loc jsonm' -> jsonm_token
+                  -> 'r)
+        : 'r
+      = match next() with
+      | Seq.Nil -> Error (`premature_end sloc)
+      | Seq.Cons ((nloc, ntok), next') ->
+         kont nloc next' ntok in
+    let ok next x : (jv*'loc jsonm', 'loc jsonm_pe) result =
+      Ok (x, next) in
+    let rec value loc next =
+      function
+      | #atomic_jsonm_token as tok ->
+         jv_of_atom tok |> ok next
+      | `As -> with_next loc next (collect_array [])
+      | `Os -> with_next loc next (collect_object [])
+      | #value_starting_jsonm_token -> . (* assert that all value starting tokens are handled *)
+      | (`Name _ | `Ae | `Oe) as tok ->
+         Error (`unexpected_token_at (loc, tok))
+      | _ -> .
+    and collect_array acc sloc next = function
+      | `Ae -> ok next (`arr (List.rev acc))
+      | #value_starting_jsonm_token ->
+         with_next sloc next value >>= (fun (v, next) ->
+          with_next sloc next (fun _nloc ->
+              collect_array (v :: acc) sloc))
+      | (`Name _ | `Oe) as tok ->
+         Error (`unexpected_token_at (sloc, tok))
+      | _ -> .
+    and collect_object acc sloc next = function
+      | `Oe -> ok next (`obj (List.rev acc))
+      | `Name key -> (
+        with_next sloc next value >>= (fun (v, next) ->
+          with_next sloc next (fun _nloc ->
+              collect_object ((key, v) :: acc) sloc)))
+      | (#value_starting_jsonm_token | `Ae) as tok ->
+         Error (`unexpected_token_at (sloc, tok))
+      | _ -> .
+    in
+    match input () with
+    | Seq.Nil -> Error (`empty_document)
+    | Seq.Cons ((loc, tok), next) -> (
+      value loc next tok)
+  let of_jsonm : jsonm -> (jv * jsonm) option = fun jsonm ->
     Seq.map (fun tok -> ((), tok)) jsonm
     |> of_jsonm'
     |> Result.to_option
+    |> Option.map (fun (out, rest) -> (out, Seq.map snd rest))
   let rec to_jsonm : jv -> jsonm = function
+    (* XXX - optimize *)
     | `null -> Seq.return `Null
     | `bool x -> Seq.return (`Bool x)
     | `num x -> Seq.return (`Float x)
