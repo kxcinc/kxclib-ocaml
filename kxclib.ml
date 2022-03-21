@@ -56,6 +56,12 @@ let iotaf' n func =
     | m -> func m; loop (succ m) in
   loop 0
 
+let iotafl n func acc0 =
+  let rec loop acc = function
+    | m when m = n -> acc
+    | m -> loop (func acc m) (succ m) in
+  loop acc0 0
+
 type exn = Printexc.t
 
 module Functionals = struct
@@ -340,6 +346,10 @@ module Option = struct
   let pp vpp ppf = Format.(function
     | Some x -> fprintf ppf "Some(%a)" vpp x
     | None -> fprintf ppf "None")
+
+  let filter pred = function
+    | Some x when pred x -> Some x
+    | _ -> None
 
   let fmap f = function
     | None -> None
@@ -1444,6 +1454,19 @@ module FmtPervasives = struct
 
   let pp_full_exn ppf exn =
     pp_full_exn' ppf (exn, Printexc.(get_raw_backtrace()))
+
+
+  let string_of_symbolic_output_items
+      : Format.symbolic_output_item list -> string =
+    fun items ->
+    let buf = Buffer.create 0 in
+    items |!> (function
+      | Output_flush -> ()
+      | Output_newline -> Buffer.add_char buf '\n'
+      | Output_string str -> Buffer.add_string buf str
+      | Output_spaces n | Output_indent n
+        -> Buffer.add_string buf (String.make n ' '));
+    Buffer.contents buf
 
 end include FmtPervasives
 
