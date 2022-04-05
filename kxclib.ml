@@ -62,6 +62,9 @@ let iotafl n func acc0 =
     | m -> loop (func acc m) (succ m) in
   loop acc0 0
 
+let min_by f x y = if f y > f x then x else y
+let max_by f x y = if f y < f x then x else y
+
 type exn = Printexc.t
 
 module Functionals = struct
