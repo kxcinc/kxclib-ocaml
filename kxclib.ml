@@ -1790,3 +1790,91 @@ end = struct
             Seq.append (Seq.cons (`Name name) (to_jsonm x)) seq)
             xs (Seq.return `Oe))
 end
+
+
+module type Intp = sig
+
+  (** represents an efficient integer type that has at least the same precision
+     as repesented in 54-bit 2's complement format, i.e. (-2^53)..(2^53-1).
+     if overflow occurs on non-guarded operations, the behavior is undefined.
+     when externalized, no precision should be expected beyond the aforementioned range.
+
+     the 54-bit precision comes from (although not exactly the same as) the
+     range of exactly representable integers using the IEEE 574 double-precision
+     floating-point format. a motivation of this format over OCaml's builtin int
+     type (which could have as low as only 31bit) is to ensure enough bits for
+     representing millisecond unix timestamp and large file sizes efficiently
+     across platforms; i.e. an efficient alternative to int64.
+
+     the actual implementation depends on the platform and architecture the
+     compiled code runs. *)
+  type t
+
+  val zero : t
+  val one : t
+  val minus_one : t
+  val neg : t -> t
+  val add : t -> t -> t
+  val sub : t -> t -> t
+  val mul : t -> t -> t
+  val div : t -> t -> t
+  val rem : t -> t -> t
+  val succ : t -> t
+  val pred : t -> t
+  val abs : t -> t
+  val logand : t -> t -> t
+  val logor : t -> t -> t
+  val logxor : t -> t -> t
+  val lognot : t -> t
+  val shift_left : t -> int -> t
+  val shift_right : t -> int -> t
+  val shift_right_logical : t -> int -> t
+  val equal : t -> t -> bool
+  val compare : t -> t -> int
+  val to_float : t -> float
+  val of_float : float -> t
+  val to_string : t -> string
+
+  val sign : t -> int (** pos, neg, zero => +1, -1, 0 *)
+  val sign_p : t -> int (** pos, neg, zero => +1, -1, +1 *)
+
+  val pp : Format.formatter -> t -> unit
+  (* todo - yojson_conv, sexp_conv *)
+
+  (* val exp : t -> t -> t (\* future work *\) *)
+  (* val mul2 : t -> t (\* future work *\) *)
+  (* val div2 : t -> t (\* future work *\) *)
+
+end
+module type IntpOps = sig
+  type intp
+  val ( +% ) : intp -> intp -> intp
+  val ( -% ) : intp -> intp -> intp
+  val ( *% ) : intp -> intp -> intp
+  val ( /% ) : intp -> intp -> intp
+  val ( /%% ) : intp -> intp -> intp (* mod *)
+  val ( //% ) : intp -> intp -> intp (* reminder *)
+
+  (* val ( ^% ) : intp -> intp -> intp (\* exp *\) (\* future work *\) *)
+end
+type intp_impl = [
+  | `unboxed_double
+  | `unboxed_int63
+  | `boxed_int64
+  (* | `specialized of (\* extensible variant type *\) specialized_intp_impl (\* future work *\) *)
+  ]
+module Intp_impl = struct
+  module Int64_impl = struct
+    let impl : intp_impl = `boxed_int64
+    include Int64
+    let pp ppf = fprintf ppf "%Ld"
+    let sign x = if x = 0L then 0 else if x > 0L then 1 else -1
+    let sign_p x = if x = 0L then 1 else if x > 0L then 1 else -1
+  end
+  module Int64_impl_check : Intp = Int64_impl
+
+  module Current_platform = Int64_impl
+end
+type intp = Intp_impl.Current_platform.t
+let intp_impl = Intp_impl.Current_platform.impl
+
