@@ -195,10 +195,15 @@ module Functionals = struct
       fun f -> fun a b -> f (a, b)
   end
 
+  module CommonTypes = struct
+    type 'x endo = 'x -> 'x
+  end
+
   module Infix = BasicInfix
 end
 module Fn = Functionals
 include Functionals.BasicInfix
+include Functionals.CommonTypes
 
 module PipeOps(S : sig
              type _ t
