@@ -247,23 +247,23 @@ end
 
 module MonadOps(M : sig
              type _ t
-             val pure : 'x -> 'x t
+             val return : 'x -> 'x t
              val bind : 'x t -> ('x -> 'y t) -> 'y t
            end) = struct
-  let pure x = M.pure x
+  let return x = M.return x
   let (>>=) = M.bind
   let (>>) : 'x M.t -> 'y M.t -> 'y M.t =
     fun ma mb -> ma >>= fun _ -> mb
   let (>|=) : 'x M.t -> ('x -> 'y) -> 'y M.t =
-    fun ma f -> ma >>= fun x -> pure (f x)
+    fun ma f -> ma >>= fun x -> return (f x)
 
   let sequence_list ms =
     List.fold_left (fun acc m ->
         acc >>= fun acc ->
         m >>= fun x ->
-        x :: acc |> pure
-      ) (pure []) ms >>= fun xs ->
-    List.rev xs |> pure
+        x :: acc |> return
+      ) (return []) ms >>= fun xs ->
+    List.rev xs |> return
 
   let (>>=*) : 'x M.t list -> ('x list -> 'y M.t) -> 'y M.t =
     fun ms af -> sequence_list ms >>= af
@@ -302,7 +302,7 @@ module ResultOf(E : sig type err end) = struct
   type err = E.err
   type 'x t = ('x, err) result
   let bind : 'x t -> ('x -> 'y t) -> 'y t = Result.bind
-  let pure : 'x -> 'x t = Result.ok
+  let return : 'x -> 'x t = Result.ok
 end
 
 module ResultWithErrmsg = struct
@@ -345,7 +345,7 @@ type 'x queue = 'x Queue.t
 module Option = struct
   include Option
 
-  let pure = some
+  let return = some
 
   let v default = function
     | Some x -> x
@@ -782,7 +782,7 @@ module List = struct
     fprintf ppf "%s@]" pclose
 
   let bind ma af = fmap af ma
-  let pure x = [x]
+  let return x = [x]
 end
 
 include PipeOps(List)
