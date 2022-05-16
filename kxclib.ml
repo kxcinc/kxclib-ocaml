@@ -245,6 +245,12 @@ module PipeOps(S : sig
     fun xs f -> filter_map (fun x -> match f x with Some y -> Some (x, y) | None -> None) xs
 end
 
+module type Monadic = sig
+  type _ t
+  val return : 'x -> 'x t
+  val bind : 'x t -> ('x -> 'y t) -> 'y t
+end
+
 module MonadOps(M : sig
              type _ t
              val return : 'x -> 'x t
