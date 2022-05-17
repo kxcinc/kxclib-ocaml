@@ -414,6 +414,9 @@ module Seq = struct
         )
       )
 
+  let length s =
+    fold_left (fun c _ -> succ c) 0 s
+
   let range ?include_endpoint:(ie=false) start end_ =
     let end_exclusive = if ie then succ end_ else end_ in
     iota (end_exclusive - start) |&> (+) start
