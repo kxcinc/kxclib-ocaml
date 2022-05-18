@@ -625,11 +625,13 @@ module List = struct
     if ie then (fun start end_ -> helper start (succ end_))
     else (fun start end_ -> helper start end_)
       
-  let dedup l =
+  let dedup' ~by l =
     let set = Hashtbl.create (List.length l) in
     l |?> (fun x ->
-      if Hashtbl.mem set x then false
-      else (Hashtbl.add set x true; true))
+      if Hashtbl.mem set (by x) then false
+      else (Hashtbl.add set (by x) true; true))
+
+  let dedup l = dedup' ~by:identity l
 
   let update_assoc : 'k -> ('v option -> 'v option) -> ('k*'v) list -> ('k*'v) list
     = fun k func l ->
