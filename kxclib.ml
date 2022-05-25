@@ -390,6 +390,8 @@ let some = Option.some
 let none = Option.none
 let (>?) o f = Option.map f o
 let (>>?) o f = Option.bind o f
+let (|?) o v = Option.v v o
+let (||?) o1 o2 = Option.otherwise o1 o2
 
 module Seq = struct
   include Seq
@@ -638,7 +640,7 @@ module List = struct
     fun ?include_endpoint:(ie=false) ->
     if ie then (fun start end_ -> helper start (succ end_))
     else (fun start end_ -> helper start end_)
-      
+
   let dedup l =
     let set = Hashtbl.create (List.length l) in
     l |?> (fun x ->
@@ -1398,7 +1400,7 @@ module FmtPervasives = struct
 
         (* start *)
         Format.fprintf ppf "@<0>%s"
-          ((esc color_code)^(style_code |> Option.map esc |> Option.v ""));
+          ((esc color_code)^(style_code |> Option.map esc |? ""));
 
         (* contents *)
         Format.kfprintf (fun ppf ->
