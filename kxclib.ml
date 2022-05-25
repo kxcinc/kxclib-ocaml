@@ -1433,6 +1433,11 @@ module FmtPervasives = struct
   let pp_ref_address ppf (r : 'x ref) =
     fprintf ppf "%#x" (2*(Obj.magic r))
 
+  let pp_int32 ppf x =
+    Int32.to_string x |> pp_string ppf
+  let pp_int64 ppf x =
+    Int64.to_string x |> pp_string ppf
+
   (** print integer with thousand separator *)
   let pp_integer_sep' ~padding ppf x =
     let rec loop acc x =
