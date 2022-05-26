@@ -1624,6 +1624,8 @@ module Json : sig
     | `arr of jv list
     | `obj of (string*jv) list
     ]
+  type jv_field = string*jv
+  type jv_fields = jv_field list
   type legacy = [
     | `arr of jv list
     | `obj of (string*jv) list
@@ -1693,6 +1695,8 @@ end = struct
     | `arr of jv list
     | `obj of (string*jv) list
     ]
+  type jv_field = string*jv
+  type jv_fields = jv_field list
   type legacy = [
     | `arr of jv list
     | `obj of (string*jv) list
