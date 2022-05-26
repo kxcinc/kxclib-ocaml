@@ -683,6 +683,62 @@ module List = struct
       | Some v -> (k, v) :: l
     ) else rev l'
 
+  let deassoc_opt : 'k -> ('k*'v) list -> 'v option*('k*'v) list =
+    fun k es ->
+    let rec loop (ret, es) = function
+      | [] -> ret, es
+      | (k', v) :: rest when k' = k ->
+         (* we are not shortcutting here since appending two lists is still O(n).. *)
+         loop (some v, es) rest
+      | e :: rest ->
+         loop (ret, e :: es) rest in
+    loop (none, []) es
+  (** [deassoc_opt k l] removes entry keyed [k] from [l], interpreted as an association list,
+      and return [v, l'] where [v] is the value of the entry being removed or [None], and
+      [l'] is the list after the removal, or semantically unchanged if the key does not exist.
+      note that entries in [l'] may differ in order wrt. [l].
+
+      if there are multiple entries keyed [k], [v] will be [Some _] and [l'] will differ from the
+      original, but otherwise the behavior is unspecified *)
+
+  let deassq_opt : 'k -> ('k*'v) list -> 'v option*('k*'v) list =
+    fun k es ->
+    let rec loop (ret, es) = function
+      | [] -> ret, es
+      | (k', v) :: rest when k' == k ->
+         (* we are not shortcutting here since appending two lists is still O(n).. *)
+         loop (some v, es) rest
+      | e :: rest ->
+         loop (ret, e :: es) rest in
+    loop (none, []) es
+  (** same as [deassoc_opt] except using [(==)] when comparing keys *)
+
+  let deassoc_opt' : 'k -> ('k*'v) list -> ('v*('k*'v) list) option =
+    fun k es ->
+    match deassoc_opt k es with
+    | Some v, es -> Some (v, es)
+    | None, _ -> None
+  (** same as [deassoc_opt] but different return type *)
+
+  let deassq_opt' : 'k -> ('k*'v) list -> ('v*('k*'v) list) option =
+    fun k es ->
+    match deassq_opt k es with
+    | Some v, es -> Some (v, es)
+    | None, _ -> None
+  (** same as [deassq_opt] but different return type *)
+
+  let deassoc : 'k -> ('k*'v) list -> 'v*('k*'v) list =
+    fun k es ->
+    let ov, es = deassoc_opt k es in
+    Option.v' (fun() -> raise Not_found) ov, es
+  (** same as [deassoc_opt] but throws [Not_found] when the requested key does not exist *)
+
+  let deassq : 'k -> ('k*'v) list -> 'v*('k*'v) list =
+    fun k es ->
+    let ov, es = deassq_opt k es in
+    Option.v' (fun() -> raise Not_found) ov, es
+  (** same as [deassq_opt] but throws [Not_found] when the requested key does not exist *)
+
   let group_by : ('x -> 'k) -> 'x t -> ('k*'x t) t =
     fun kf l ->
     l |> fold_left (fun acc x ->
