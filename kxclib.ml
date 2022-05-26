@@ -806,6 +806,13 @@ module List = struct
     foldl (fun _ x -> x) (List.hd list) list
   (** last element of list *)
 
+  let and_last : 'x. 'x list -> 'x list*'x =
+    fun xs ->
+    match rev xs with
+    | [] -> raise Not_found
+    | l :: r -> rev r, l
+  (** last element and rest of a list *)
+
   let fmap : ('x -> 'y list) -> 'x list -> 'y list = fun f l ->
     let rec loop acc = function
         | [] -> acc
