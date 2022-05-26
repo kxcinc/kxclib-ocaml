@@ -392,6 +392,8 @@ let (>?) o f = Option.map f o
 let (>>?) o f = Option.bind o f
 let (|?) o v = Option.v v o
 let (||?) o1 o2 = Option.otherwise o2 o1
+let (&>?) : ('x -> 'y option) -> ('y -> 'z) -> ('x -> 'z option) =
+  fun af f -> af &> (Option.map f)
 
 module Seq = struct
   include Seq
