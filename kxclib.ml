@@ -1624,8 +1624,16 @@ module Json : sig
     | `arr of jv list
     | `obj of (string*jv) list
     ]
+
   type jv_field = string*jv
   type jv_fields = jv_field list
+
+  type jvpath = ([
+    | `f of string (** field within an object *)
+    | `i of int (** index within an array *)
+    ] as 'path_component) list
+  (** an empty path designate the root element *)
+
   type legacy = [
     | `arr of jv list
     | `obj of (string*jv) list
@@ -1697,6 +1705,10 @@ end = struct
     ]
   type jv_field = string*jv
   type jv_fields = jv_field list
+  type jvpath = ([
+    | `f of string
+    | `i of int
+    ] as 'path_component) list
   type legacy = [
     | `arr of jv list
     | `obj of (string*jv) list
