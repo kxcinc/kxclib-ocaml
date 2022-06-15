@@ -1892,3 +1892,16 @@ end = struct
             Seq.append (Seq.cons (`Name name) (to_jsonm x)) seq)
             xs (Seq.return `Oe))
 end
+
+module Jv = struct
+  open Json
+
+  let pump_field fname : jv -> jv = function
+    | `obj [(_, _)] as jv -> jv
+    | `obj fs as jv -> (
+      match List.deassoc_opt fname fs with
+      | Some fval, fs' ->
+         `obj ((fname, fval) :: fs')
+      | None, _ -> jv)
+    | jv -> jv
+end
