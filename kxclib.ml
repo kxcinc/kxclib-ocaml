@@ -929,6 +929,8 @@ module String = struct
       Some (sub str 0 (slen-plen))
     ) else None
 
+  let to_bytes = Bytes.of_string
+
   let to_list str =
     to_seq str |> List.of_seq
 
