@@ -1919,8 +1919,7 @@ module Base64 = struct
     let int_9 = int_of_char '9'
   end open InternalUtils
 
-  let encode ?(no_padding=false) ?(c62='+') ?(c63='/') ?(pad_char='=')
-        ?prefix ?sub:input_range input =
+  let encode ?(no_padding=false) ?(c62='+') ?(c63='/') ?(offset=0) ?len input =
     let open Bytes in
     let c62, c63 = int_of_char c62, int_of_char c63 in
     let sixbit_to_char b =
@@ -1930,19 +1929,16 @@ module Base64 = struct
       else if b = 62 then c62
       else c63
     in
-    let iofs, ilen, itill = match input_range with
-      | None ->
-         let ilen = length input in
-         0, ilen, ilen
-      | Some (iofs, ilen) -> iofs, iofs+ilen, ilen in
-    let plen, prefix = match prefix with
-      | None -> 0, ignore
-      | Some p ->
-         let plen = String.length p in
-         plen, (fun out ->
-           iotaf' plen (fun i -> set out i (String.get p i))) in
-    let estimated_chars = (ilen / 3) * 4 + 4 (* worst case *) in
-    let output = create (plen + estimated_chars) in
+    let input_offset, input_end, input_length =
+      let orig_len = length input in
+      let len = len |? (orig_len - offset) in
+      let end_index = offset + len in
+      if len < 0 || end_index > orig_len then
+        invalid_arg' "Base64.encode: the input range (offset:%d, len:%d) is out of bounds" offset len
+      else offset, end_index, len
+    in
+    let estimated_chars = (input_length / 3) * 4 + 4 (* worst case: (4/3)n + 2 + "==" *) in
+    let output = create estimated_chars in
     let write i o len =
       let set value o =
         set_uint8 output o (sixbit_to_char (value land 0x3f));
@@ -1964,7 +1960,7 @@ module Base64 = struct
             |> set b3 (* b3[2]..b3[7] *)
     in
     let rec go i o =
-      match itill - i with
+      match input_end - i with
       | 0 ->
         let pad_chars =
           match o mod 4 with
@@ -1975,18 +1971,15 @@ module Base64 = struct
           | _ -> failwith "impossible"
         in
         List.range 0 pad_chars
-        |> List.fold_left (fun o _ -> set output o pad_char; o+1) o
+        |> List.fold_left (fun o _ -> set output o '='; o+1) o
       | 1 -> `I |> write i o |> go (i+1)
       | 2 -> `S `I |> write i o |> go (i+2)
       | _ -> `S (`S `I) |> write i o |> go (i+3)
     in
-    prefix output;
-    let actual_chars = go iofs plen in
+    let actual_chars = go input_offset 0 in
     Bytes.sub output 0 actual_chars |> Bytes.to_string
 
-  let decode ?(no_padding=false) ?(ignore_newline=false) ?(ignore_unknown=false)
-        ?(c62='+') ?(c63='/') ?(pad_char='=') ?prefix
-        ?sub:input_range input =
+  let decode ?(no_padding=false) ?(ignore_newline=false) ?(ignore_unknown=false) ?(c62='+') ?(c63='/') input =
     let open Bytes in
     let c62, c63 = int_of_char c62, int_of_char c63 in
     let char_to_sixbit c =
@@ -1997,25 +1990,14 @@ module Base64 = struct
       else if c = c63 then Some 63
       else None
     in
-    let input, input_str = of_string input, input in
-    (match prefix with
-     | Some p when not (String.starts_with p input_str) ->
-        invalid_arg "Base64.decode: wrong prefix"
-     | _ -> ());
-    let iofs, ilen, itill =
-      let iofs = match prefix with
-        | Some p -> String.length p
-        | None -> 0 in
-      let iofs, itill = match input_range with
-        | None -> iofs, length input
-        | Some (iofs, ilen) -> iofs, iofs+ilen in
-      let ilen = itill - iofs in
-      if no_padding || (ilen mod 4) = 0 then
-        iofs, ilen, itill
+    let input = of_string input in
+    let input_length =
+      let len = length input in
+      if no_padding || (len mod 4) = 0 then len
       else invalid_arg "Base64.decode: wrong padding"
     in
     let output =
-      let estimated_bytes = (ilen / 4) * 3 + 2 in  (* worst case: 3n+2 bytes (= 4n+3 chars) *)
+      let estimated_bytes = (input_length / 4) * 3 + 2 in  (* worst case: 3n+2 bytes (= 4n+3 chars) *)
       create estimated_bytes
     in
     let read stack o =
@@ -2042,10 +2024,11 @@ module Base64 = struct
     let check_padding s =
       match String.length s with
       | slen when slen > 0 && slen <= 2 ->
-         iotafl slen (fun acc i -> acc && String.get s i = pad_char) true
-      | _ -> false in
+         iotafl slen (fun acc i -> acc && String.get s i = '=') true
+      | _ -> false
+    in
     let rec go stack i o =
-      if i = itill then read stack o
+      if i = input_length then read stack o
       else
         let c = get_uint8 input i in
         match char_to_sixbit c with
@@ -2053,10 +2036,10 @@ module Base64 = struct
           begin match char_of_int c with
           | _ when ignore_unknown -> go stack (i+1) o
           | '\r' | '\n' when ignore_newline -> go stack (i+1) o
-          | c when c = pad_char && not no_padding ->
-            let rest = sub_string input i (itill - i) in
+          | c when c = '=' && not no_padding ->
+            let rest = sub_string input i (input_length - i) in
             if check_padding rest then read stack o
-            else invalid_arg' "Base64.decode: invalid char '%c' at index %d" pad_char i
+            else invalid_arg' "Base64.decode: invalid char '=' at index %d" i
           | c -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
           end
         | Some s ->
@@ -2067,32 +2050,24 @@ module Base64 = struct
           else
             go stack (i+1) o
     in
-    let actual_bytes = go [] iofs 0 in
+    let actual_bytes = go [] 0 0 in
     Bytes.sub output 0 actual_bytes
 
-  type base64_codec = (?sub:int * int -> bytes -> string) * (?sub:int * int -> string -> bytes)
+  type t = {
+    encode: (?offset:int -> ?len:int -> bytes -> string);
+    decode: (string -> bytes);
+  }
 
-  let base64_codec ?no_padding ?c62 ?c63 ?pad_char ?prefix
-        ?ignore_newline ?ignore_unknown
-        () : base64_codec =
-    let enc = encode ?no_padding ?c62 ?c63 ?pad_char ?prefix in
-    let dec = decode ?no_padding ?c62 ?c63 ?pad_char ?prefix ?ignore_newline ?ignore_unknown in
-    enc, dec
+  let mk ?no_padding ?c62 ?c63 ?ignore_newline ?ignore_unknown () : t =
+    let encode = encode ?no_padding ?c62 ?c63 in
+    let decode = decode ?no_padding ?c62 ?c63 ?ignore_newline ?ignore_unknown in
+    { encode; decode }
 
-  let encode_rfc4648' = encode ~no_padding:false ~c62:'+' ~c63:'/' ~pad_char:'='
-  let decode_rfc4648' ?(ignore_newline=true) =
-    decode ~no_padding:false ~c62:'+' ~c63:'/' ~pad_char:'='
-      ~ignore_newline ~ignore_unknown:false 
+  let encode_rfc4648 = encode ~no_padding:false ~c62:'+' ~c63:'/'
+  let decode_rfc4648 = decode ~no_padding:false ~c62:'+' ~c63:'/' ~ignore_unknown:false
+  let mk_rfc4648 = mk ~no_padding:false ~c62:'+' ~c63:'/' ~ignore_unknown:false
 
-  let encode_rfc4648_url' ?(no_padding=false) = encode ~no_padding ~c62:'-' ~c63:'_' ~pad_char:'='
-  let decode_rfc4648_url' ?(no_padding=false) =
-    decode ~no_padding ~c62:'-' ~c63:'_' ~pad_char:'='
-      ~ignore_newline:false ~ignore_unknown:false 
-
-  let encode_rfc4648 ?sub bytes = encode_rfc4648' ?sub bytes
-  let decode_rfc4648 ?sub str = decode_rfc4648' ?sub str
-
-  let encode_rfc4648_url ?sub bytes = encode_rfc4648_url' ?sub bytes
-  let decode_rfc4648_url ?sub str = decode_rfc4648_url' ?sub str
-
+  let encode_rfc4648_url = encode ~c62:'-' ~c63:'_'
+  let decode_rfc4648_url = decode ~c62:'-' ~c63:'_' ~ignore_unknown:false
+  let mk_rfc4648_url = mk ~c62:'-' ~c63:'_' ~ignore_unknown:false
 end

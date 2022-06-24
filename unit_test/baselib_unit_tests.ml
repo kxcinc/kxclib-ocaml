@@ -87,9 +87,8 @@ let stream_drop_2 = stream_drop (list string) 3 ["A"; "B"; "C"] []
 
 let base64_known () =
   let open Base64 in
-  let rfc4648_base64 = encode_rfc4648, decode_rfc4648 in
-  let rfc4648_base64url = encode_rfc4648_url, decode_rfc4648_url in
-  let prefixed = base64_codec() ~prefix:";base64," in
+  let rfc4648_base64 = mk_rfc4648 () in
+  let rfc4648_base64url = mk_rfc4648_url () in
   let cases = [
     (* from RFC4648 *)
     "", "", rfc4648_base64;
@@ -107,11 +106,14 @@ let base64_known () =
 
     (* very long strings *)
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.",
-    "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYS4=", rfc4648_base64;
+    "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYS4=",
+    rfc4648_base64;
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
-    "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVuaWFtLCBxdWlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBuaXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZXF1YXQu", rfc4648_base64;
+    "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVuaWFtLCBxdWlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBuaXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZXF1YXQu",
+    rfc4648_base64;
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVuaWFtLCBxdWlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBuaXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZXF1YXQuIER1aXMgYXV0ZSBpcnVyZSBkb2xvciBpbiByZXByZWhlbmRlcml0IGluIHZvbHVwdGF0ZSB2ZWxpdCBlc3NlIGNpbGx1bSBkb2xvcmUgZXUgZnVnaWF0IG51bGxhIHBhcmlhdHVyLiBFeGNlcHRldXIgc2ludCBvY2NhZWNhdCBjdXBpZGF0YXQgbm9uIHByb2lkZW50LCBzdW50IGluIGN1bHBhIHF1aSBvZmZpY2lhIGRlc2VydW50IG1vbGxpdCBhbmltIGlkIGVzdCBsYWJvcnVtLg==", rfc4648_base64;
+    "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVuaWFtLCBxdWlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBuaXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZXF1YXQuIER1aXMgYXV0ZSBpcnVyZSBkb2xvciBpbiByZXByZWhlbmRlcml0IGluIHZvbHVwdGF0ZSB2ZWxpdCBlc3NlIGNpbGx1bSBkb2xvcmUgZXUgZnVnaWF0IG51bGxhIHBhcmlhdHVyLiBFeGNlcHRldXIgc2ludCBvY2NhZWNhdCBjdXBpZGF0YXQgbm9uIHByb2lkZW50LCBzdW50IGluIGN1bHBhIHF1aSBvZmZpY2lhIGRlc2VydW50IG1vbGxpdCBhbmltIGlkIGVzdCBsYWJvcnVtLg==",
+    rfc4648_base64;
 
     (* bytes *)
     "\xff", "/w==", rfc4648_base64;
@@ -133,17 +135,37 @@ let base64_known () =
 
     (* base64url *)
     "\xff\xee\xdd\xcc", "_-7dzA==", rfc4648_base64url;
-
-    (* prefix *)
-    "\xff\xee\xdd\xcc", ";base64,/+7dzA==", prefixed;
   ] in
-  cases |> List.iter (fun (plain, code, ((enc, dec) : base64_codec)) ->
+  cases |> List.iter (fun (plain, code, (t: t)) ->
     let expected_plain = Bytes.of_string plain in
     let expected_code = code in
-    let actual_code = enc expected_plain in
+    let actual_code = t.encode expected_plain in
     check string (sprintf "base64: encode '%s' => %s" plain expected_code) expected_code actual_code;
-    let actual_plain = dec expected_code in
+    let actual_plain = t.decode expected_code in
     check bytes (sprintf "base64: decode '%s' => %s" code (String.escaped plain)) expected_plain actual_plain
+  )
+
+let base64_range () =
+  let open Base64 in
+  let orig = Bytes.of_string "\xff\xee\xdd\xcc\xbb\xaa\x99\x88" in
+  let cases = [
+    (* offset, len, expected_code *)
+    0, 8, "/+7dzLuqmYg=";
+    0, 7, "/+7dzLuqmQ==";
+    0, 6, "/+7dzLuq";
+    1, 7, "7t3Mu6qZiA==";
+    2, 6, "3cy7qpmI";
+    3, 5, "zLuqmYg=";
+    1, 6, "7t3Mu6qZ";
+    2, 4, "3cy7qg==";
+    3, 2, "zLs=";
+    4, 0, "";
+  ] in
+  cases |> List.iter (fun (offset, len, expected_code) ->
+    let actual_code = encode_rfc4648 ~offset ~len orig in
+    check string
+      (sprintf "base64: encode with range (offset=%d, len=%d) => '%s'" offset len expected_code)
+      expected_code actual_code
   )
 
 let () =
@@ -184,5 +206,6 @@ let () =
     ];
     "base64", [
       test_case "base64_known" `Quick base64_known;
+      test_case "base64_range" `Quick base64_range;
     ]
   ]
