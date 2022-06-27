@@ -86,69 +86,67 @@ let stream_drop_1 = stream_drop (list string) 0 ["A"; "B"; "C"] ["A"; "B"; "C"]
 let stream_drop_2 = stream_drop (list string) 3 ["A"; "B"; "C"] []
 
 let base64_known () =
-  let open Base64 in
-  let rfc4648_base64 = mk_rfc4648 () in
-  let rfc4648_base64url = mk_rfc4648_url () in
+  let rfc4648 = (module Base64 : Base64.T) in
+  let rfc4648_url = (module Base64.Url : Base64.T) in
   let cases = [
     (* from RFC4648 *)
-    "", "", rfc4648_base64;
-    "f", "Zg==", rfc4648_base64;
-    "fo", "Zm8=", rfc4648_base64;
-    "foo", "Zm9v", rfc4648_base64;
-    "foob", "Zm9vYg==", rfc4648_base64;
-    "fooba", "Zm9vYmE=", rfc4648_base64;
-    "foobar", "Zm9vYmFy", rfc4648_base64;
+    "", "", rfc4648;
+    "f", "Zg==", rfc4648;
+    "fo", "Zm8=", rfc4648;
+    "foo", "Zm9v", rfc4648;
+    "foob", "Zm9vYg==", rfc4648;
+    "fooba", "Zm9vYmE=", rfc4648;
+    "foobar", "Zm9vYmFy", rfc4648;
 
     (* long strings *)
-    "hello, world", "aGVsbG8sIHdvcmxk", rfc4648_base64;
-    "hello, world?!", "aGVsbG8sIHdvcmxkPyE=", rfc4648_base64;
-    "hello, world.", "aGVsbG8sIHdvcmxkLg==", rfc4648_base64;
+    "hello, world", "aGVsbG8sIHdvcmxk", rfc4648;
+    "hello, world?!", "aGVsbG8sIHdvcmxkPyE=", rfc4648;
+    "hello, world.", "aGVsbG8sIHdvcmxkLg==", rfc4648;
 
     (* very long strings *)
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna.",
     "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYS4=",
-    rfc4648_base64;
+    rfc4648;
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
     "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVuaWFtLCBxdWlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBuaXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZXF1YXQu",
-    rfc4648_base64;
+    rfc4648;
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
     "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdCwgc2VkIGRvIGVpdXNtb2QgdGVtcG9yIGluY2lkaWR1bnQgdXQgbGFib3JlIGV0IGRvbG9yZSBtYWduYSBhbGlxdWEuIFV0IGVuaW0gYWQgbWluaW0gdmVuaWFtLCBxdWlzIG5vc3RydWQgZXhlcmNpdGF0aW9uIHVsbGFtY28gbGFib3JpcyBuaXNpIHV0IGFsaXF1aXAgZXggZWEgY29tbW9kbyBjb25zZXF1YXQuIER1aXMgYXV0ZSBpcnVyZSBkb2xvciBpbiByZXByZWhlbmRlcml0IGluIHZvbHVwdGF0ZSB2ZWxpdCBlc3NlIGNpbGx1bSBkb2xvcmUgZXUgZnVnaWF0IG51bGxhIHBhcmlhdHVyLiBFeGNlcHRldXIgc2ludCBvY2NhZWNhdCBjdXBpZGF0YXQgbm9uIHByb2lkZW50LCBzdW50IGluIGN1bHBhIHF1aSBvZmZpY2lhIGRlc2VydW50IG1vbGxpdCBhbmltIGlkIGVzdCBsYWJvcnVtLg==",
-    rfc4648_base64;
+    rfc4648;
 
     (* bytes *)
-    "\xff", "/w==", rfc4648_base64;
-    "\xff\xee", "/+4=", rfc4648_base64;
-    "\xff\xee\xdd", "/+7d", rfc4648_base64;
-    "\xff\xee\xdd\xcc", "/+7dzA==", rfc4648_base64;
-    "\xff\xee\xdd\xcc\xbb", "/+7dzLs=", rfc4648_base64;
-    "\xff\xee\xdd\xcc\xbb\xaa", "/+7dzLuq", rfc4648_base64;
-    "\xff\xee\xdd\xcc\xbb\xaa\x99", "/+7dzLuqmQ==", rfc4648_base64;
-    "\xff\xee\xdd\xcc\xbb\xaa\x99\x88", "/+7dzLuqmYg=", rfc4648_base64;
+    "\xff", "/w==", rfc4648;
+    "\xff\xee", "/+4=", rfc4648;
+    "\xff\xee\xdd", "/+7d", rfc4648;
+    "\xff\xee\xdd\xcc", "/+7dzA==", rfc4648;
+    "\xff\xee\xdd\xcc\xbb", "/+7dzLs=", rfc4648;
+    "\xff\xee\xdd\xcc\xbb\xaa", "/+7dzLuq", rfc4648;
+    "\xff\xee\xdd\xcc\xbb\xaa\x99", "/+7dzLuqmQ==", rfc4648;
+    "\xff\xee\xdd\xcc\xbb\xaa\x99\x88", "/+7dzLuqmYg=", rfc4648;
 
     (* edge cases *)
-    "\x00", "AA==", rfc4648_base64;
-    "\x00\x00", "AAA=", rfc4648_base64;
-    "\x00\x00\x00", "AAAA", rfc4648_base64;
-    "\xff", "/w==", rfc4648_base64;
-    "\xff\xff", "//8=", rfc4648_base64;
-    "\xff\xff\xff", "////", rfc4648_base64;
+    "\x00", "AA==", rfc4648;
+    "\x00\x00", "AAA=", rfc4648;
+    "\x00\x00\x00", "AAAA", rfc4648;
+    "\xff", "/w==", rfc4648;
+    "\xff\xff", "//8=", rfc4648;
+    "\xff\xff\xff", "////", rfc4648;
 
     (* base64url *)
-    "\xff\xee\xdd\xcc", "_-7dzA==", rfc4648_base64url;
+    "\xff\xee\xdd\xcc", "_-7dzA", rfc4648_url;
   ] in
-  cases |> List.iter (fun (plain, code, (t: t)) ->
+  cases |> List.iter (fun (plain, code, (module B64: Base64.T)) ->
     let expected_plain = Bytes.of_string plain in
     let expected_code = code in
-    let actual_code = t.encode expected_plain in
+    let actual_code = B64.encode expected_plain in
     check string (sprintf "base64: encode '%s' => %s" plain expected_code) expected_code actual_code;
-    let actual_plain = t.decode expected_code in
+    let actual_plain = B64.decode expected_code in
     check bytes (sprintf "base64: decode '%s' => %s" code (String.escaped plain)) expected_plain actual_plain
   )
 
 let base64_range () =
-  let open Base64 in
   let orig = Bytes.of_string "\xff\xee\xdd\xcc\xbb\xaa\x99\x88" in
-  let cases = [
+  let input_cases = [
     (* offset, len, expected_code *)
     0, 8, "/+7dzLuqmYg=";
     0, 7, "/+7dzLuqmQ==";
@@ -161,11 +159,23 @@ let base64_range () =
     3, 2, "zLs=";
     4, 0, "";
   ] in
-  cases |> List.iter (fun (offset, len, expected_code) ->
-    let actual_code = encode_rfc4648 ~offset ~len orig in
+  input_cases |> List.iter (fun (offset, len, expected_code) ->
+    let actual_code = Base64.encode ~offset ~len orig in
     check string
       (sprintf "base64: encode with range (offset=%d, len=%d) => '%s'" offset len expected_code)
       expected_code actual_code
+  );
+  let output_cases = [
+    (* code, offset, len, expected_plain *)
+    "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==", 23, None, "Hello, World!";
+    "{'data': 'SGVsbG8sIFdvcmxkIQ=='}", 10, Some 20, "Hello, World!";
+  ] in
+  output_cases |> List.iter (fun (code, offset, len, expected_plain) ->
+    let actual_plain = Base64.decode ~offset ?len code in
+    check bytes
+      (sprintf "base64: decode '%s' with range (offset=%d, len=%s) => '%s'"
+        code offset (match len with None -> "None" | Some d -> sprintf "%d" d) expected_plain)
+      (Bytes.of_string expected_plain) actual_plain
   )
 
 let () =

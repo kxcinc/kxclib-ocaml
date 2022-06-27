@@ -1909,79 +1909,75 @@ module Jv = struct
 end
 
 module Base64 = struct
+  module type Config = sig
+    (** the 62nd character. ['+'] in rfc4648, ['-'] in rfc4648_url. *)
+    val c62 : char
 
-  module InternalUtils = struct
+    (** the 63rd character. ['/'] in rfc4648, ['_'] in rfc4648_url. *)
+    val c63 : char
+
+    (** the pad character. if [None], padding is disabled.
+
+        [Some '='] in rfc4648. [None] in rfc4648_url. *)
+    val pad : char option
+
+    (** if set to true, newline characters are ignored on decoding. *)
+    val ignore_newline : bool
+
+    (** if set to true, unknown characters are ignored on decoding.
+
+        [ignore_unknown = true] implies [ignore_newline = true]. *)
+    val ignore_unknown : bool
+  end
+
+  module type T = sig
+    (**
+      Takes an input [bytes], and writes the encoded string to [Buffer.t].
+      @param offset   the offset of input which the encoder should start reading from.
+      @param len      the length of input which the encoder should read.
+      @return the number of bytes written to [Buffer.t].
+    *)
+    val encode_buf : ?offset:int -> ?len:int -> Buffer.t -> bytes -> int (* written bytes*)
+
+    (**
+      Takes an input [string], and writes the decoded bytes to [Buffer.t].
+      @param offset   the offset of input which the decoder should start reading from.
+      @param len      the length of input which the decoder should read.
+      @return the number of bytes written to [Buffer.t].
+    *)
+    val decode_buf : ?offset:int -> ?len:int -> Buffer.t -> string -> int (* written bytes *)
+
+    (**
+      Takes an input [bytes], and returns the encoded [string].
+      @param offset   the offset of input which the encoder should start reading from.
+      @param len      the length of input which the encoder should read.
+    *)
+    val encode : ?offset:int -> ?len:int -> bytes -> string
+
+    (**
+      Takes an input [string], and returns the decoded [bytes].
+      @param offset   the offset of input which the decoder should start reading from.
+      @param len      the length of input which the decoder should read.
+    *)
+    val decode : ?offset:int -> ?len:int -> string -> bytes
+  end
+
+  module Make (C: Config) : T = struct
+    open C
+
     let int_A = int_of_char 'A'
     let int_Z = int_of_char 'Z'
     let int_a = int_of_char 'a'
     let int_z = int_of_char 'z'
     let int_0 = int_of_char '0'
     let int_9 = int_of_char '9'
-  end open InternalUtils
-
-  let encode ?(no_padding=false) ?(c62='+') ?(c63='/') ?(offset=0) ?len input =
-    let open Bytes in
-    let c62, c63 = int_of_char c62, int_of_char c63 in
+    let c62, c63 = int_of_char c62, int_of_char c63
     let sixbit_to_char b =
       if b < 26 (* A-Z *) then b + int_A
       else if b < 52 (* a-z *) then b - 26 + int_a
       else if b < 62 (* 0-9 *) then b - 52 + int_0
       else if b = 62 then c62
       else c63
-    in
-    let input_offset, input_end, input_length =
-      let orig_len = length input in
-      let len = len |? (orig_len - offset) in
-      let end_index = offset + len in
-      if len < 0 || end_index > orig_len then
-        invalid_arg' "Base64.encode: the input range (offset:%d, len:%d) is out of bounds" offset len
-      else offset, end_index, len
-    in
-    let estimated_chars = (input_length / 3) * 4 + 4 (* worst case: (4/3)n + 2 + "==" *) in
-    let output = create estimated_chars in
-    let write i o len =
-      let set value o =
-        set_uint8 output o (sixbit_to_char (value land 0x3f));
-        o+1
-      in
-      let get i = get_uint8 input i in
-      let b1 = get i in
-      let o = o |> set (b1 lsr 2) in (* b1[0]..b1[5] *)
-      match len with
-      | `I -> o |> set (b1 lsl 4) (* b1[6] b1[7] 0 0 0 0 *)
-      | `S n ->
-        let b2 = get (i+1) in
-        let o = o |> set ((b1 lsl 4) lor (b2 lsr 4)) in (* b1[6] b1[7] b2[0]..b2[3] *)
-        match n with
-        | `I -> o |> set (b2 lsl 2) (* b2[4]..b2[7] 0 0*)
-        | `S `I ->
-          let b3 = get (i+2) in
-          o |> set ((b2 lsl 2) lor (b3 lsr 6)) (* b2[4]..b2[7] b3[0] b3[1]*)
-            |> set b3 (* b3[2]..b3[7] *)
-    in
-    let rec go i o =
-      match input_end - i with
-      | 0 ->
-        let pad_chars =
-          match o mod 4 with
-          | _ when no_padding -> 0
-          | 0 -> 0 (* when len mod 3 = 0 *)
-          | 2 -> 2 (* when len mod 3 = 1 *)
-          | 3 -> 1 (* when len mod 3 = 2 *)
-          | _ -> failwith "impossible"
-        in
-        List.range 0 pad_chars
-        |> List.fold_left (fun o _ -> set output o '='; o+1) o
-      | 1 -> `I |> write i o |> go (i+1)
-      | 2 -> `S `I |> write i o |> go (i+2)
-      | _ -> `S (`S `I) |> write i o |> go (i+3)
-    in
-    let actual_chars = go input_offset 0 in
-    Bytes.sub output 0 actual_chars |> Bytes.to_string
-
-  let decode ?(no_padding=false) ?(ignore_newline=false) ?(ignore_unknown=false) ?(c62='+') ?(c63='/') input =
-    let open Bytes in
-    let c62, c63 = int_of_char c62, int_of_char c63 in
     let char_to_sixbit c =
       if int_A <= c && c <= int_Z then Some (c - int_A)
       else if int_a <= c && c <= int_z then Some (c - int_a + 26)
@@ -1989,85 +1985,164 @@ module Base64 = struct
       else if c = c62 then Some 62
       else if c = c63 then Some 63
       else None
-    in
-    let input = of_string input in
-    let input_length =
-      let len = length input in
-      if no_padding || (len mod 4) = 0 then len
-      else invalid_arg "Base64.decode: wrong padding"
-    in
-    let output =
-      let estimated_bytes = (input_length / 4) * 3 + 2 in  (* worst case: 3n+2 bytes (= 4n+3 chars) *)
-      create estimated_bytes
-    in
-    let read stack o =
-      let set o value = set_uint8 output o (value land 0xff); o+1 in
-      match List.rev stack with
-      | [] -> o
-      | [_] -> invalid_arg "Base64.decode: unterminated input"
-      | s1 :: s2 :: ss ->
-        let o = set o ((s1 lsl 2) lor (s2 lsr 4)) in (* s1[0]..s1[5] s2[0] s2[1] *)
-        match ss with
-        | [] -> (* [3n+1 bytes] 4bits = s2[2]..s2[5] should've been padded *)
-          if not ((s2 land 0xf) = 0) then invalid_arg "Base64.decode: unterminated input"
-          else o
-        | s3 :: ss ->
-          let o = set o ((s2 lsl 4) lor (s3 lsr 2)) in (* s2[2]..s1[5] s3[0]..[3] *)
-          match ss with
-          | [] -> (* [3n+2 bytes] 2bits = s3[4] s3[5] should've been padded *)
-            if not ((s3 land 0x3) = 0) then invalid_arg "Base64.decode: unterminated input"
-            else o
-          | s4 :: [] -> (* [3n bytes] *)
-            set o ((s3 lsl 6) lor s4) (* s3[4] s3[5] s4[0]..[5] *)
-          | _ -> failwith "impossible"
-    in
-    let check_padding s =
-      match String.length s with
-      | slen when slen > 0 && slen <= 2 ->
-         iotafl slen (fun acc i -> acc && String.get s i = '=') true
-      | _ -> false
-    in
-    let rec go stack i o =
-      if i = input_length then read stack o
-      else
-        let c = get_uint8 input i in
-        match char_to_sixbit c with
-        | None ->
-          begin match char_of_int c with
-          | _ when ignore_unknown -> go stack (i+1) o
-          | '\r' | '\n' when ignore_newline -> go stack (i+1) o
-          | c when c = '=' && not no_padding ->
-            let rest = sub_string input i (input_length - i) in
-            if check_padding rest then read stack o
-            else invalid_arg' "Base64.decode: invalid char '=' at index %d" i
-          | c -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
+
+    let encode_buf ?(offset=0) ?len (output: Buffer.t) (input: bytes) =
+      let input_offset, input_end, input_length =
+        let orig_len = Bytes.length input in
+        let len = len |? (orig_len - offset) in
+        let end_index = offset + len in
+        if len < 0 || end_index > orig_len then
+          invalid_arg' "Base64.encode: the input range (offset:%d, len:%d) is out of bounds" offset len
+        else offset, end_index, len
+      in
+      let output_buf =
+        let estimated_chars = (input_length / 3) * 4 + 4 (* worst case: (4/3)n + 2 + "==" *) in
+        Buffer.create estimated_chars
+      in
+      let write i o len =
+        let set value o =
+          Buffer.add_uint8 output_buf (sixbit_to_char (value land 0x3f));
+          o + 1
+        in
+        let get i = Bytes.get_uint8 input i in
+        let b1 = get i in
+        let o = o |> set (b1 lsr 2) in (* b1[0]..b1[5] *)
+        match len with
+        | `I -> o |> set (b1 lsl 4) (* b1[6] b1[7] 0 0 0 0 *)
+        | `S n ->
+          let b2 = get (i+1) in
+          let o = o |> set ((b1 lsl 4) lor (b2 lsr 4)) in (* b1[6] b1[7] b2[0]..b2[3] *)
+          match n with
+          | `I -> o |> set (b2 lsl 2) (* b2[4]..b2[7] 0 0*)
+          | `S `I ->
+            let b3 = get (i+2) in
+            o |> set ((b2 lsl 2) lor (b3 lsr 6)) (* b2[4]..b2[7] b3[0] b3[1]*)
+              |> set b3 (* b3[2]..b3[7] *)
+      in
+      let rec go i o =
+        match input_end - i with
+        | 0 ->
+          begin match pad with
+          | Some pad ->
+            let pad_chars =
+              match o mod 4 with
+              | 0 -> 0 (* when len mod 3 = 0 *)
+              | 2 -> 2 (* when len mod 3 = 1 *)
+              | 3 -> 1 (* when len mod 3 = 2 *)
+              | _ -> failwith "impossible"
+            in
+            List.range 0 pad_chars
+            |> List.fold_left (fun o _ -> Buffer.add_char output_buf pad; o+1) o
+          | None -> o
           end
-        | Some s ->
-          let stack = s :: stack in
-          if List.length stack = 4 then
-            let o = read stack o in
-            go [] (i+1) o
-          else
-            go stack (i+1) o
-    in
-    let actual_bytes = go [] 0 0 in
-    Bytes.sub output 0 actual_bytes
+        | 1 -> `I |> write i o |> go (i+1)
+        | 2 -> `S `I |> write i o |> go (i+2)
+        | _ -> `S (`S `I) |> write i o |> go (i+3)
+      in
+      let total_bytes = go input_offset 0 in
+      Buffer.add_buffer output output_buf;
+      total_bytes
 
-  type t = {
-    encode: (?offset:int -> ?len:int -> bytes -> string);
-    decode: (string -> bytes);
-  }
+    let encode ?offset ?len input =
+      let output = Buffer.create 0 in
+      encode_buf ?offset ?len output input |> ignore;
+      Buffer.contents output
 
-  let mk ?no_padding ?c62 ?c63 ?ignore_newline ?ignore_unknown () : t =
-    let encode = encode ?no_padding ?c62 ?c63 in
-    let decode = decode ?no_padding ?c62 ?c63 ?ignore_newline ?ignore_unknown in
-    { encode; decode }
+    let decode_buf ?(offset=0) ?len (output: Buffer.t) (input: string) =
+      let input = Bytes.of_string input in
+      let input_offset, input_end, input_length =
+        let orig_len = Bytes.length input in
+        let len = len |? (orig_len - offset) in
+        let end_index = offset + len in
+        if len < 0 || end_index > orig_len then
+          invalid_arg' "Base64.encode: the input range (offset:%d, len:%d) is out of bounds" offset len
+        else if pad <> None && len mod 4 <> 0 then
+          invalid_arg "Base64.decode: wrong padding"
+        else offset, end_index, len
+      in
+      let output_buf =
+        let estimated_bytes = (input_length / 4) * 3 + 2 in  (* worst case: 3n+2 bytes (= 4n+3 chars) *)
+        Buffer.create estimated_bytes
+      in
+      let read stack o =
+        let set o value = Buffer.add_uint8 output_buf (value land 0xff); o+1 in
+        match List.rev stack with
+        | [] -> o
+        | [_] -> invalid_arg "Base64.decode: unterminated input"
+        | s1 :: s2 :: ss ->
+          let o = set o ((s1 lsl 2) lor (s2 lsr 4)) in (* s1[0]..s1[5] s2[0] s2[1] *)
+          match ss with
+          | [] -> (* [3n+1 bytes] 4bits = s2[2]..s2[5] should've been padded *)
+            if not ((s2 land 0xf) = 0) then invalid_arg "Base64.decode: unterminated input"
+            else o
+          | s3 :: ss ->
+            let o = set o ((s2 lsl 4) lor (s3 lsr 2)) in (* s2[2]..s1[5] s3[0]..[3] *)
+            match ss with
+            | [] -> (* [3n+2 bytes] 2bits = s3[4] s3[5] should've been padded *)
+              if not ((s3 land 0x3) = 0) then invalid_arg "Base64.decode: unterminated input"
+              else o
+            | s4 :: [] -> (* [3n bytes] *)
+              set o ((s3 lsl 6) lor s4) (* s3[4] s3[5] s4[0]..[5] *)
+            | _ -> failwith "impossible"
+      in
+      let rec go stack i o =
+        if i = input_end then read stack o
+        else
+          let c = Bytes.get_uint8 input i in
+          match char_to_sixbit c with
+          | None ->
+            begin match char_of_int c with
+            | _ when ignore_unknown -> go stack (i+1) o
+            | '\r' | '\n' when ignore_newline -> go stack (i+1) o
+            | c ->
+              begin match pad with
+              | Some pad when c = pad ->
+                let rest = Bytes.sub_string input i (input_end - i) in
+                let valid =
+                  match String.length rest with
+                  | rest_len when rest_len > 0 && rest_len <= 2 ->
+                    iotafl rest_len (fun acc i -> acc && String.get rest i = pad) true
+                  | _ -> false
+                  in
+                if valid then read stack o
+                else invalid_arg' "Base64.decode: invalid char '%c' at index %d" pad i
+              | _ ->
+                invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
+              end
+            end
+          | Some s ->
+            let stack = s :: stack in
+            if List.length stack = 4 then
+              let o = read stack o in
+              go [] (i+1) o
+            else
+              go stack (i+1) o
+      in
+      let total_bytes = go [] input_offset 0 in
+      Buffer.add_buffer output output_buf;
+      total_bytes
 
-  let encode_rfc4648 = encode ~no_padding:false ~c62:'+' ~c63:'/'
-  let decode_rfc4648 = decode ~no_padding:false ~c62:'+' ~c63:'/' ~ignore_unknown:false
-  let mk_rfc4648 = mk ~no_padding:false ~c62:'+' ~c63:'/' ~ignore_unknown:false
+    let decode ?offset ?len input =
+      let output = Buffer.create 0 in
+      decode_buf ?offset ?len output input |> ignore;
+      Buffer.to_bytes output
+  end
 
-  let encode_rfc4648_url = encode ~c62:'-' ~c63:'_'
-  let decode_rfc4648_url = decode ~c62:'-' ~c63:'_' ~ignore_unknown:false
-  let mk_rfc4648_url = mk ~c62:'-' ~c63:'_' ~ignore_unknown:false
+  module Config_rfc4648 : Config = struct
+    let c62 = '+'
+    let c63 = '/'
+    let pad = Some '='
+    let ignore_newline = false
+    let ignore_unknown = false
+  end
+  include Make(Config_rfc4648)
+
+  module Config_rfc4648_url : Config = struct
+    let c62 = '-'
+    let c63 = '_'
+    let pad = None
+    let ignore_newline = false
+    let ignore_unknown = false
+  end
+  module Url = Make(Config_rfc4648_url)
 end
