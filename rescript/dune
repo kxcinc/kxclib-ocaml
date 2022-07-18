@@ -1,0 +1,15 @@
+(rule
+ (mode (promote))
+ (target kxclib.ml)
+ (deps ../kxclib.ml kxclib_comp_re.ml)
+ (action
+  (with-stdout-to %{target}
+   (progn
+    (echo "#0 \"kxclib_comp_re.ml\"\n")
+    (cat kxclib_comp_re.ml)
+    (echo "\nopen Kxclib_comp\n")
+    (echo "\n[@@@warning \"-3-44\"]\n")
+    (echo "\n#0 \"kxclib.ml\"\n")
+    (cat ../kxclib.ml)))))
+
+(dirs :standard \ node_modules)

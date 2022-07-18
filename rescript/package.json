@@ -1,0 +1,31 @@
+{
+  "name": "kxclib-re",
+  "version": "1.0.0",
+  "description": "Kxclib packaged to be used with ReScript",
+  "keywords": ["kxclib", "rescript"],
+  "main": "kxclib.bs.js",
+  "scripts": {
+    "build": "dune build && yarn re:compile",
+    "test": "npx jest",
+    "re:compile": "rescript build -with-deps"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kxcteam/kxclib-ocaml.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kxcteam/kxclib-ocaml/issues"
+  },
+  "homepage": "https://github.com/kxcteam/kxclib-ocaml",
+  "devDependencies": {
+    "bs-platform": "^9.0.2",
+    "gentype": "^4.4.0",
+    "jest": "^28.1.3",
+    "rescript": "^9.1.4"
+  },
+  "peerDependencies": {
+    "bs-platform": "9.x"
+  }
+}

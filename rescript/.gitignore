@@ -1,0 +1,6 @@
+lib/bs
+lib/ocaml
+.merlin
+yarn-error.log
+node_modules
+.bsb.lock
