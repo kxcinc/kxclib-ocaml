@@ -972,6 +972,7 @@ module IoPervasives = struct
   (* optimization *)
   let slurp_file path =
     with_input_file path slurp_input
+  [@@warning "-48"]
 
   let spit_file path str =
     with_output_file path (Fn.flip output_string str)
