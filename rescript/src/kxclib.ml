@@ -1297,7 +1297,7 @@ open Kxclib_comp
       [("library-name", "kxclib_src");
       ("ppx_optcomp.env",
         (env ~flambda2:(Defined false) ~flambda_backend:(Defined false)
-           ~ocaml_version:(Defined (4, 12, 0)) ~os_type:(Defined "re")
+           ~ocaml_version:(Defined (4, 12, 1)) ~os_type:(Defined "re")
            ~re:(Defined true)))]
   }]
 let refset r x = r := x[@@ocaml.doc " [refset r x] sets [x] to ref [r]. "]

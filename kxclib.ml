@@ -594,6 +594,7 @@ module Array = struct
     fun arr idx -> arr.(idx)
 end
 
+[%%if ocaml_version < (4, 14, 0)]
 module Stream = struct
   include Stream
 
@@ -628,6 +629,7 @@ module Stream = struct
 
   let drop n s = Fn.ntimes n drop1 s
 end
+[%%endif]
 
 module List = struct
   include PipeOps(List)
