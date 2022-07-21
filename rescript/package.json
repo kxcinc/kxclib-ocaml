@@ -1,6 +1,6 @@
 {
   "name": "kxclib-re",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Kxclib packaged to be used with ReScript",
   "keywords": ["kxclib", "rescript", "ocaml"],
   "main": "src/kxclib.bs.js",
@@ -9,6 +9,13 @@
     "test": "npx jest",
     "re:compile": "rescript build -with-deps"
   },
+  "files": [
+    "bsconfig.json",
+    "package.json",
+    "*.ml",
+    "*.mli",
+    "src/**"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kxcteam/kxclib-ocaml.git"
