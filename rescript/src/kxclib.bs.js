@@ -3552,7 +3552,7 @@ function protect(f) {
   };
 }
 
-var ResultWithErrmsg = {
+var ResultWithErrmsg0 = {
   bind: bind$1,
   $$return: ok,
   protect$p: protect$p,
@@ -3737,7 +3737,7 @@ function some_if(cond, x) {
   
 }
 
-var $$Option$1 = {
+var Option0 = {
   or_exn: or_exn,
   or_not_found: or_not_found,
   none: undefined,
@@ -3765,6 +3765,91 @@ var $$Option$1 = {
   fmap: fmap,
   of_bool: of_bool,
   some_if: some_if
+};
+
+function $$return$1(x) {
+  return Caml_option.some(x);
+}
+
+function $great$great(ma, mb) {
+  return bind(ma, (function (param) {
+                return mb;
+              }));
+}
+
+function $great$pipe$eq(ma, f) {
+  return bind(ma, (function (x) {
+                return Caml_option.some(Curry._1(f, x));
+              }));
+}
+
+function sequence_list(ms) {
+  return bind(Belt_List.reduce(ms, /* [] */0, (function (acc, m) {
+                    return bind(acc, (function (acc) {
+                                  return bind(m, (function (x) {
+                                                return {
+                                                        hd: x,
+                                                        tl: acc
+                                                      };
+                                              }));
+                                }));
+                  })), (function (xs) {
+                return Caml_option.some(Belt_List.reverse(xs));
+              }));
+}
+
+function $great$great$eq$star(ms, af) {
+  return bind(sequence_list(ms), af);
+}
+
+var Ops_monad = {
+  $$return: $$return$1,
+  $great$great$eq: bind,
+  $great$great: $great$great,
+  $great$pipe$eq: $great$pipe$eq,
+  sequence_list: sequence_list,
+  $great$great$eq$star: $great$great$eq$star
+};
+
+var Ops = {
+  $$return: $$return$1,
+  $great$great$eq: bind,
+  $great$great: $great$great,
+  $great$pipe$eq: $great$pipe$eq,
+  sequence_list: sequence_list,
+  $great$great$eq$star: $great$great$eq$star
+};
+
+var $$Option$1 = {
+  or_exn: or_exn,
+  or_not_found: or_not_found,
+  none: undefined,
+  some: some,
+  value: value,
+  get: get,
+  bind: bind,
+  join: join,
+  map: map$1,
+  fold: fold,
+  iter: iter$1,
+  is_none: is_none,
+  is_some: is_some,
+  equal: equal,
+  compare: compare,
+  to_result: to_result,
+  to_list: to_list,
+  to_seq: to_seq,
+  $$return: some,
+  v: v,
+  v$p: v$p,
+  otherwise: otherwise,
+  pp: pp,
+  filter: filter$1,
+  fmap: fmap,
+  of_bool: of_bool,
+  some_if: some_if,
+  Ops_monad: Ops_monad,
+  Ops: Ops
 };
 
 function $great$question(o, f) {
@@ -4018,7 +4103,7 @@ function make$1(n, x) {
   };
 }
 
-var Seq$1 = {
+var Seq0 = {
   empty: empty,
   $$return: $$return,
   cons: cons,
@@ -4053,6 +4138,128 @@ var Seq$1 = {
   make: make$1
 };
 
+function $pipe$amp$great$1(xs, f) {
+  return function (param) {
+    return map(f, xs, param);
+  };
+}
+
+function $pipe$plus$amp$great$1(xs, f) {
+  return function (param) {
+    return map((function (x) {
+                  return [
+                          x,
+                          Curry._1(f, x)
+                        ];
+                }), xs, param);
+  };
+}
+
+function $pipe$bang$great$1(xs, f) {
+  return iter(f, xs);
+}
+
+function $pipe$neg$bang$great$1(xs, f) {
+  iter(f, xs);
+  return xs;
+}
+
+function $pipe$at$great$1(xs, param) {
+  var f = param[1];
+  return fold_left((function (acc, x) {
+                return Curry._1(f, [
+                            acc,
+                            x
+                          ]);
+              }), param[0], xs);
+}
+
+function $pipe$question$great$1(xs, f) {
+  return function (param) {
+    return filter(f, xs, param);
+  };
+}
+
+function $pipe$amp$question$great$1(xs, f) {
+  return function (param) {
+    return filter_map(f, xs, param);
+  };
+}
+
+function $pipe$plus$amp$question$great$1(xs, f) {
+  return function (param) {
+    return filter_map((function (x) {
+                  var y = Curry._1(f, x);
+                  if (y !== undefined) {
+                    return [
+                            x,
+                            Caml_option.valFromOption(y)
+                          ];
+                  }
+                  
+                }), xs, param);
+  };
+}
+
+var Ops_piping = {
+  $pipe$amp$great: $pipe$amp$great$1,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$1,
+  $pipe$bang$great: $pipe$bang$great$1,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$1,
+  $pipe$at$great: $pipe$at$great$1,
+  $pipe$question$great: $pipe$question$great$1,
+  $pipe$amp$question$great: $pipe$amp$question$great$1,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$1
+};
+
+var Ops$1 = {
+  $pipe$amp$great: $pipe$amp$great$1,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$1,
+  $pipe$bang$great: $pipe$bang$great$1,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$1,
+  $pipe$at$great: $pipe$at$great$1,
+  $pipe$question$great: $pipe$question$great$1,
+  $pipe$amp$question$great: $pipe$amp$question$great$1,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$1
+};
+
+var Seq$1 = {
+  empty: empty,
+  $$return: $$return,
+  cons: cons,
+  append: append,
+  map: map,
+  filter_map: filter_map,
+  filter: filter,
+  flat_map: flat_map,
+  flat_map_app: flat_map_app,
+  fold_left: fold_left,
+  iter: iter,
+  unfold: unfold,
+  $pipe$amp$great: $pipe$amp$great,
+  $pipe$plus$amp$great: $pipe$plus$amp$great,
+  $pipe$bang$great: $pipe$bang$great,
+  $pipe$neg$bang$great: $pipe$neg$bang$great,
+  $pipe$at$great: $pipe$at$great,
+  $pipe$question$great: $pipe$question$great,
+  $pipe$amp$question$great: $pipe$amp$question$great,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great,
+  from: from,
+  iota: iota,
+  length: length$3,
+  range: range,
+  $$enum: $$enum,
+  limited: limited,
+  iteri: iteri$2,
+  hd: hd$1,
+  tl: tl$1,
+  take: take,
+  drop: drop,
+  make: make$1,
+  Ops_piping: Ops_piping,
+  Ops: Ops$1
+};
+
 function filter$2(f, arr) {
   var partial_arg = to_seq$1(arr);
   return of_seq(function (param) {
@@ -4067,11 +4274,11 @@ function filter_map$2(f, arr) {
             });
 }
 
-function $pipe$amp$great$1(xs, f) {
+function $pipe$amp$great$2(xs, f) {
   return map$2(f, xs);
 }
 
-function $pipe$plus$amp$great$1(xs, f) {
+function $pipe$plus$amp$great$2(xs, f) {
   return map$2((function (x) {
                 return [
                         x,
@@ -4080,16 +4287,16 @@ function $pipe$plus$amp$great$1(xs, f) {
               }), xs);
 }
 
-function $pipe$bang$great$1(xs, f) {
+function $pipe$bang$great$2(xs, f) {
   return iter$2(f, xs);
 }
 
-function $pipe$neg$bang$great$1(xs, f) {
+function $pipe$neg$bang$great$2(xs, f) {
   iter$2(f, xs);
   return xs;
 }
 
-function $pipe$at$great$1(xs, param) {
+function $pipe$at$great$2(xs, param) {
   var f = param[1];
   return fold_left$1((function (acc, x) {
                 return Curry._1(f, [
@@ -4099,15 +4306,15 @@ function $pipe$at$great$1(xs, param) {
               }), param[0], xs);
 }
 
-function $pipe$question$great$1(xs, f) {
+function $pipe$question$great$2(xs, f) {
   return filter$2(f, xs);
 }
 
-function $pipe$amp$question$great$1(xs, f) {
+function $pipe$amp$question$great$2(xs, f) {
   return filter_map$2(f, xs);
 }
 
-function $pipe$plus$amp$question$great$1(xs, f) {
+function $pipe$plus$amp$question$great$2(xs, f) {
   return filter_map$2((function (x) {
                 var y = Curry._1(f, x);
                 if (y !== undefined) {
@@ -4320,6 +4527,212 @@ function shuffle(rngOpt, arr) {
 
 var to_function = Belt_Array.getExn;
 
+var Array0 = {
+  B: B,
+  Imported: Imported,
+  length: length,
+  get: get$1,
+  set: set,
+  make: make,
+  create: create,
+  Internals: Internals,
+  init: init,
+  copy: copy,
+  append: append$1,
+  sub: sub,
+  fill: fill,
+  blit: blit,
+  iter: iter$2,
+  iter2: iter2,
+  map: map$2,
+  map2: map2,
+  iteri: iteri,
+  mapi: mapi,
+  to_list: to_list$1,
+  list_length: list_length,
+  of_list: of_list,
+  fold_left: fold_left$1,
+  fold_right: fold_right,
+  exists: exists,
+  for_all: for_all,
+  for_all2: for_all2,
+  exists2: exists2,
+  mem: mem,
+  memq: memq,
+  Bottom: Bottom,
+  sort: sort,
+  cutoff: 5,
+  stable_sort: stable_sort,
+  fast_sort: stable_sort,
+  to_seq: to_seq$1,
+  to_seqi: to_seqi,
+  of_rev_list: of_rev_list,
+  of_seq: of_seq,
+  filter: filter$2,
+  filter_map: filter_map$2,
+  $pipe$amp$great: $pipe$amp$great$2,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$2,
+  $pipe$bang$great: $pipe$bang$great$2,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$2,
+  $pipe$at$great: $pipe$at$great$2,
+  $pipe$question$great: $pipe$question$great$2,
+  $pipe$amp$question$great: $pipe$amp$question$great$2,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$2,
+  of_list_of_length: of_list_of_length,
+  mean: mean,
+  min: min,
+  max: max,
+  first: first,
+  last: last,
+  sorted: sorted,
+  update: update,
+  update_each: update_each,
+  blastsati: blastsati,
+  blastsat: blastsat,
+  swap: swap,
+  shuffle: shuffle,
+  to_function: to_function
+};
+
+function $pipe$amp$great$3(xs, f) {
+  return map$2(f, xs);
+}
+
+function $pipe$plus$amp$great$3(xs, f) {
+  return map$2((function (x) {
+                return [
+                        x,
+                        Curry._1(f, x)
+                      ];
+              }), xs);
+}
+
+function $pipe$bang$great$3(xs, f) {
+  return iter$2(f, xs);
+}
+
+function $pipe$neg$bang$great$3(xs, f) {
+  iter$2(f, xs);
+  return xs;
+}
+
+function $pipe$at$great$3(xs, param) {
+  var f = param[1];
+  return fold_left$1((function (acc, x) {
+                return Curry._1(f, [
+                            acc,
+                            x
+                          ]);
+              }), param[0], xs);
+}
+
+function $pipe$question$great$3(xs, f) {
+  return filter$2(f, xs);
+}
+
+function $pipe$amp$question$great$3(xs, f) {
+  return filter_map$2(f, xs);
+}
+
+function $pipe$plus$amp$question$great$3(xs, f) {
+  return filter_map$2((function (x) {
+                var y = Curry._1(f, x);
+                if (y !== undefined) {
+                  return [
+                          x,
+                          Caml_option.valFromOption(y)
+                        ];
+                }
+                
+              }), xs);
+}
+
+var Ops_piping$1 = {
+  $pipe$amp$great: $pipe$amp$great$3,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$3,
+  $pipe$bang$great: $pipe$bang$great$3,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$3,
+  $pipe$at$great: $pipe$at$great$3,
+  $pipe$question$great: $pipe$question$great$3,
+  $pipe$amp$question$great: $pipe$amp$question$great$3,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$3
+};
+
+function $pipe$amp$great$4(xs, f) {
+  return map$2(f, xs);
+}
+
+function $pipe$plus$amp$great$4(xs, f) {
+  return map$2((function (x) {
+                return [
+                        x,
+                        Curry._1(f, x)
+                      ];
+              }), xs);
+}
+
+function $pipe$bang$great$4(xs, f) {
+  return iter$2(f, xs);
+}
+
+function $pipe$neg$bang$great$4(xs, f) {
+  iter$2(f, xs);
+  return xs;
+}
+
+function $pipe$at$great$4(xs, param) {
+  var f = param[1];
+  return fold_left$1((function (acc, x) {
+                return Curry._1(f, [
+                            acc,
+                            x
+                          ]);
+              }), param[0], xs);
+}
+
+function $pipe$question$great$4(xs, f) {
+  return filter$2(f, xs);
+}
+
+function $pipe$amp$question$great$4(xs, f) {
+  return filter_map$2(f, xs);
+}
+
+function $pipe$plus$amp$question$great$4(xs, f) {
+  return filter_map$2((function (x) {
+                var y = Curry._1(f, x);
+                if (y !== undefined) {
+                  return [
+                          x,
+                          Caml_option.valFromOption(y)
+                        ];
+                }
+                
+              }), xs);
+}
+
+var Ops_monad$1 = {
+  $pipe$amp$great: $pipe$amp$great$4,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$4,
+  $pipe$bang$great: $pipe$bang$great$4,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$4,
+  $pipe$at$great: $pipe$at$great$4,
+  $pipe$question$great: $pipe$question$great$4,
+  $pipe$amp$question$great: $pipe$amp$question$great$4,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$4
+};
+
+var Ops$2 = {
+  $pipe$amp$great: $pipe$amp$great$4,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$4,
+  $pipe$bang$great: $pipe$bang$great$4,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$4,
+  $pipe$at$great: $pipe$at$great$4,
+  $pipe$question$great: $pipe$question$great$4,
+  $pipe$amp$question$great: $pipe$amp$question$great$4,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$4
+};
+
 var $$Array$2 = {
   B: B,
   Imported: Imported,
@@ -4363,14 +4776,14 @@ var $$Array$2 = {
   of_seq: of_seq,
   filter: filter$2,
   filter_map: filter_map$2,
-  $pipe$amp$great: $pipe$amp$great$1,
-  $pipe$plus$amp$great: $pipe$plus$amp$great$1,
-  $pipe$bang$great: $pipe$bang$great$1,
-  $pipe$neg$bang$great: $pipe$neg$bang$great$1,
-  $pipe$at$great: $pipe$at$great$1,
-  $pipe$question$great: $pipe$question$great$1,
-  $pipe$amp$question$great: $pipe$amp$question$great$1,
-  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$1,
+  $pipe$amp$great: $pipe$amp$great$2,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$2,
+  $pipe$bang$great: $pipe$bang$great$2,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$2,
+  $pipe$at$great: $pipe$at$great$2,
+  $pipe$question$great: $pipe$question$great$2,
+  $pipe$amp$question$great: $pipe$amp$question$great$2,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$2,
   of_list_of_length: of_list_of_length,
   mean: mean,
   min: min,
@@ -4384,7 +4797,10 @@ var $$Array$2 = {
   blastsat: blastsat,
   swap: swap,
   shuffle: shuffle,
-  to_function: to_function
+  to_function: to_function,
+  Ops_piping: Ops_piping$1,
+  Ops_monad: Ops_monad$1,
+  Ops: Ops$2
 };
 
 function to_list_rev(stream) {
@@ -4503,11 +4919,11 @@ var Stream$1 = {
   drop: drop$1
 };
 
-function $pipe$amp$great$2(xs, f) {
+function $pipe$amp$great$5(xs, f) {
   return map$4(f, xs);
 }
 
-function $pipe$plus$amp$great$2(xs, f) {
+function $pipe$plus$amp$great$5(xs, f) {
   return map$4((function (x) {
                 return [
                         x,
@@ -4516,16 +4932,16 @@ function $pipe$plus$amp$great$2(xs, f) {
               }), xs);
 }
 
-function $pipe$bang$great$2(xs, f) {
+function $pipe$bang$great$5(xs, f) {
   return iter$4(f, xs);
 }
 
-function $pipe$neg$bang$great$2(xs, f) {
+function $pipe$neg$bang$great$5(xs, f) {
   iter$4(f, xs);
   return xs;
 }
 
-function $pipe$at$great$2(xs, param) {
+function $pipe$at$great$5(xs, param) {
   var f = param[1];
   return fold_left$2((function (acc, x) {
                 return Curry._1(f, [
@@ -4535,15 +4951,15 @@ function $pipe$at$great$2(xs, param) {
               }), param[0], xs);
 }
 
-function $pipe$question$great$2(xs, f) {
+function $pipe$question$great$5(xs, f) {
   return find_all(f, xs);
 }
 
-function $pipe$amp$question$great$2(xs, f) {
+function $pipe$amp$question$great$5(xs, f) {
   return filter_map$1(f, xs);
 }
 
-function $pipe$plus$amp$question$great$2(xs, f) {
+function $pipe$plus$amp$question$great$5(xs, f) {
   return filter_map$1((function (x) {
                 var y = Curry._1(f, x);
                 if (y !== undefined) {
@@ -5235,22 +5651,22 @@ function bind$2(ma, af) {
   return fmap$1(af, ma);
 }
 
-function $$return$1(x) {
+function $$return$2(x) {
   return {
           hd: x,
           tl: /* [] */0
         };
 }
 
-var List$1 = {
-  $pipe$amp$great: $pipe$amp$great$2,
-  $pipe$plus$amp$great: $pipe$plus$amp$great$2,
-  $pipe$bang$great: $pipe$bang$great$2,
-  $pipe$neg$bang$great: $pipe$neg$bang$great$2,
-  $pipe$at$great: $pipe$at$great$2,
-  $pipe$question$great: $pipe$question$great$2,
-  $pipe$amp$question$great: $pipe$amp$question$great$2,
-  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$2,
+var List0 = {
+  $pipe$amp$great: $pipe$amp$great$5,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$5,
+  $pipe$bang$great: $pipe$bang$great$5,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$5,
+  $pipe$at$great: $pipe$at$great$5,
+  $pipe$question$great: $pipe$question$great$5,
+  $pipe$amp$question$great: $pipe$amp$question$great$5,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$5,
   B: B$1,
   length: length$1,
   nth_opt: nth_opt,
@@ -5340,12 +5756,12 @@ var List$1 = {
   to_hashtbl: to_hashtbl,
   pp: pp$1,
   bind: bind$2,
-  $$return: $$return$1
+  $$return: $$return$2
 };
 
-var $pipe$amp$great$3 = Belt_List.map;
+var $pipe$amp$great$6 = Belt_List.map;
 
-function $pipe$plus$amp$great$3(xs, f) {
+function $pipe$plus$amp$great$6(xs, f) {
   return Belt_List.map(xs, (function (x) {
                 return [
                         x,
@@ -5354,14 +5770,14 @@ function $pipe$plus$amp$great$3(xs, f) {
               }));
 }
 
-var $pipe$bang$great$3 = Belt_List.forEach;
+var $pipe$bang$great$6 = Belt_List.forEach;
 
-function $pipe$neg$bang$great$3(xs, f) {
+function $pipe$neg$bang$great$6(xs, f) {
   Belt_List.forEach(xs, f);
   return xs;
 }
 
-function $pipe$at$great$3(xs, param) {
+function $pipe$at$great$6(xs, param) {
   var f = param[1];
   return Belt_List.reduce(xs, param[0], (function (acc, x) {
                 return Curry._1(f, [
@@ -5371,11 +5787,11 @@ function $pipe$at$great$3(xs, param) {
               }));
 }
 
-var $pipe$question$great$3 = Belt_List.keep;
+var $pipe$question$great$6 = Belt_List.keep;
 
-var $pipe$amp$question$great$3 = Belt_List.keepMap;
+var $pipe$amp$question$great$6 = Belt_List.keepMap;
 
-function $pipe$plus$amp$question$great$3(xs, f) {
+function $pipe$plus$amp$question$great$6(xs, f) {
   return Belt_List.keepMap(xs, (function (x) {
                 var y = Curry._1(f, x);
                 if (y !== undefined) {
@@ -5387,6 +5803,188 @@ function $pipe$plus$amp$question$great$3(xs, f) {
                 
               }));
 }
+
+var Ops_piping$2 = {
+  $pipe$amp$great: $pipe$amp$great$6,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$6,
+  $pipe$bang$great: $pipe$bang$great$6,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$6,
+  $pipe$at$great: $pipe$at$great$6,
+  $pipe$question$great: $pipe$question$great$6,
+  $pipe$amp$question$great: $pipe$amp$question$great$6,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$6
+};
+
+var $pipe$amp$great$7 = Belt_List.map;
+
+function $pipe$plus$amp$great$7(xs, f) {
+  return Belt_List.map(xs, (function (x) {
+                return [
+                        x,
+                        Curry._1(f, x)
+                      ];
+              }));
+}
+
+var $pipe$bang$great$7 = Belt_List.forEach;
+
+function $pipe$neg$bang$great$7(xs, f) {
+  Belt_List.forEach(xs, f);
+  return xs;
+}
+
+function $pipe$at$great$7(xs, param) {
+  var f = param[1];
+  return Belt_List.reduce(xs, param[0], (function (acc, x) {
+                return Curry._1(f, [
+                            acc,
+                            x
+                          ]);
+              }));
+}
+
+var $pipe$question$great$7 = Belt_List.keep;
+
+var $pipe$amp$question$great$7 = Belt_List.keepMap;
+
+function $pipe$plus$amp$question$great$7(xs, f) {
+  return Belt_List.keepMap(xs, (function (x) {
+                var y = Curry._1(f, x);
+                if (y !== undefined) {
+                  return [
+                          x,
+                          Caml_option.valFromOption(y)
+                        ];
+                }
+                
+              }));
+}
+
+var Ops_monad$2 = {
+  $pipe$amp$great: $pipe$amp$great$7,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$7,
+  $pipe$bang$great: $pipe$bang$great$7,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$7,
+  $pipe$at$great: $pipe$at$great$7,
+  $pipe$question$great: $pipe$question$great$7,
+  $pipe$amp$question$great: $pipe$amp$question$great$7,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$7
+};
+
+var Ops$3 = {
+  $pipe$amp$great: $pipe$amp$great$7,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$7,
+  $pipe$bang$great: $pipe$bang$great$7,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$7,
+  $pipe$at$great: $pipe$at$great$7,
+  $pipe$question$great: $pipe$question$great$7,
+  $pipe$amp$question$great: $pipe$amp$question$great$7,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$7
+};
+
+var List$1 = {
+  $pipe$amp$great: $pipe$amp$great$5,
+  $pipe$plus$amp$great: $pipe$plus$amp$great$5,
+  $pipe$bang$great: $pipe$bang$great$5,
+  $pipe$neg$bang$great: $pipe$neg$bang$great$5,
+  $pipe$at$great: $pipe$at$great$5,
+  $pipe$question$great: $pipe$question$great$5,
+  $pipe$amp$question$great: $pipe$amp$question$great$5,
+  $pipe$plus$amp$question$great: $pipe$plus$amp$question$great$5,
+  B: B$1,
+  length: length$1,
+  nth_opt: nth_opt,
+  nth: nth,
+  append: Pervasives.$at,
+  rev_append: rev_append,
+  rev: rev,
+  init: init$1,
+  flatten: flatten,
+  concat: flatten,
+  map: map$4,
+  mapi: mapi$1,
+  rev_map: rev_map,
+  iter: iter$4,
+  iteri: iteri$1,
+  fold_left: fold_left$2,
+  fold_right: fold_right$1,
+  map2: map2$1,
+  rev_map2: rev_map2,
+  iter2: iter2$1,
+  for_all: for_all$1,
+  exists: exists$1,
+  for_all2: for_all2$1,
+  exists2: exists2$1,
+  mem: mem$1,
+  memq: memq$1,
+  assoc_opt: assoc_opt,
+  assq_opt: assq_opt,
+  assoc: assoc,
+  assq: assq,
+  mem_assoc: mem_assoc,
+  mem_assq: mem_assq,
+  remove_assoc: remove_assoc,
+  remove_assq: remove_assq,
+  find_opt: find_opt,
+  find: find,
+  find_map: find_map,
+  find_all: find_all,
+  filter: find_all,
+  filter_map: filter_map$1,
+  concat_map: concat_map,
+  fold_left_map: fold_left_map,
+  partition: partition,
+  split: split,
+  combine: combine,
+  merge: merge,
+  stable_sort: stable_sort$1,
+  sort: stable_sort$1,
+  fast_sort: stable_sort$1,
+  compare: compare$2,
+  equal: equal$2,
+  to_seq: to_seq$3,
+  of_seq: of_seq$1,
+  iota: iota$1,
+  range: range$1,
+  dedup$p: dedup$p,
+  dedup: dedup,
+  update_assoc: update_assoc,
+  update_assq: update_assq,
+  deassoc_opt: deassoc_opt,
+  deassq_opt: deassq_opt,
+  deassoc_opt$p: deassoc_opt$p,
+  deassq_opt$p: deassq_opt$p,
+  deassoc: deassoc,
+  deassq: deassq,
+  group_by: group_by,
+  unzip: unzip,
+  unzip3: unzip3,
+  reduce: reduce,
+  min: min$1,
+  max: max$1,
+  foldl: fold_left$2,
+  foldr: foldr,
+  hd: hd$3,
+  tl: tl$2,
+  take: take$2,
+  drop: drop$2,
+  make: make$2,
+  count: count,
+  last: last$1,
+  and_last: and_last,
+  fmap: fmap$1,
+  interpolate: interpolate,
+  filteri: filteri$1,
+  empty: empty$1,
+  to_function: to_function$1,
+  to_hashtbl: to_hashtbl,
+  pp: pp$1,
+  bind: bind$2,
+  $$return: $$return$2,
+  Ops_piping: Ops_piping$2,
+  Ops_monad: Ops_monad$2,
+  Ops: Ops$3
+};
 
 function rev$1(orig) {
   var partial_arg = to_seq$4(orig);
@@ -6782,27 +7380,25 @@ function parse_opts(optparsers, argsourceOpt, param) {
       Sys.argv,
       1
     ];
-  var f = function (param) {
-    var _param = optparsers;
-    while(true) {
-      var param$1 = _param;
-      if (param$1) {
-        var match = Curry._1(param$1.hd, param);
-        if (!match.VAL) {
-          return ;
-        }
-        _param = param$1.tl;
-        continue ;
-      }
-      throw {
-            RE_EXN_ID: "Invalid_argument",
-            _1: "unparsed option: " + param,
-            Error: new Error()
-          };
-    };
-  };
-  var xs = ntimes(argsource[1], tl$2, to_list$1(argsource[0]));
-  return Belt_List.forEach(xs, f);
+  return $pipe$bang$great$6(ntimes(argsource[1], tl$2, to_list$1(argsource[0])), (function (param) {
+                var _param = optparsers;
+                while(true) {
+                  var param$1 = _param;
+                  if (param$1) {
+                    var match = Curry._1(param$1.hd, param);
+                    if (!match.VAL) {
+                      return ;
+                    }
+                    _param = param$1.tl;
+                    continue ;
+                  }
+                  throw {
+                        RE_EXN_ID: "Invalid_argument",
+                        _1: "unparsed option: " + param,
+                        Error: new Error()
+                      };
+                };
+              }));
 }
 
 function parse_opts_args(optprefixOpt, optsepOpt, optparsers, argsourceOpt, param) {
@@ -7435,31 +8031,26 @@ function pp_integer_sep$p(padding, ppf, x) {
   if (chunks) {
     var r = chunks.tl;
     var x$1 = chunks.hd;
-    if (r) {
-      var f = Format.asprintf(/* Format */{
-            _0: {
-              TAG: /* Int */4,
-              _0: /* Int_d */0,
-              _1: {
-                TAG: /* Lit_padding */0,
-                _0: /* Zeros */2,
-                _1: 3
-              },
-              _2: /* No_precision */0,
-              _3: /* End_of_format */0
-            },
-            _1: "%03d"
-          });
-      chunks$1 = {
-        hd: String(x$1),
-        tl: Belt_List.map(r, f)
-      };
-    } else {
-      chunks$1 = {
-        hd: String(x$1),
-        tl: /* [] */0
-      };
-    }
+    chunks$1 = r ? ({
+          hd: String(x$1),
+          tl: $pipe$amp$great$6(r, Format.asprintf(/* Format */{
+                    _0: {
+                      TAG: /* Int */4,
+                      _0: /* Int_d */0,
+                      _1: {
+                        TAG: /* Lit_padding */0,
+                        _0: /* Zeros */2,
+                        _1: 3
+                      },
+                      _2: /* No_precision */0,
+                      _3: /* End_of_format */0
+                    },
+                    _1: "%03d"
+                  }))
+        }) : ({
+          hd: String(x$1),
+          tl: /* [] */0
+        });
   } else {
     chunks$1 = {
       hd: "0",
@@ -7570,7 +8161,7 @@ function pp_full_exn(ppf, exn) {
 
 function string_of_symbolic_output_items(items) {
   var buf = create$1(0);
-  Belt_List.forEach(items, (function (str) {
+  $pipe$bang$great$6(items, (function (str) {
           if (typeof str === "number") {
             if (str === /* Output_flush */0) {
               return ;
@@ -7853,56 +8444,54 @@ function of_yojson(param) {
             VAL: param.VAL
           };
   }
-  if (variant === "Variant") {
-    var match = param.VAL;
-    var x = match[1];
-    var t = match[0];
-    if (x !== undefined) {
+  if (variant !== "Variant") {
+    if (variant === "List" || variant === "Tuple") {
       return {
               NAME: "arr",
-              VAL: {
-                hd: {
-                  NAME: "str",
-                  VAL: t
-                },
-                tl: {
-                  hd: of_yojson(x),
-                  tl: /* [] */0
-                }
-              }
+              VAL: $pipe$amp$great$6(param.VAL, of_yojson)
+            };
+    } else if (variant === "Bool") {
+      return {
+              NAME: "bool",
+              VAL: param.VAL
+            };
+    } else if (variant === "Assoc") {
+      return {
+              NAME: "obj",
+              VAL: $pipe$amp$great$6(param.VAL, (function (param) {
+                      return $question$great(of_yojson, param);
+                    }))
             };
     } else {
       return {
               NAME: "str",
-              VAL: t
+              VAL: param.VAL
             };
     }
   }
-  if (variant === "List" || variant === "Tuple") {
+  var match = param.VAL;
+  var x = match[1];
+  var t = match[0];
+  if (x !== undefined) {
     return {
             NAME: "arr",
-            VAL: Belt_List.map(param.VAL, of_yojson)
+            VAL: {
+              hd: {
+                NAME: "str",
+                VAL: t
+              },
+              tl: {
+                hd: of_yojson(x),
+                tl: /* [] */0
+              }
+            }
           };
-  }
-  if (variant === "Bool") {
-    return {
-            NAME: "bool",
-            VAL: param.VAL
-          };
-  }
-  if (variant !== "Assoc") {
+  } else {
     return {
             NAME: "str",
-            VAL: param.VAL
+            VAL: t
           };
   }
-  var f = function (param) {
-    return $question$great(of_yojson, param);
-  };
-  return {
-          NAME: "obj",
-          VAL: Belt_List.map(param.VAL, f)
-        };
 }
 
 function to_yojson(param) {
@@ -7913,25 +8502,18 @@ function to_yojson(param) {
   if (variant === "arr") {
     return {
             NAME: "List",
-            VAL: Belt_List.map(param.VAL, to_yojson)
+            VAL: $pipe$amp$great$6(param.VAL, to_yojson)
           };
   }
-  if (variant === "num") {
-    var x = param.VAL;
-    if (Number.isInteger(x) && x <= max_int && x >= min_int) {
+  if (variant !== "num") {
+    if (variant === "obj") {
       return {
-              NAME: "Int",
-              VAL: x
+              NAME: "Assoc",
+              VAL: $pipe$amp$great$6(param.VAL, (function (param) {
+                      return $question$great(to_yojson, param);
+                    }))
             };
-    } else {
-      return {
-              NAME: "Float",
-              VAL: x
-            };
-    }
-  }
-  if (variant !== "obj") {
-    if (variant === "str") {
+    } else if (variant === "str") {
       return {
               NAME: "String",
               VAL: param.VAL
@@ -7943,13 +8525,18 @@ function to_yojson(param) {
             };
     }
   }
-  var f = function (param) {
-    return $question$great(to_yojson, param);
-  };
-  return {
-          NAME: "Assoc",
-          VAL: Belt_List.map(param.VAL, f)
-        };
+  var x = param.VAL;
+  if (Number.isInteger(x) && x <= max_int && x >= min_int) {
+    return {
+            NAME: "Int",
+            VAL: x
+          };
+  } else {
+    return {
+            NAME: "Float",
+            VAL: x
+          };
+  }
 }
 
 function yojson_basic_of_safe(yojson) {
@@ -7979,7 +8566,7 @@ function yojson_basic_of_safe(yojson) {
     if (variant === "List" || variant === "Tuple") {
       return {
               NAME: "List",
-              VAL: Belt_List.map(yojson.VAL, yojson_basic_of_safe)
+              VAL: $pipe$amp$great$6(yojson.VAL, yojson_basic_of_safe)
             };
     } else if (variant === "Bool") {
       return {
@@ -7989,7 +8576,7 @@ function yojson_basic_of_safe(yojson) {
     } else if (variant === "Assoc") {
       return {
               NAME: "Assoc",
-              VAL: Belt_List.map(yojson.VAL, (function (param) {
+              VAL: $pipe$amp$great$6(yojson.VAL, (function (param) {
                       return [
                               param[0],
                               yojson_basic_of_safe(param[1])
@@ -9518,8 +10105,9 @@ exports.projected_compare = projected_compare;
 exports.Either = Either;
 exports.Result = Result$1;
 exports.ResultOf = ResultOf;
-exports.ResultWithErrmsg = ResultWithErrmsg;
+exports.ResultWithErrmsg0 = ResultWithErrmsg0;
 exports.Queue = Queue;
+exports.Option0 = Option0;
 exports.$$Option = $$Option$1;
 exports.some = some;
 exports.none = none;
@@ -9528,18 +10116,21 @@ exports.$great$great$question = $great$great$question;
 exports.$pipe$question = $pipe$question;
 exports.$pipe$pipe$question = $pipe$pipe$question;
 exports.$amp$great$question = $amp$great$question;
+exports.Seq0 = Seq0;
 exports.Seq = Seq$1;
+exports.Array0 = Array0;
 exports.$$Array = $$Array$2;
 exports.Stream = Stream$1;
+exports.List0 = List0;
 exports.List = List$1;
-exports.$pipe$amp$great = $pipe$amp$great$3;
-exports.$pipe$plus$amp$great = $pipe$plus$amp$great$3;
-exports.$pipe$bang$great = $pipe$bang$great$3;
-exports.$pipe$neg$bang$great = $pipe$neg$bang$great$3;
-exports.$pipe$at$great = $pipe$at$great$3;
-exports.$pipe$question$great = $pipe$question$great$3;
-exports.$pipe$amp$question$great = $pipe$amp$question$great$3;
-exports.$pipe$plus$amp$question$great = $pipe$plus$amp$question$great$3;
+exports.$pipe$amp$great = $pipe$amp$great$6;
+exports.$pipe$plus$amp$great = $pipe$plus$amp$great$6;
+exports.$pipe$bang$great = $pipe$bang$great$6;
+exports.$pipe$neg$bang$great = $pipe$neg$bang$great$6;
+exports.$pipe$at$great = $pipe$at$great$6;
+exports.$pipe$question$great = $pipe$question$great$6;
+exports.$pipe$amp$question$great = $pipe$amp$question$great$6;
+exports.$pipe$plus$amp$question$great = $pipe$plus$amp$question$great$6;
 exports.iota = iota$1;
 exports.Hashtbl = Hashtbl$2;
 exports.$$String = $$String$2;

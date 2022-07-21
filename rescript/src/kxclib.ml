@@ -1528,7 +1528,7 @@ module ResultOf(E:sig type err end) =
     let bind : 'x t -> ('x -> 'y t) -> 'y t = Result.bind
     let return : 'x -> 'x t = Result.ok
   end
-module ResultWithErrmsg =
+module ResultWithErrmsg0 =
   struct
     include (ResultOf)(struct type err = string end)
     let protect' : handler:(exn -> string) -> ('x -> 'y) -> 'x -> 'y t =
@@ -1565,7 +1565,7 @@ module Queue :
       | ([], []) -> None
   end 
 type 'x queue = 'x Queue.t
-module Option =
+module Option0 =
   struct
     include Option
     let return = some
@@ -1585,6 +1585,12 @@ module Option =
     let of_bool = function | true -> Some () | false -> None
     let some_if cond x = if cond then Some x else None
   end
+module Option =
+  struct
+    include Option0
+    module Ops_monad = (MonadOps)(Option0)
+    module Ops = struct include Ops_monad end
+  end
 let some = Option.some
 let none = Option.none
 let (>?) o f = Option.map f o
@@ -1593,7 +1599,7 @@ let (|?) o v = Option.v v o
 let (||?) o1 o2 = Option.otherwise o2 o1
 let (&>?) : ('x -> 'y option) -> ('y -> 'z) -> 'x -> 'z option =
   fun af -> fun f -> af &> (Option.map f)
-module Seq =
+module Seq0 =
   struct
     include Seq
     include (PipeOps)(Seq)
@@ -1648,8 +1654,14 @@ module Seq =
             match i with | 0 -> Nil | _ -> Cons (x, (h (i - 1))) in
           h n
   end
+module Seq =
+  struct
+    include Seq0
+    module Ops_piping = (PipeOps)(Seq0)
+    module Ops = struct include Ops_piping end
+  end
 type 'x seq = 'x Seq.t
-module Array =
+module Array0 =
   struct
     include Array
     let filter f arr = ((arr |> to_seq) |> (Seq.filter f)) |> of_seq
@@ -1742,6 +1754,14 @@ module Array =
           for i = len - 1 downto 1 do swap arr i (rng (succ i)) done
     let to_function : 'a array -> int -> 'a = fun arr -> fun idx -> arr.(idx)
   end
+module Array =
+  struct
+    include Array0
+    module Ops_piping = (PipeOps)(Array0)
+    module Ops_monad = (PipeOps)(Array0)
+    module Ops = struct include Ops_piping
+                        include Ops_monad end
+  end
 module Stream =
   struct
     include Stream
@@ -1765,7 +1785,7 @@ module Stream =
         | _ -> raise Not_found
     let drop n s = Fn.ntimes n drop1 s
   end
-module List =
+module List0 =
   struct
     include (PipeOps)(List)
     include List
@@ -1966,7 +1986,15 @@ module List =
     let bind ma af = fmap af ma
     let return x = [x]
   end
-include (PipeOps)(List)
+module List =
+  struct
+    include List0
+    module Ops_piping = (PipeOps)(List0)
+    module Ops_monad = (PipeOps)(List0)
+    module Ops = struct include Ops_piping
+                        include Ops_monad end
+  end
+include List.Ops_piping
 let iota = List.iota
 module Hashtbl =
   struct

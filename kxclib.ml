@@ -311,7 +311,7 @@ module ResultOf(E : sig type err end) = struct
   let return : 'x -> 'x t = Result.ok
 end
 
-module ResultWithErrmsg = struct
+module ResultWithErrmsg0 = struct
   include ResultOf(struct type err = string end)
   let protect' : handler:(exn -> string) -> ('x -> 'y) -> ('x -> 'y t) =
     fun ~handler f x ->
@@ -348,7 +348,7 @@ end = struct
 end
 type 'x queue = 'x Queue.t
 
-module Option = struct
+module Option0 = struct
   include Option
 
   let return = some
@@ -386,6 +386,11 @@ module Option = struct
 
   let some_if cond x = if cond then Some x else None
 end
+module Option = struct
+  include Option0
+  module Ops_monad = MonadOps(Option0)
+  module Ops = struct include Ops_monad end
+end
 let some = Option.some
 let none = Option.none
 let (>?) o f = Option.map f o
@@ -395,7 +400,7 @@ let (||?) o1 o2 = Option.otherwise o2 o1
 let (&>?) : ('x -> 'y option) -> ('y -> 'z) -> ('x -> 'z option) =
   fun af f -> af &> (Option.map f)
 
-module Seq = struct
+module Seq0 = struct
   include Seq
   include PipeOps(Seq)
 
@@ -481,9 +486,14 @@ module Seq = struct
        h n
 
 end
+module Seq = struct
+  include Seq0
+  module Ops_piping = PipeOps(Seq0)
+  module Ops = struct include Ops_piping end
+end
 type 'x seq = 'x Seq.t
 
-module Array = struct
+module Array0 = struct
   include Array
 
   let filter f arr =
@@ -593,6 +603,12 @@ module Array = struct
   let to_function : 'a array -> (int -> 'a) =
     fun arr idx -> arr.(idx)
 end
+module Array = struct
+  include Array0
+  module Ops_piping = PipeOps(Array0)
+  module Ops_monad = PipeOps(Array0)
+  module Ops = struct include Ops_piping include Ops_monad end
+end
 
 [%%if ocaml_version < (4, 14, 0)]
 module Stream = struct
@@ -631,7 +647,7 @@ module Stream = struct
 end
 [%%endif]
 
-module List = struct
+module List0 = struct
   include PipeOps(List)
   include List
 
@@ -864,8 +880,13 @@ module List = struct
   let bind ma af = fmap af ma
   let return x = [x]
 end
-
-include PipeOps(List)
+module List = struct
+  include List0
+  module Ops_piping = PipeOps(List0)
+  module Ops_monad = PipeOps(List0)
+  module Ops = struct include Ops_piping include Ops_monad end
+end
+include List.Ops_piping
 
 let iota = List.iota
 
@@ -889,7 +910,6 @@ module Hashtbl = struct
     let table = Hashtbl.create ?random n in
     Seq.iota n |> Seq.map genfunc |> Hashtbl.add_seq table;
     table
-
 end
 
 module String = struct
