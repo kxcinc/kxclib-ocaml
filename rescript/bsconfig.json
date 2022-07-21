@@ -6,7 +6,7 @@
   ],
   "sources": [
     {
-      "dir": ".",
+      "dir": "src",
       "subdirs": false,
       "public": ["Kxclib"]
     }

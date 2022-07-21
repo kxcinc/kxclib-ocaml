@@ -841,8 +841,8 @@ function sort(cmp, a) {
         throw {
               RE_EXN_ID: "Assert_failure",
               _1: [
-                "kxclib_comp_re.ml",
-                365,
+                "kxclib.ml",
+                366,
                 4
               ],
               Error: new Error()
@@ -2046,8 +2046,8 @@ function resize(b, more) {
     throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "kxclib_comp_re.ml",
-            802,
+            "kxclib.ml",
+            803,
             2
           ],
           Error: new Error()
@@ -2057,8 +2057,8 @@ function resize(b, more) {
     throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "kxclib_comp_re.ml",
-            803,
+            "kxclib.ml",
+            804,
             2
           ],
           Error: new Error()
@@ -2083,8 +2083,8 @@ function add_utf_8_uchar(b, u) {
     throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "kxclib_comp_re.ml",
-            847,
+            "kxclib.ml",
+            848,
             19
           ],
           Error: new Error()
@@ -2129,8 +2129,8 @@ function add_utf_8_uchar(b, u) {
   throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "kxclib_comp_re.ml",
-          880,
+          "kxclib.ml",
+          881,
           8
         ],
         Error: new Error()
@@ -2143,8 +2143,8 @@ function add_utf_16be_uchar(b, u) {
     throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "kxclib_comp_re.ml",
-            883,
+            "kxclib.ml",
+            884,
             19
           ],
           Error: new Error()
@@ -2178,8 +2178,8 @@ function add_utf_16be_uchar(b, u) {
   throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "kxclib_comp_re.ml",
-          901,
+          "kxclib.ml",
+          902,
           8
         ],
         Error: new Error()
@@ -2192,8 +2192,8 @@ function add_utf_16le_uchar(b, u) {
     throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "kxclib_comp_re.ml",
-            904,
+            "kxclib.ml",
+            905,
             19
           ],
           Error: new Error()
@@ -2227,8 +2227,8 @@ function add_utf_16le_uchar(b, u) {
   throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "kxclib_comp_re.ml",
-          922,
+          "kxclib.ml",
+          923,
           8
         ],
         Error: new Error()
@@ -2305,8 +2305,8 @@ function unsafe_add_channel_up_to(b, ic, len) {
     throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "kxclib_comp_re.ml",
-            972,
+            "kxclib.ml",
+            973,
             2
           ],
           Error: new Error()
@@ -2344,8 +2344,8 @@ function closing(param) {
   throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "kxclib_comp_re.ml",
-          991,
+          "kxclib.ml",
+          992,
           9
         ],
         Error: new Error()

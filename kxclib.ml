@@ -1,3 +1,5 @@
+[%%define re (os_type = "re")]
+
 let refset r x = r := x
 (** [refset r x] sets [x] to ref [r]. *)
 

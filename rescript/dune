@@ -1,15 +1,34 @@
 (rule
- (mode (promote))
+ (mode (promote (into src)))
  (target kxclib.ml)
- (deps ../kxclib.ml kxclib_comp_re.ml)
+ (deps kxclib.pp.ml kxclib_comp_re.ml)
  (action
   (with-stdout-to %{target}
    (progn
-    (echo "#0 \"kxclib_comp_re.ml\"\n")
     (cat kxclib_comp_re.ml)
     (echo "\nopen Kxclib_comp\n")
     (echo "\n[@@@warning \"-3-44\"]\n")
-    (echo "\n#0 \"kxclib.ml\"\n")
-    (cat ../kxclib.ml)))))
+    (cat kxclib.pp.ml)))))
+
+(rule
+ (target kxclib_src.ml)
+ (deps ../kxclib.ml)
+ (action
+  (with-stdout-to %{target}
+   (progn
+    (echo "[%%define os_type \"re\"]\n")
+    (cat %{deps})))))
+
+(library
+ (name kxclib_src)
+ (modules kxclib_src)
+ (preprocess (pps ppx_deriving.std ppx_optcomp)))
+
+(rule
+ (target kxclib.pp.ml)
+ (deps kxclib_src.pp.ml)
+ (action
+  (with-stderr-to %{target}
+    (run %{bin:ocamlc} -stop-after parsing -dsource %{deps}))))
 
 (dirs :standard \ node_modules)

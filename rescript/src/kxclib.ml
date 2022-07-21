@@ -1,4 +1,3 @@
-#0 "kxclib_comp_re.ml"
 (* adopted from OCaml 4.12.0 source tree *)
 (* FIXME - sort out licensing before releasing *)
 
@@ -1279,8 +1278,6 @@ end
 open Kxclib_comp
 
 [@@@warning "-3-44"]
-
-#0 "kxclib.ml"
 [@@@ocaml.ppx.context
   {
     tool_name = "ppx_driver";
@@ -1296,7 +1293,12 @@ open Kxclib_comp
     transparent_modules = false;
     unboxed_types = false;
     unsafe_string = false;
-    cookies = [("library-name", "kxclib_nopp")]
+    cookies =
+      [("library-name", "kxclib_src");
+      ("ppx_optcomp.env",
+        (env ~flambda2:(Defined false) ~flambda_backend:(Defined false)
+           ~ocaml_version:(Defined (4, 12, 0)) ~os_type:(Defined "re")
+           ~re:(Defined true)))]
   }]
 let refset r x = r := x[@@ocaml.doc " [refset r x] sets [x] to ref [r]. "]
 let refupdate r f = r := (f (!r))[@@ocaml.doc
