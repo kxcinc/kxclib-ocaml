@@ -178,6 +178,107 @@ let base64_range () =
       (Bytes.of_string expected_plain) actual_plain
   )
 
+type jv = Json.jv
+
+
+let rec pp_jv ppf : jv -> unit = function
+  | `null -> fprintf ppf "`null"
+  | `bool b -> fprintf ppf "`bool %B" b
+  | `num f -> fprintf ppf "`num %F" f
+  | `str s -> fprintf ppf "`str %S" s
+  | `arr xs -> fprintf ppf "`arr %a" (List.pp pp_jv) xs
+  | `obj xs -> fprintf ppf "`obj %a" (List.pp (fun ppf (k, v) -> fprintf ppf "(%S, %a)" k pp_jv v)) xs
+
+let rec equal_jv (jv1 : jv) (jv2 : jv) = match jv1, jv2 with
+  | `null, `null -> true
+  | `bool b1, `bool b2 -> b1 = b2
+  | `num f1, `num f2 -> f1 = f2
+  | `str s1, `str s2 -> s1 = s2
+  | `arr a1, `arr a2->
+    List.for_all2 equal_jv
+      (List.sort compare a1)
+      (List.sort compare a2)
+  | `obj o1, `obj o2 ->
+    List.for_all2
+      (fun (k1, v1) (k2, v2) -> k1 = k2 && (equal_jv v1 v2))
+      (List.sort compare o1)
+      (List.sort compare o2)
+  | _, _ -> false
+
+let jv = testable pp_jv equal_jv
+
+let json_of_jsonm jsonm_token_list expected () =
+  let actual = jsonm_token_list |> List.to_seq |> Json.of_jsonm >? fst in
+  check (option jv) "Json.of_jsonm" (some expected) actual
+
+let json_of_jsonm_null = json_of_jsonm [`Null] `null
+let json_of_jsonm_bool_0 = json_of_jsonm [`Bool true] (`bool true)
+let json_of_jsonm_bool_1 = json_of_jsonm [`Bool false] (`bool false)
+let json_of_jsonm_num_0 = json_of_jsonm [`Float 0.] (`num 0.)
+let json_of_jsonm_num_1 = json_of_jsonm [`Float 42.] (`num 42.)
+let json_of_jsonm_num_2 = json_of_jsonm [`Float (-12.4)] (`num (-12.4))
+let json_of_jsonm_str_0 = json_of_jsonm [`String ""] (`str "")
+let json_of_jsonm_str_1 = json_of_jsonm [`String "hello"] (`str "hello")
+let json_of_jsonm_str_2 = json_of_jsonm [`String "こんにちは"] (`str "こんにちは")
+let json_of_jsonm_arr_0 =
+  json_of_jsonm
+    [`As; `Ae]
+    (`arr [])
+let json_of_jsonm_arr_1 =
+  json_of_jsonm
+    [`As; `Null; `Ae]
+    (`arr [`null])
+let json_of_jsonm_arr_2 =
+  json_of_jsonm
+    [`As; `Null; `Bool true; `Ae]
+    (`arr [`null; `bool true])
+let json_of_jsonm_arr_3 =
+  json_of_jsonm
+    [`As; `Null; `Bool false; `Float 54.2; `Ae]
+    (`arr [`null; `bool false; `num 54.2])
+let json_of_jsonm_arr_4 =
+  json_of_jsonm
+    [`As; `Null; `Bool true; `Float 9.; `String "hello"; `Ae]
+    (`arr [`null; `bool true; `num 9.; `str "hello"])
+let json_of_jsonm_arr_5 =
+  json_of_jsonm
+    [`As; `As; `Ae; `As; `Float 0.; `Ae; `As; `As; `Float 1.; `Float 2.; `Ae; `As; `Float 3.; `Ae; `Ae; `Float 4.; `Ae]
+    (`arr [`arr []; `arr [`num 0.]; `arr [`arr [`num 1.; `num 2.]; `arr [`num 3.]]; `num 4.])
+let json_of_jsonm_arr_6 =
+  json_of_jsonm
+    [`As; `Os; `Oe; `Os; `Name "a"; `Null; `Oe; `Os; `Name "b"; `Bool true; `Name "c"; `Float 0.; `Oe;
+     `Os; `Name "d"; `String ""; `Name "e"; `String "hello"; `Name "f"; `As; `String "g"; `String "h"; `Ae; `Oe; `Ae]
+    (`arr [ `obj []; `obj ["a", `null]; `obj ["b", `bool true; "c", `num 0.];
+            `obj ["d", `str ""; "e", `str "hello"; "f", `arr [`str "g"; `str "h"]]; ])
+let json_of_jsonm_obj_0 =
+  json_of_jsonm
+    [`Os; `Oe]
+    (`obj [])
+let json_of_jsonm_obj_1 =
+  json_of_jsonm
+    [`Os; `Name "a"; `Null; `Oe]
+    (`obj ["a", `null])
+let json_of_jsonm_obj_2 =
+  json_of_jsonm
+    [`Os; `Name "a"; `Null; `Name "b"; `Bool false; `Oe]
+    (`obj ["a", `null; "b", `bool false])
+let json_of_jsonm_obj_3 =
+  json_of_jsonm
+    [`Os; `Name "a"; `Null; `Name "b"; `Bool false; `Name "c"; `Float 0.; `Oe]
+    (`obj ["a", `null; "b", `bool false; "c", `num 0.])
+let json_of_jsonm_obj_4 =
+  json_of_jsonm
+    [`Os; `Name "a"; `Null; `Name "b"; `Bool false; `Name "c"; `Float 0.; `Name "d"; `String "hello"; `Oe]
+    (`obj ["a", `null; "b", `bool false; "c", `num 0.; "d", `str "hello"])
+let json_of_jsonm_obj_5 =
+  json_of_jsonm
+    [`Os; `Name "a"; `Null; `Name "b"; `Bool false; `Name "c"; `Float 0.; `Name "d"; `String "hello";
+     `Name "e"; `As; `Ae; `Name "f"; `As; `Float 0.; `Ae; `Name "g"; `As; `Float 0.; `Float 1.; `Ae;
+     `Name "h"; `Os; `Oe; `Name "i"; `Os; `Name "a2"; `Null; `Oe; `Name "j"; `Os; `Name "a2"; `Null; `Name "b2"; `Bool true; `Oe; `Oe]
+    (`obj ["a", `null; "b", `bool false; "c", `num 0.; "d", `str "hello";
+           "e", `arr []; "f", `arr [`num 0.]; "g", `arr [`num 0.; `num 1.];
+           "h", `obj []; "i", `obj ["a2", `null]; "j", `obj ["a2", `null; "b2", `bool true]])
+
 let () =
   Printexc.record_backtrace true;
   run "Datecode_unit_tests" [
@@ -217,5 +318,30 @@ let () =
     "base64", [
       test_case "base64_known" `Quick base64_known;
       test_case "base64_range" `Quick base64_range;
+    ];
+
+    "json_of_jsonm", [
+      test_case "json_of_jsonm_null" `Quick json_of_jsonm_null;
+      test_case "json_of_jsonm_bool_0" `Quick json_of_jsonm_bool_0;
+      test_case "json_of_jsonm_bool_1" `Quick json_of_jsonm_bool_1;
+      test_case "json_of_jsonm_num_0" `Quick json_of_jsonm_num_0;
+      test_case "json_of_jsonm_num_1" `Quick json_of_jsonm_num_1;
+      test_case "json_of_jsonm_num_2" `Quick json_of_jsonm_num_2;
+      test_case "json_of_jsonm_str_0" `Quick json_of_jsonm_str_0;
+      test_case "json_of_jsonm_str_1" `Quick json_of_jsonm_str_1;
+      test_case "json_of_jsonm_str_2" `Quick json_of_jsonm_str_2;
+      test_case "json_of_jsonm_arr_0" `Quick json_of_jsonm_arr_0;
+      test_case "json_of_jsonm_arr_1" `Quick json_of_jsonm_arr_1;
+      test_case "json_of_jsonm_arr_2" `Quick json_of_jsonm_arr_2;
+      test_case "json_of_jsonm_arr_3" `Quick json_of_jsonm_arr_3;
+      test_case "json_of_jsonm_arr_4" `Quick json_of_jsonm_arr_4;
+      test_case "json_of_jsonm_arr_5" `Quick json_of_jsonm_arr_5;
+      test_case "json_of_jsonm_arr_6" `Quick json_of_jsonm_arr_6;
+      test_case "json_of_jsonm_obj_0" `Quick json_of_jsonm_obj_0;
+      test_case "json_of_jsonm_obj_1" `Quick json_of_jsonm_obj_1;
+      test_case "json_of_jsonm_obj_2" `Quick json_of_jsonm_obj_2;
+      test_case "json_of_jsonm_obj_3" `Quick json_of_jsonm_obj_3;
+      test_case "json_of_jsonm_obj_4" `Quick json_of_jsonm_obj_4;
+      test_case "json_of_jsonm_obj_5" `Quick json_of_jsonm_obj_5;
     ]
   ]
