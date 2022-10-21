@@ -1876,8 +1876,8 @@ end = struct
       | _ -> .
     and collect_array acc sloc next = function
       | `Ae -> ok next (`arr (List.rev acc))
-      | #value_starting_jsonm_token ->
-         with_next sloc next value >>= (fun (v, next) ->
+      | #value_starting_jsonm_token as head ->
+         with_next sloc Seq.(cons (sloc, head) next) value >>= (fun (v, next) ->
           with_next sloc next (fun _nloc ->
               collect_array (v :: acc) sloc))
       | (`Name _ | `Oe) as tok ->
