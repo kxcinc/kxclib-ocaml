@@ -152,8 +152,8 @@ module Array = struct
     let append_prim a1 a2 = _concat_2 a1 a2
     let unsafe_sub arr ofs len =
       let arr' = B.makeUninitializedUnsafe len in
-      for i = ofs to pred len do
-        (arr'.(i-ofs) <- arr.(i)) |> ignore
+      for i = 0 to pred len do
+        (arr'.(i) <- arr.(i+ofs)) |> ignore
       done;
       arr'
     let unsafe_blit src src_ofs dst dst_ofs len =
