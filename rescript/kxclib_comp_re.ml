@@ -153,7 +153,7 @@ module Array = struct
     let unsafe_sub arr ofs len =
       let arr' = B.makeUninitializedUnsafe len in
       for i = ofs to pred len do
-        (arr'.(i) <- arr.(i)) |> ignore
+        (arr'.(i-ofs) <- arr.(i)) |> ignore
       done;
       arr'
     let unsafe_blit src src_ofs dst dst_ofs len =
