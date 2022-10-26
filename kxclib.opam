@@ -11,6 +11,7 @@ bug-reports: "https://github.com/kxcteam/kxclib-ocaml/issues"
 depends: [
   "dune" {>= "2.6"}
   "alcotest" {with-test}
+  "qtest" {with-test}
   "ocaml" {>= "4.11.0"}
 ]
 build: [

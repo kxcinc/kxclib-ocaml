@@ -17,4 +17,5 @@
  (description "Common OCaml utilities maintained by Kotoi-Xie Consultancy")
  (depends
   (alcotest :with-test)
+  (qtest :with-test)
   (ocaml (>= 4.11.0))))
