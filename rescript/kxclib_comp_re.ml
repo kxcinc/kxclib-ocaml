@@ -710,6 +710,8 @@ end open Imported
 
 let max_int = _MAX_SAFE_INTEGER
 let min_int = _MIN_SAFE_INTEGER
+
+let compare a b = if a = b then 0 else if a > b then 1 else (-1)
 end
 
 module Float = struct

@@ -987,8 +987,10 @@ module MapPlus (M : Map.S) = struct
              vpp value);
     pp_close_box ppf ()
 
+  [%%if not(re)]
   let of_list : (M.key * 'v) list -> 'v M.t =
     fun kvs -> kvs |> M.of_seq % List.to_seq
+  [%%endif]
 end
 
 module StringMap = struct
