@@ -970,6 +970,39 @@ module String = struct
   let of_array = Array.to_seq &> of_seq
 end
 
+module MapPlus (M : Map.S) = struct
+  let pp' kpp vpp ppf m =
+    let open Format in
+    fprintf ppf "{ ";
+    pp_open_hovbox ppf 0;
+    M.bindings m
+    |> List.iter'
+         (fun (key, value) ->
+           fprintf ppf "@[<hov 0>%a=@,@[<hov 0>%a@];@]@;<1 2>@?"
+             kpp key
+             vpp value)
+         (fun (key, value) ->
+           fprintf ppf "@[<hov 0>%a=@,@[<hov 0>%a@];@] }@?"
+             kpp key
+             vpp value);
+    pp_close_box ppf ()
+
+  let of_list : (M.key * 'v) list -> 'v M.t =
+    fun kvs -> kvs |> M.of_seq % List.to_seq
+end
+
+module StringMap = struct
+  include Map.Make(String)
+  include MapPlus(Map.Make(String))
+  let pp vpp ppf m = pp' Format.pp_print_string vpp ppf m
+end
+
+module IntMap = struct
+  include Map.Make(Int)
+  include MapPlus(Map.Make(Int))
+  let pp vpp ppf m = pp' Format.pp_print_int vpp ppf m
+end
+
 module IoPervasives = struct
 
   let with_input_file path f =
