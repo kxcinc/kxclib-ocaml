@@ -833,6 +833,14 @@ module List0 = struct
     | l :: r -> rev r, l
   (** last element and rest of a list *)
 
+  let iter' f f_last xs =
+    let rec go = function
+      | [x] -> f_last x
+      | x :: rest ->
+         f x; go rest
+      | [] -> () in
+    go xs
+
   let fmap : ('x -> 'y list) -> 'x list -> 'y list = fun f l ->
     let rec loop acc = function
         | [] -> acc
