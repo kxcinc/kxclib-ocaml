@@ -700,6 +700,10 @@ let rem = (mod)
 let succ = succ
 let pred = pred
 let abs x = if x >= 0 then x else -x
+let to_string = string_of_int
+let max = max
+let min = min
+let equal = (==)
 
 module Imported = struct
   external _MAX_SAFE_INTEGER : int = "MAX_SAFE_INTEGER"
@@ -714,8 +718,16 @@ let min_int = _MIN_SAFE_INTEGER
 let compare a b = if a = b then 0 else if a > b then 1 else (-1)
 end
 
+module Int64 = struct
+include Int64
+let max = max
+let min = min
+let equal = (=)
+end
+
 module Float = struct
   module Imported = struct
+    external cast : 'a -> 'b = "%identity"
     external _isInteger : float -> bool = "isInteger"
     [@@bs.val][@@bs.scope "Number"]
   end open Imported
@@ -724,6 +736,28 @@ module Float = struct
   let floor = Js.Math.floor_float
   let is_integer = _isInteger
   let to_int : float -> int = fun x -> _cast x
+
+  let max = max
+  let min = min
+  let equal = (==)
+  let compare a b = if a = b then 0 else if a > b then 1 else (-1)
+
+  let neg x = (-.x)
+  let add a b = a +. b
+  let sub a b = a -. b
+  let mul a b = a *. b
+  let div a b = a /. b
+  let rem a b = Int.rem (cast a) (cast b) |> cast
+  let succ x = x +. 1.
+  let pred x = x -. 1.
+  let abs = abs_float
+
+  let one = 1.
+  let zero = 0.
+  let minus_one = (-1.)
+
+  let to_string = Js.Float.toString
+  let of_int = float_of_int
 end
 
 module Buffer = struct

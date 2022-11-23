@@ -1063,6 +1063,190 @@ module Timing = struct
 
 end
 
+module Int53p = struct
+  type int53p_impl_flavor = [
+    | `int_impl
+    | `int64_impl
+    | `float_impl
+    | `custom_impl of string
+    ]
+
+  let pp_int53p_impl_flavor : Format.formatter -> int53p_impl_flavor -> unit = fun ppf ->
+    let open Format in
+    function
+    | `int_impl -> pp_print_string ppf "int_impl"
+    | `int64_impl -> pp_print_string ppf "int64_impl"
+    | `float_impl -> pp_print_string ppf "float_impl"
+    | `custom_impl s -> fprintf ppf "custom_impl(%s)" s
+  let show_int53p_impl_flavor : int53p_impl_flavor -> string = Format.asprintf "%a" pp_int53p_impl_flavor
+
+  module type Ops = sig
+    type int53p
+
+    val ( ~- ) : int53p -> int53p
+    val ( ~+ ) : int53p -> int53p
+    val succ : int53p -> int53p
+    val pred : int53p -> int53p
+    val ( + ) : int53p -> int53p -> int53p
+    val ( - ) : int53p -> int53p -> int53p
+    val ( * ) : int53p -> int53p -> int53p
+    val ( / ) : int53p -> int53p -> int53p
+    val ( mod ) : int53p -> int53p -> int53p
+  end
+
+  module type S = sig
+    val impl_flavor : int53p_impl_flavor
+
+    module Ops : Ops
+    include Ops
+    val zero : int53p
+    val one : int53p
+    val minus_one : int53p
+    val neg : int53p -> int53p
+    val add : int53p -> int53p -> int53p
+    val sub : int53p -> int53p -> int53p
+    val mul : int53p -> int53p -> int53p
+    val div : int53p -> int53p -> int53p
+    val rem : int53p -> int53p -> int53p
+    val abs : int53p -> int53p
+    val equal : int53p -> int53p -> bool
+    val compare : int53p -> int53p -> int
+    val min : int53p -> int53p -> int53p
+    val max : int53p -> int53p -> int53p
+
+    val to_float : int53p -> float
+    val of_float : float -> int53p
+
+    val to_int : int53p -> int
+    val of_int : int -> int53p
+
+    val to_int64 : int53p -> int64
+    val of_int64 : int64 -> int53p
+
+    [%%if not(re)]
+    val to_nativeint : int53p -> nativeint
+    val of_nativeint : nativeint -> int53p
+    [%%endif]
+
+    val to_string : int53p -> string
+  end
+
+  module Internals = struct
+    module MakeOps(M : sig
+                 type int53p
+                 val neg : int53p -> int53p
+                 val add : int53p -> int53p -> int53p
+                 val sub : int53p -> int53p -> int53p
+                 val mul : int53p -> int53p -> int53p
+                 val div : int53p -> int53p -> int53p
+                 val rem : int53p -> int53p -> int53p
+                 val succ : int53p -> int53p
+                 val pred : int53p -> int53p
+               end) : Ops with type int53p = M.int53p = struct
+      type int53p = M.int53p
+      let ( ~- ) : int53p -> int53p = M.neg
+      let ( ~+ ) : int53p -> int53p = identity
+      let succ : int53p -> int53p = M.succ
+      let pred : int53p -> int53p = M.pred
+      let ( + ) : int53p -> int53p -> int53p = M.add
+      let ( - ) : int53p -> int53p -> int53p = M.sub
+      let ( * ) : int53p -> int53p -> int53p = M.mul
+      let ( / ) : int53p -> int53p -> int53p = M.div
+      let ( mod ) : int53p -> int53p -> int53p = M.rem
+    end
+
+    module IntImpl : S = struct
+      let impl_flavor = `int_impl
+      include Int
+      module Ops = MakeOps(struct type int53p = int include Int end)
+      include Ops
+      let to_int = identity
+      let of_int = identity
+      let to_int64 = Int64.of_int
+      let of_int64 = Int64.to_int
+      let to_float = float_of_int
+      let of_float = int_of_float
+
+      [%%if not(re)]
+      let to_nativeint = Nativeint.of_int
+      let of_nativeint = Nativeint.to_int
+      [%%endif]
+    end
+
+    module Int64Impl : S = struct
+      let impl_flavor = `int64_impl
+      include Int64
+      module Ops = MakeOps(struct type int53p = int64 include Int64 end)
+      include Ops
+      let of_int64 = identity
+      let to_int64 = identity
+    end
+
+    module FloatImpl : S = struct
+      let impl_flavor = `float_impl
+
+      let round_towards_zero x =
+        let open Float in
+        if x < 0. then x |> neg % floor % neg
+        else floor x
+
+      module Float' = struct
+        let zero = Float.zero
+        let one = Float.one
+        let minus_one = Float.minus_one
+        let succ = Float.succ
+        let pred = Float.pred
+        let neg = Float.neg
+        let add = Float.add
+        let sub = Float.sub
+        let mul = Float.mul
+        let rem = Float.rem
+        let abs = Float.abs
+        let equal = Float.equal
+        let compare = Float.compare
+        let min = Float.min
+        let max = Float.max
+
+        let div a b = Float.div a b |> round_towards_zero
+
+        let to_int = Float.to_int
+        let of_int = Float.of_int
+
+        let to_string = Float.to_string
+      end
+      include Float'
+      module Ops = MakeOps(struct type int53p = float include Float' end)
+      include Ops
+      let of_float = identity
+      let to_float = identity
+      let to_int64 = Int64.of_float
+      let of_int64 = Int64.to_float
+
+      [%%if not(re)]
+      let to_nativeint = Nativeint.of_float
+      let of_nativeint = Nativeint.to_float
+      [%%endif]
+    end
+
+    let current_impl_flavor =
+      if Sys.int_size >= 53 then `int_impl
+      else match Sys.backend_type with
+           | Other "js_of_ocaml" | Other "BS" -> `float_impl
+           | _ -> `int64_impl
+
+    let impl_of_builtin_flavor : int53p_impl_flavor -> (module S) = function
+      | `int_impl -> (module IntImpl)
+      | `int64_impl -> (module Int64Impl)
+      | `float_impl -> (module FloatImpl)
+      | flavor -> failwith' "non-builtin int53p_impl_flavor: %a" pp_int53p_impl_flavor flavor
+
+    module CurrentFlavorImpl = (val (impl_of_builtin_flavor current_impl_flavor))
+  end
+
+  include Internals.CurrentFlavorImpl
+end
+type int53p = Int53p.int53p
+
 module Datetime0 : sig
 
   (** all according to proleptic Gregorian Calender *)
