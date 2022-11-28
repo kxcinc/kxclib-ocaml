@@ -1157,7 +1157,13 @@ module Int53p = struct
 
     module IntImpl : S = struct
       let impl_flavor = `int_impl
+
       include Int
+      [%%if ocaml_version < (4, 13, 0)]
+      let min (a: int) (b: int) = min a b
+      let max (a: int) (b: int) = max a b
+      [%%endif]
+
       module Ops = MakeOps(struct type int53p = int include Int end)
       include Ops
       let to_int = identity
@@ -1175,7 +1181,13 @@ module Int53p = struct
 
     module Int64Impl : S = struct
       let impl_flavor = `int64_impl
+
       include Int64
+      [%%if ocaml_version < (4, 13, 0)]
+      let min (a: int64) (b: int64) = min a b
+      let max (a: int64) (b: int64) = max a b
+      [%%endif]
+
       module Ops = MakeOps(struct type int53p = int64 include Int64 end)
       include Ops
       let of_int64 = identity
