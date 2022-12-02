@@ -1,10 +1,28 @@
+open Js_of_ocaml
 open Baselib_test_lib.Json
 
 type jv = Kxclib.Json.jv
 
+let cast = Obj.magic
+let json_parse s =
+  Js.Unsafe.(
+    meth_call
+      (pure_js_expr "JSON")
+      "parse" [| s |> cast |])
+  |> cast
+
+let display_value ?msg x =
+  Js.Unsafe.(
+    meth_call
+      (pure_js_expr "console")
+    "log" (match msg with
+           | None -> [| cast x |]
+           | Some msg ->
+              [| Js.string msg |> cast; cast x |]
+  )) |> ignore
+[@@warning "-32"]
+
 let display_json ?msg x =
-  let open Js_of_ocaml in
-  let cast = Obj.magic in
   let template = match msg with
     | None -> "%j"
     | Some msg -> msg^": %j" in
@@ -30,11 +48,24 @@ let test_xjv_round_trip : jv -> bool = fun x ->
              |> to_xjv))
 
 let () =
+  let open Json_ext in
   let successful = ref true in
   let go x =
     if not (test_xjv_round_trip x)
     then successful := false
   in
+  let go_raw ~print expected actual =
+    if actual = expected then (
+      printf "[OK] raw: %s@." (print expected)
+    ) else (
+      successful := false;
+      printf "[FAIL] raw: { expected = %s ; actual = %s}@."
+        (print expected) (print actual)
+    )
+  in
+  go_raw ~print:string_of_jv
+    (`str "日本語")
+    (json_parse (Js.string {|"\u65E5\u672C\u8A9E"|}) |> cast |> of_xjv);
   go (`null);
   go (`bool true);
   go (`bool false);
@@ -45,6 +76,7 @@ let () =
   (* go (`str "\128a"); (* todo.future *) *)
   (* go (`str "\200"); (* todo.future *) *)
   go (`str "日本語");
+  go (`str (Js.to_string (Json.unsafe_input (Js.string {|"\u65E5\u672C\u8A9E"|}))));
   go (`arr []);
   go (`obj ["", `obj []]);
   go (`arr [`arr []]);
@@ -71,7 +103,7 @@ let () =
         s = (Js.string &> Js.to_string) s
       );
     that "Json.eqv" gen_jv ~print:string_of_jv
-      (fun j -> Json.eqv j j);
+      (fun j -> Kxclib.Json.eqv j j);
     that "to/of_xjv" gen_jv ~print:string_of_jv
       test_xjv_round_trip;
   ] |> QCheck_base_runner.run_tests |> exit
