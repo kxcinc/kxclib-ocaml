@@ -9,13 +9,14 @@ license: "MIT"
 homepage: "https://github.com/kxcteam/kxclib-ocaml"
 bug-reports: "https://github.com/kxcteam/kxclib-ocaml/issues"
 depends: [
-  "dune" {>= "2.6"}
+  "dune" {>= "3.0"}
   "alcotest" {with-test}
   "qtest" {with-test}
   "ocaml" {>= "4.11.0"}
+  "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"

@@ -1,0 +1,8 @@
+(library
+ (name kxclib_jsoo)
+ (public_name kxclib.jsoo)
+ (optional)
+ (libraries
+   js_of_ocaml
+   kxclib)
+ (preprocess (pps ppx_optcomp)))
