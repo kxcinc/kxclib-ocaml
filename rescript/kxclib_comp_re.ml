@@ -588,6 +588,13 @@ let fast_sort = stable_sort
 let compare cmp l1 l2 = B.cmp l1 l2 cmp
 let equal eq l1 l2 = B.eq l1 l2 eq
 
+let sort_uniq cmp l =
+  let rec loop acc = function
+    | [] -> acc
+    | x :: y :: xs when cmp x y = 0 -> loop acc (y :: xs)
+    | x :: xs -> loop (x :: acc) xs in
+  sort (fun x y -> cmp y x) l |> loop []
+
 let to_seq l =
   let rec aux l () = match l with
     | [] -> Seq.Nil
