@@ -65,7 +65,13 @@ let () =
   in
   go_raw ~print:string_of_jv
     (`str "日本語")
-    (json_parse (Js.string {|"\u65E5\u672C\u8A9E"|}) |> cast |> of_xjv);
+    (json_parse (Js.string {|"日本語"|}) |> cast |> of_xjv);
+  go_raw ~print:identity
+    (to_json_string (`arr [`bool true; `str "hello?"]))
+    {|[true,"hello?"]|};
+  go_raw ~print:(sprintf "%a" Option.(pp pp_jv))
+    (of_json_string_opt {|[true,"hello?"]|})
+    (`arr [`bool true; `str "hello?"] |> some);
   go (`null);
   go (`bool true);
   go (`bool false);

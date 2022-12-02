@@ -8,6 +8,9 @@ module Json_ext : sig
 
   val to_xjv : jv -> xjv
   val of_xjv : xjv -> jv
+
+  val to_json_string : jv -> string
+  val of_json_string_opt : string -> jv option
 end = struct
   external _cast : 'a -> 'b = "%identity"
   open Js_of_ocaml
@@ -36,6 +39,7 @@ end = struct
 
   let _js_array : any = Js_of_ocaml.Js.Unsafe.pure_js_expr "Array"
   let _js_object : any = Js_of_ocaml.Js.Unsafe.pure_js_expr "Object"
+  let _js_json : any = Js_of_ocaml.Js.Unsafe.pure_js_expr "JSON"
 
   let _jstr_length : any = jstr "length"
 
@@ -116,4 +120,12 @@ end = struct
        `obj (loop [] (pred len))
     | _ -> invalid_arg' "of_xjv: unable to convert non-JSON encodable value %s" (
                _to_jstr x |> ocstr)
+
+  let to_json_string = to_xjv &> Json.output &> Js.to_string
+  let of_json_string_opt str =
+    try
+      _call _js_json "parse" [| Js.string str |> _cast |]
+      |> of_xjv |> some
+    with Js_error.Exn _ ->
+      None
 end
