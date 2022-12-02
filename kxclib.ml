@@ -1894,6 +1894,12 @@ module Json : sig
   type jv_field = string*jv
   type jv_fields = jv_field list
 
+  val normalize : jv -> jv
+  val normalize_fields : jv_fields -> jv_fields
+
+  val eqv : jv -> jv -> bool
+  (** whether two json value are equivalent, i.e. equal while ignoring ordering of object fields *)
+
   type jvpath = ([
     | `f of string (** field within an object *)
     | `i of int (** index within an array *)
@@ -1969,8 +1975,39 @@ end = struct
     | `arr of jv list
     | `obj of (string*jv) list
     ]
+  let sort_by_key fs = fs |> List.sort_uniq (fun (k1, _) (k2, _) -> String.compare k1 k2)
+  let rec eqv a b = match a, b with
+    | `null, `null -> true
+    | `bool a, `bool b -> a = b
+    | `num a, `num b -> a = b
+    | `str a, `str b -> a = b
+    | `arr xs, `arr ys ->
+       let rec loop = function
+         | [], [] -> true
+         | x :: xs, y :: ys when eqv x y -> loop (xs, ys)
+         | _ -> false in
+       loop (xs, ys)
+    | `obj fs1, `obj fs2 ->
+       let sort = sort_by_key in
+       let fs1, fs2 = sort fs1, sort fs2 in
+       let rec loop = function
+         | [], [] -> true
+         | (k1, x) :: xs, (k2, y) :: ys
+              when k1 = k2 && eqv x y -> loop (xs, ys)
+         | _ -> false in
+       loop (fs1, fs2)
+    | _ -> false
+
   type jv_field = string*jv
   type jv_fields = jv_field list
+
+  let rec normalize : jv -> jv = function
+    | (`null | `bool _ | `num _ | `str _) as x -> x
+    | `arr xs -> `arr (xs |&> normalize)
+    | `obj fs -> `obj (normalize_fields fs)
+  and normalize_fields : jv_fields -> jv_fields = fun fs ->
+    sort_by_key fs |&> (fun (k, v) -> k, normalize v)
+
   type jvpath = ([
     | `f of string
     | `i of int
