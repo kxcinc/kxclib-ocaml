@@ -1083,15 +1083,14 @@ module Int53p = struct
   module type Ops = sig
     type int53p
 
-    val ( ~- ) : int53p -> int53p
-    val ( ~+ ) : int53p -> int53p
-    val succ : int53p -> int53p
-    val pred : int53p -> int53p
-    val ( + ) : int53p -> int53p -> int53p
-    val ( - ) : int53p -> int53p -> int53p
-    val ( * ) : int53p -> int53p -> int53p
-    val ( / ) : int53p -> int53p -> int53p
-    val ( mod ) : int53p -> int53p -> int53p
+    val ( ~-% ) : int53p -> int53p
+    val ( ~+% ) : int53p -> int53p
+
+    val ( +% ) : int53p -> int53p -> int53p
+    val ( -% ) : int53p -> int53p -> int53p
+    val ( *% ) : int53p -> int53p -> int53p
+    val ( /% ) : int53p -> int53p -> int53p
+    val ( /%% ) : int53p -> int53p -> int53p (* rem *)
   end
 
   module type S = sig
@@ -1102,8 +1101,13 @@ module Int53p = struct
     val zero : int53p
     val one : int53p
     val minus_one : int53p
+
     val neg : int53p -> int53p
     val add : int53p -> int53p -> int53p
+
+    val succ : int53p -> int53p
+    val pred : int53p -> int53p
+
     val sub : int53p -> int53p -> int53p
     val mul : int53p -> int53p -> int53p
     val div : int53p -> int53p -> int53p
@@ -1140,19 +1144,15 @@ module Int53p = struct
                  val mul : int53p -> int53p -> int53p
                  val div : int53p -> int53p -> int53p
                  val rem : int53p -> int53p -> int53p
-                 val succ : int53p -> int53p
-                 val pred : int53p -> int53p
                end) : Ops with type int53p = M.int53p = struct
       type int53p = M.int53p
-      let ( ~- ) : int53p -> int53p = M.neg
-      let ( ~+ ) : int53p -> int53p = identity
-      let succ : int53p -> int53p = M.succ
-      let pred : int53p -> int53p = M.pred
-      let ( + ) : int53p -> int53p -> int53p = M.add
-      let ( - ) : int53p -> int53p -> int53p = M.sub
-      let ( * ) : int53p -> int53p -> int53p = M.mul
-      let ( / ) : int53p -> int53p -> int53p = M.div
-      let ( mod ) : int53p -> int53p -> int53p = M.rem
+      let ( ~-% ) : int53p -> int53p = M.neg
+      let ( ~+% ) : int53p -> int53p = identity
+      let ( +% ) : int53p -> int53p -> int53p = M.add
+      let ( -% ) : int53p -> int53p -> int53p = M.sub
+      let ( *% ) : int53p -> int53p -> int53p = M.mul
+      let ( /% ) : int53p -> int53p -> int53p = M.div
+      let ( /%% ) : int53p -> int53p -> int53p = M.rem
     end
 
     module IntImpl : S = struct
@@ -1257,7 +1257,7 @@ module Int53p = struct
 
   include Internals.CurrentFlavorImpl
 end
-type int53p = Int53p.int53p
+include Int53p.Ops
 
 module Datetime0 : sig
 
