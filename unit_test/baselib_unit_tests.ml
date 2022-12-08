@@ -279,6 +279,77 @@ let json_of_jsonm_obj_5 =
            "e", `arr []; "f", `arr [`num 0.]; "g", `arr [`num 0.; `num 1.];
            "h", `obj []; "i", `obj ["a2", `null]; "j", `obj ["a2", `null; "b2", `bool true]])
 
+let jvpath_access path x expected () =
+  let actual = Jv.access path x in
+  check (option jv) "Json.access" expected actual
+
+let jvpath_access_cases = [
+    test_case "Json.access_0_1" `Quick (
+        jvpath_access [] (`null) (some `null)
+      );
+    test_case "Json.access_0_2" `Quick (
+        jvpath_access [] (`str "hello") (some (`str "hello"))
+      );
+    test_case "Json.access_0_3" `Quick (
+        jvpath_access [] (`arr [`num 0.; `str "abc"]) (some (`arr [`num 0.; `str "abc"]))
+      );
+    test_case "Json.access_0_4" `Quick (
+        jvpath_access []
+          (`obj ["f1", `num 0.; "f2", `str "abc"])
+          (some (`obj ["f1", `num 0.; "f2", `str "abc"]))
+      );
+    test_case "Json.access_1_1" `Quick (
+        jvpath_access [`i 0]
+          (`obj ["f1", `num 0.; "f2", `str "abc"])
+          (none)
+      );
+    test_case "Json.access_1_2" `Quick (
+        jvpath_access [`i 0]
+          (`arr [])
+          (none)
+      );
+    test_case "Json.access_1_3" `Quick (
+        jvpath_access [`i 1]
+          (`arr [`bool true])
+          (none)
+      );
+    test_case "Json.access_2_1" `Quick (
+        jvpath_access [`i 0]
+          (`arr [`num 0.;`str "abc"])
+          (some (`num 0.))
+      );
+    test_case "Json.access_2_2" `Quick (
+        jvpath_access [`i 1]
+          (`arr [`num 0.;`str "abc"])
+          (some (`str "abc"))
+      );
+    test_case "Json.access_3_1" `Quick (
+        jvpath_access [`f "f1"]
+          (`obj ["f1", `num 0.; "f2", `str "abc"])
+          (some (`num 0.))
+      );
+    test_case "Json.access_3_2" `Quick (
+        jvpath_access [`f "f2"]
+          (`obj ["f1", `num 0.; "f2", `str "abc"])
+          (some (`str "abc"))
+      );
+    test_case "Json.access_3_3" `Quick (
+        jvpath_access [`f "f3"]
+          (`obj ["f1", `num 0.; "f2", `str "abc"])
+          (none)
+      );
+    test_case "Json.access_4_1" `Quick (
+        jvpath_access [`f "f1"; `i 1]
+          (`obj ["f1", `arr [`num 0.; `bool false]; "f2", `str "abc"])
+          (some (`bool false))
+      );
+    test_case "Json.access_4_2" `Quick (
+        jvpath_access [ `i 1; `f "f1";]
+          (`arr [`bool false; (`obj ["f1", `num 0.; "f2", `str "abc"])])
+          (some (`num 0.))
+      );
+  ]
+
 let () =
   Printexc.record_backtrace true;
   run "Datecode_unit_tests" [
@@ -343,5 +414,7 @@ let () =
       test_case "json_of_jsonm_obj_3" `Quick json_of_jsonm_obj_3;
       test_case "json_of_jsonm_obj_4" `Quick json_of_jsonm_obj_4;
       test_case "json_of_jsonm_obj_5" `Quick json_of_jsonm_obj_5;
-    ]
+    ];
+
+    "Json.access", jvpath_access_cases;
   ]

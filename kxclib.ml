@@ -2196,7 +2196,21 @@ end = struct
             xs (Seq.return `Oe))
 end
 
-module Jv = struct
+module Jv : sig
+  open Json
+
+  val pump_field : string -> jv -> jv
+
+  val access : jvpath -> jv -> jv option
+  val access' : (jv -> 'a option) -> jvpath -> jv -> 'a option
+  val access_null : jvpath -> jv -> unit option
+  val access_bool : jvpath -> jv -> bool option
+  val access_num : jvpath -> jv -> float option
+  val access_int : jvpath -> jv -> int option
+  val access_str : jvpath -> jv -> string option
+  val access_arr : jvpath -> jv -> jv list option
+  val access_obj : jvpath -> jv -> jv_fields option
+end = struct
   open Json
 
   let pump_field fname : jv -> jv = function
@@ -2207,6 +2221,59 @@ module Jv = struct
          `obj ((fname, fval) :: fs')
       | None, _ -> jv)
     | jv -> jv
+
+  let access : jvpath -> jv -> jv option = fun path jv ->
+    let rec go = function
+      | [], x -> some x
+      | `f fname :: path', `obj fs ->
+         fs |> List.find_map (fun (k, v) ->
+                   if k = fname then go (path', v)
+                   else none
+                 )
+      | `i idx :: path', `arr xs ->
+         List.nth_opt xs idx >>? (fun x -> go (path', x))
+      | _ -> none
+    in
+    go (path, jv)
+
+  let access' : (jv -> 'a option) -> jvpath -> jv -> 'a option = fun f path jv ->
+    access path jv >>? f
+
+  let access_null : jvpath -> jv -> unit option =
+    access' (function
+        | `null -> some ()
+        | _ -> none)
+
+  let access_bool : jvpath -> jv -> bool option =
+    access' (function
+        | `bool x -> some x
+        | _ -> none)
+
+  let access_num : jvpath -> jv -> float option =
+    access' (function
+        | `num x -> some x
+        | _ -> none)
+
+  let access_int : jvpath -> jv -> int option =
+    access' (function
+        | `num x when (float_of_int % int_of_float) x = x
+          -> some (x |> int_of_float)
+        | _ -> none)
+
+  let access_str : jvpath -> jv -> string option =
+    access' (function
+        | `str x -> some x
+        | _ -> none)
+
+  let access_arr : jvpath -> jv -> jv list option =
+    access' (function
+        | `arr xs -> some xs
+        | _ -> none)
+
+  let access_obj : jvpath -> jv -> jv_fields option =
+    access' (function
+        | `obj fs -> some fs
+        | _ -> none)
 end
 
 module Base64 = struct
