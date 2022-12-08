@@ -2202,7 +2202,6 @@ module Jv : sig
   val pump_field : string -> jv -> jv
 
   val access : jvpath -> jv -> jv option
-  val access' : (jv -> 'a option) -> jvpath -> jv -> 'a option
   val access_null : jvpath -> jv -> unit option
   val access_bool : jvpath -> jv -> bool option
   val access_num : jvpath -> jv -> float option
@@ -2210,6 +2209,9 @@ module Jv : sig
   val access_str : jvpath -> jv -> string option
   val access_arr : jvpath -> jv -> jv list option
   val access_obj : jvpath -> jv -> jv_fields option
+
+  val access' : (jv -> 'a option) -> jvpath -> jv -> 'a option
+  val access_arr' : (jv -> 'a option) -> jvpath -> jv -> 'a list option
 end = struct
   open Json
 
@@ -2274,6 +2276,12 @@ end = struct
     access' (function
         | `obj fs -> some fs
         | _ -> none)
+
+  let access_arr' : (jv -> 'a option) -> jvpath -> jv -> 'a list option = fun f path jv ->
+    let open MonadOps(Option) in
+    access_arr path jv
+    >? (List.map f &> sequence_list)
+    |> Option.join
 end
 
 module Base64 = struct

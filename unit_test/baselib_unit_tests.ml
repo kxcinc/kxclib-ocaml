@@ -279,9 +279,12 @@ let json_of_jsonm_obj_5 =
            "e", `arr []; "f", `arr [`num 0.]; "g", `arr [`num 0.; `num 1.];
            "h", `obj []; "i", `obj ["a2", `null]; "j", `obj ["a2", `null; "b2", `bool true]])
 
-let jvpath_access path x expected () =
-  let actual = Jv.access path x in
-  check (option jv) "Json.access" expected actual
+let jvpath_access' (f, msg, typ) path x expected () =
+  let actual = f path x in
+  check (option typ) msg expected actual
+
+let jvpath_access =
+  jvpath_access' (Jv.access, "Json.access", jv)
 
 let jvpath_access_cases = [
     test_case "Json.access_0_1" `Quick (
@@ -347,6 +350,51 @@ let jvpath_access_cases = [
         jvpath_access [ `i 1; `f "f1";]
           (`arr [`bool false; (`obj ["f1", `num 0.; "f2", `str "abc"])])
           (some (`num 0.))
+      );
+    test_case "Json.access_int_1" `Quick (
+        jvpath_access' (Jv.access_int, "Jv.access_int", int) [`i 1]
+          (`arr [`null; `num 1.])
+          (some 1)
+      );
+    test_case "Json.access_int_2" `Quick (
+        jvpath_access' (Jv.access_int, "Jv.access_int", int) [`i 1]
+          (`arr [`null; `num 1.1])
+          (none)
+      );
+    test_case "Json.access_arr_1'" `Quick (
+        jvpath_access' (
+            Jv.access_arr' (Jv.access_str [`f "name"]),
+            "Jv.access_arr",
+            list string) []
+          (`arr [`obj ["name", `str "alice"; "age", `num 12.];
+                 `obj ["name", `str "bob"; "age", `num 13.];
+                 `obj ["name", `str "cathy"; "age", `num 11.];])
+          (some ["alice"; "bob"; "cathy"])
+      );
+    test_case "Json.access_arr_2'" `Quick (
+        jvpath_access' (
+            Jv.access_arr' (Jv.access_int [`f "age"]),
+            "Jv.access_arr",
+            list int) []
+          (`arr [`obj ["name", `str "alice"; "age", `num 12.];
+                 `obj ["name", `str "bob"; "age", `num 13.];
+                 `obj ["name", `str "cathy"; "age", `num 11.];])
+          (some [12; 13; 11])
+      );
+    test_case "Json.access_arr_3'" `Quick (
+        jvpath_access' (
+            Jv.access_arr' Jv.(fun person ->
+              access_int [`f "age"] person >>? fun age ->
+              access_str [`f "name"] person >>? fun name ->
+              some (name, age)),
+            "Jv.access_arr",
+            list (pair string int)) []
+          (`arr [`obj ["name", `str "alice"; "age", `num 12.];
+                 `obj ["name", `str "bob"; "age", `num 13.];
+                 `obj ["name", `str "cathy"; "age", `num 11.];])
+          (some ["alice", 12;
+                 "bob", 13;
+                 "cathy", 11])
       );
   ]
 
