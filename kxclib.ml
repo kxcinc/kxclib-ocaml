@@ -1097,7 +1097,7 @@ module Int53p = struct
     val impl_flavor : int53p_impl_flavor
 
     module Ops : Ops
-    include Ops
+    include Ops with type int53p = Ops.int53p
     val zero : int53p
     val one : int53p
     val minus_one : int53p
@@ -1133,6 +1133,7 @@ module Int53p = struct
     [%%endif]
 
     val to_string : int53p -> string
+    val of_string : string -> int53p
   end
 
   module Internals = struct
@@ -1177,6 +1178,8 @@ module Int53p = struct
       let to_nativeint = Nativeint.of_int
       let of_nativeint = Nativeint.to_int
       [%%endif]
+
+      let of_string = int_of_string
     end
 
     module Int64Impl : S = struct
@@ -1196,6 +1199,13 @@ module Int53p = struct
 
     module FloatImpl : S = struct
       let impl_flavor = `float_impl
+
+      (* there is a problem with int_of_float in at least JSOO,
+         and type int = float in both JSOO and BuckleScript runtime  *)
+      let to_int, of_int = match Sys.backend_type with
+        | Other "js_of_ocaml" | Other "BS" ->
+           Obj.magic, Obj.magic
+        | _ -> Float.(to_int, of_int)
 
       let round_towards_zero x =
         let open Float in
@@ -1221,8 +1231,8 @@ module Int53p = struct
 
         let div a b = Float.div a b |> round_towards_zero
 
-        let to_int = Float.to_int
-        let of_int = Float.of_int
+        let to_int = to_int
+        let of_int = of_int
 
         let to_string = Float.to_string
       end
@@ -1238,6 +1248,8 @@ module Int53p = struct
       let to_nativeint = Nativeint.of_float
       let of_nativeint = Nativeint.to_float
       [%%endif]
+
+      let of_string = float_of_string
     end
 
     let current_impl_flavor =
@@ -2206,6 +2218,7 @@ module Jv : sig
   val access_bool : jvpath -> jv -> bool option
   val access_num : jvpath -> jv -> float option
   val access_int : jvpath -> jv -> int option
+  val access_int53p : jvpath -> jv -> int53p option
   val access_str : jvpath -> jv -> string option
   val access_arr : jvpath -> jv -> jv list option
   val access_obj : jvpath -> jv -> jv_fields option
@@ -2261,6 +2274,9 @@ end = struct
         | `num x when (float_of_int % int_of_float) x = x
           -> some (x |> int_of_float)
         | _ -> none)
+
+  let access_int53p : jvpath -> jv -> int53p option = fun path jv ->
+    access_num path jv >? Int53p.of_float
 
   let access_str : jvpath -> jv -> string option =
     access' (function
