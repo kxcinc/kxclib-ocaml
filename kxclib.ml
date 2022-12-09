@@ -2278,7 +2278,7 @@ end = struct
         | _ -> none)
 
   let access_arr' : (jv -> 'a option) -> jvpath -> jv -> 'a list option = fun f path jv ->
-    let open MonadOps(Option) in
+    let open Option.Ops_monad in
     access_arr path jv
     >? (List.map f &> sequence_list)
     |> Option.join
