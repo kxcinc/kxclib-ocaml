@@ -65,6 +65,7 @@ let seq_drop_1 = seq_drop (list string) 0 ["A"; "B"; "C"] ["A"; "B"; "C"]
 let seq_drop_2 = seq_drop (list string) 3 ["A"; "B"; "C"] []
 
 
+[%%if ocaml_version < (4, 14, 0)]
 let stream_take tstbl n org_lst expected_lst () =
   let actual = Stream.of_list org_lst |> Stream.take n in
   let actual_lst = actual in
@@ -84,6 +85,7 @@ let stream_drop tstbl n org_lst expected_lst () =
 let stream_drop_0 = stream_drop (list int) 2 [2; 3; 4] [4]
 let stream_drop_1 = stream_drop (list string) 0 ["A"; "B"; "C"] ["A"; "B"; "C"]
 let stream_drop_2 = stream_drop (list string) 3 ["A"; "B"; "C"] []
+[%%endif]
 
 let base64_known () =
   let rfc4648 = (module Base64 : Base64.T) in
@@ -398,9 +400,25 @@ let jvpath_access_cases = [
       );
   ]
 
+[%%if ocaml_version < (4, 14, 0)]
+let stream_suite = [
+  "stream_take", [
+    test_case "stream_take_0" `Quick stream_take_0;
+    test_case "stream_take_1" `Quick stream_take_1
+  ];
+  "stream_drop", [
+    test_case "stream_drop_0" `Quick stream_drop_0;
+    test_case "stream_drop_1" `Quick stream_drop_1;
+    test_case "stream_drop_2" `Quick stream_drop_2
+  ];
+]
+[%%else]
+let stream_suite = []
+[%%endif]
+
 let () =
   Printexc.record_backtrace true;
-  run "Datecode_unit_tests" [
+  run "Datecode_unit_tests" ([
     "trivial", [
       test_case "trivial_case" `Quick trivial
     ];
@@ -425,15 +443,8 @@ let () =
       test_case "seq_drop_1" `Quick seq_drop_1;
       test_case "seq_drop_2" `Quick seq_drop_2
     ];
-    "stream_take", [
-      test_case "stream_take_0" `Quick stream_take_0;
-      test_case "stream_take_1" `Quick stream_take_1
-    ];
-    "stream_drop", [
-      test_case "stream_drop_0" `Quick stream_drop_0;
-      test_case "stream_drop_1" `Quick stream_drop_1;
-      test_case "stream_drop_2" `Quick stream_drop_2
-    ];
+  ] @ stream_suite
+  @ [
     "base64", [
       test_case "base64_known" `Quick base64_known;
       test_case "base64_range" `Quick base64_range;
@@ -465,4 +476,4 @@ let () =
     ];
 
     "Json.access", jvpath_access_cases;
-  ]
+  ])

@@ -3,5 +3,6 @@
  (libraries
    kxclib baselib_test_lib
    alcotest qcheck)
+ (preprocess (pps ppx_optcomp))
  (flags (:standard
           -open Kxclib)))
