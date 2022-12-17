@@ -416,6 +416,128 @@ let stream_suite = [
 let stream_suite = []
 [%%endif]
 
+let json_escaped_suite =
+  let counter = ref 0 in
+  let case orig escaped =
+    let id = get_and_incr counter in
+    test_case (sprintf "json_escaped_%d" id) `Quick (fun () ->
+        check string
+          (sprintf "json_escape: %s => %s"
+             (String.escaped orig) escaped)
+          escaped (String.json_escaped orig)
+      )
+  in [
+    "json_escaped", [
+      case "" {||};
+      case "abc" {|abc|};
+      case "a\nbc" {|a\nbc|};
+      case "a\127bc" {|a\u007fbc|};
+      case "\196\163" {|ģ|};
+      case "\230\151\165" {|日|};
+      case "\xF0\x93\x83\x93" {|𓃓|};
+      case "\196\163\n\230\151\165cca\xF0\x93\x83\x93" {|ģ\n日cca𓃓|};
+    ];
+  ]
+
+let json_unparse =
+  let counter = ref 0 in
+  let case jv unparsed =
+    let id = get_and_incr counter in
+    test_case (sprintf "json_unparse_%d" id) `Quick (fun () ->
+        check string
+          (sprintf "json_unparsed: %s"
+             unparsed)
+          unparsed (Json.unparse jv)
+      )
+  in [
+    "json_unparse", [
+      case (`null) {|null|};
+      case (`bool true) {|true|};
+      case (`bool false) {|false|};
+      case (`num 3.) {|3|};
+      case (`num 0.) {|0|};
+      case (`num 3.14) {|3.14|};
+      case (`num 4.5e12) {|4.5e+12|};
+      case (`num (-3.)) {|-3|};
+      case (`num (-4.6e-24)) {|-4.6e-24|};
+      case (`str "abc") {|"abc"|};
+      case (`str "a\nbc") {|"a\nbc"|};
+      case (`str "a\127bc") {|"a\u007fbc"|};
+      case (`str "\196\163") {|"ģ"|};
+      case (`str "\230\151\165") {|"日"|};
+      case (`str "\xF0\x93\x83\x93") {|"𓃓"|};
+      case (`str "\196\163\n\230\151\165cca\xF0\x93\x83\x93") {|"ģ\n日cca𓃓"|};
+      case (`arr []) {|[]|};
+      case (`obj []) {|{}|};
+      case (`arr [`obj []; `bool true]) {|[{},true]|};
+      case (`arr [`null]) {|[null]|};
+      case (`arr [`null;`null;`null]) {|[null,null,null]|};
+      case (`obj ["num", `num 1.]) {|{"num":1}|};
+      case (`obj ["_1_num", `num 1.; "_2_arr", `arr [`null;`str "hello"]]
+            |> Json.normalize)
+        {|{"_1_num":1,"_2_arr":[null,"hello"]}|};
+    ];
+  ]
+
+let string_ignore_whitespace =
+  let normalize s =
+    let buf = Buffer.create (String.length s) in
+    let addc = Buffer.add_char buf in
+    let last = ref `whitespace in
+    s |> String.iter (function
+         | (' ' | '\n' | '\t') when !last = `whitespace -> ()
+         | (' ' | '\n' | '\t') (* otherwise *) ->
+            last := `whitespace;
+            addc ' '
+         | c ->
+            last := `non_whitespace;
+            addc c);
+    Buffer.contents buf in
+  let pp_string ppf x = fprintf ppf "%S" x in
+  testable pp_string (fun a b -> normalize a = normalize b)
+
+let json_show =
+  let counter = ref 0 in
+  let case jv shown =
+    let id = get_and_incr counter in
+    test_case (sprintf "json_show_%d" id) `Quick (fun () ->
+        check string_ignore_whitespace
+          (sprintf "json_show: %s"
+             shown)
+          shown (Json.show jv)
+      )
+  in [
+    "json_show", [
+      case (`null) {|`null|};
+      case (`bool true) {|`bool true|};
+      case (`bool false) {|`bool false|};
+      case (`num 3.) {|`num 3.|};
+      case (`num 0.) {|`num 0.|};
+      case (`num 3.14) {|`num 3.14|};
+      case (`num 4.5e12) {|`num 4.5e+12|};
+      case (`num (-0.)) {|`num 0.|};
+      case (`num 0.) {|`num 0.|};
+      case (`num (-3.)) {|`num (-3.)|};
+      case (`num (-4.6e-24)) {|`num (-4.6e-24)|};
+      case (`str "abc") {|`str "abc"|};
+      case (`str "a\nbc") {|`str "a\nbc"|};
+      case (`str "a\127bc") {|`str "a\127bc"|};
+      case (`str "\196\163") {|`str "\196\163"|};
+      case (`str "\230\151\165") {|`str "\230\151\165"|};
+      case (`str "\xF0\x93\x83\x93") {|`str "\240\147\131\147"|};
+      case (`str "\196\163\n\230\151\165cca\xF0\x93\x83\x93") {|`str "\196\163\n\230\151\165cca\240\147\131\147"|};
+      case (`arr []) {|`arr []|};
+      case (`obj []) {|`obj []|};
+      case (`arr [`obj []; `bool true]) {|`arr [`obj []; `bool true]|};
+      case (`arr [`null]) {|`arr [`null]|};
+      case (`arr [`null;`null;`null]) {|`arr [`null; `null; `null]|};
+      case (`obj ["num", `num 1.]) {|`obj ["num", `num 1.]|};
+      case (`obj ["_1_num", `num 1.; "_2_arr", `arr [`null;`str "hello"]]
+            |> Json.normalize)
+        {|`obj ["_1_num", `num 1.; "_2_arr", `arr [`null; `str "hello"]]|};
+    ];
+  ]
+
 let () =
   Printexc.record_backtrace true;
   run "Datecode_unit_tests" ([
@@ -444,6 +566,8 @@ let () =
       test_case "seq_drop_2" `Quick seq_drop_2
     ];
   ] @ stream_suite
+    @ json_escaped_suite
+    @ json_unparse @ json_show
   @ [
     "base64", [
       test_case "base64_known" `Quick base64_known;

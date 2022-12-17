@@ -968,6 +968,59 @@ module String = struct
 
   let of_list = List.to_seq &> of_seq
   let of_array = Array.to_seq &> of_seq
+
+  let pp_json_escaped : Format.formatter -> string -> unit =
+    fun ppf str ->
+    let len = length str in
+    let getc = unsafe_get str in
+    let addc = Format.pp_print_char ppf in
+    let adds = Format.pp_print_string ppf in
+    let addu x =
+      adds "\\u";
+      adds (Format.sprintf "%04x" x) in
+    let addb n k =
+      iotaf' k (fun i -> addc (getc (n + i))) in
+    let flush = Format.pp_print_flush ppf in
+    let raise' pos =
+      invalid_arg' "json_escaped: invalid/incomplete utf-8 string at pos %d" pos in
+    let rec loop n =
+      if (n-1) mod 64 = 0 then flush();
+      let adv k = loop (n + k) in
+      let check k =
+        if not (n + k <= len)
+        then raise' (n+k-1) in
+      if succ n > len then ()
+      else (
+        match getc n with
+        | '"' -> adds "\\\""; adv 1
+        | '\\' -> adds "\\\\"; adv 1
+        | '\b' -> adds "\\b"; adv 1
+        | '\012' -> adds "\\f"; adv 1
+        | '\n' -> adds "\\n"; adv 1
+        | '\r' -> adds "\\r"; adv 1
+        | '\t' -> adds "\\t"; adv 1
+        | '\127' -> addu 127; adv 1
+        | c ->
+           let x1 = int_of_char c in
+           if x1 < 32 then (addu x1; adv 1)
+           else if x1 < 127 then (addc c; adv 1)
+           else (
+             check 2;
+             let spit k = check k; addb n k; adv k in
+             if x1 land 0xe0 = 0xc0 then (
+               spit 2 (* 2byte utf8 *)
+             ) else if (x1 land 0xf0 = 0xe0) then (
+               spit 3 (* 3byte utf8 *)
+             ) else if (x1 land 0xf8 = 0xf0) then (
+               spit 4 (* 4byte utf8 *)
+             ) else raise' n
+           )
+      )
+    in loop 0
+
+  let json_escaped : string -> string =
+    Format.asprintf "%a" pp_json_escaped
+
 end
 
 module MapPlus (M : Map.S) = struct
@@ -1912,6 +1965,22 @@ module Json : sig
   val eqv : jv -> jv -> bool
   (** whether two json value are equivalent, i.e. equal while ignoring ordering of object fields *)
 
+  val pp_unparse : ppf -> jv -> unit
+  (** [pp_unparse ppf j] output [j] as a JSON string.
+      NB: this function does not check if [j] contains any [`str s]
+           where [s] is an invalid UTF-8 string. it just assumes so. *)
+
+  val unparse : jv -> string
+  (** [unparse j] convert [j] to a JSON string using [pp_unparse].
+      see [pp_unparse] for caveats. *)
+
+  val pp_lit : ppf -> jv -> unit
+  (** [pp_lit ppf j] output [j] in a format that can be used as an OCaml literal. *)
+
+  val show : jv -> string
+  (** [show j] convert [j] to a string using [pp_lit],
+      which is a string that can be used as an OCaml literal. *)
+
   type jvpath = ([
     | `f of string (** field within an object *)
     | `i of int (** index within an array *)
@@ -2019,6 +2088,75 @@ end = struct
     | `obj fs -> `obj (normalize_fields fs)
   and normalize_fields : jv_fields -> jv_fields = fun fs ->
     sort_by_key fs |&> (fun (k, v) -> k, normalize v)
+
+  let rec pp_unparse = fun ppf ->
+    let self = pp_unparse in
+    let outs = Format.pp_print_string ppf in
+    let outf fmt = Format.fprintf ppf fmt in
+    function
+    | `null -> outs "null"
+    | `bool true -> outs "true"
+    | `bool false -> outs "false"
+    | `num n -> outf "%g" n
+    | `str s -> outf "\"%a\"" String.pp_json_escaped s
+    | `arr [] -> outs "[]"
+    | `arr xs ->
+       outs "[";
+       xs |> List.iter'
+               (fun j -> outf "%a,%!" self j)
+               (fun j -> outf "%a]%!" self j)
+    | `obj [] -> outs "{}"
+    | `obj fs ->
+       outs "{";
+       fs |> List.iter'
+               (fun (f,j) -> outf "\"%a\":%!%a,%!"
+                               String.pp_json_escaped f
+                               self j)
+               (fun (f,j) -> outf "\"%a\":%!%a}%!"
+                               String.pp_json_escaped f
+                               self j)
+
+  let unparse = sprintf "%a" pp_unparse
+
+  let rec pp_lit = fun ppf ->
+    let self = pp_lit in
+    let outs = Format.pp_print_string ppf in
+    let outf fmt = Format.fprintf ppf fmt in
+    function
+    | `null -> outs "`null"
+    | `bool true -> outs "`bool true"
+    | `bool false -> outs "`bool false"
+    | `num n ->
+       if n = 0. then outs "`num 0."
+       else if n < 0. then outf "`num (%F)" n
+       else outf "`num %F" n
+    | `str s -> outf "`str %S" s
+    | `arr [] -> outs "`arr []"
+    | `arr xs ->
+       outf "`arr [";
+       xs
+       |> List.iter'
+         (fun value ->
+           fprintf ppf "@[<hov 0>%a@];@;<1 2>@?"
+             self value)
+         (fun value ->
+           fprintf ppf "@[<hov 0>%a@]]@?"
+             self value);
+    | `obj [] -> outs "`obj []"
+    | `obj fs ->
+       outf "`obj [";
+       fs
+       |> List.iter'
+         (fun (key, value) ->
+           fprintf ppf "@[<hov 0>%S, @,@[<hov 0>%a@];@]@;<1 2>@?"
+             key
+             self value)
+         (fun (key, value) ->
+           fprintf ppf "@[<hov 0>%S, @,@[<hov 0>%a@]@]]@?"
+             key
+             self value)
+
+  let show = sprintf "%a" pp_lit
 
   type jvpath = ([
     | `f of string
