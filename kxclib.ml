@@ -1321,8 +1321,23 @@ module Int53p = struct
   end
 
   include Internals.CurrentFlavorImpl
+
+  module Pervasives = struct
+    let _cP = of_int (** "convert to int53p" *)
+    let _cPL = of_int64 (** "convert long to int53p" *)
+    let _cPF = of_float (** "convert float to int53p" *)
+    let _rP = to_int (** "revert to int from int53p" *)
+    let _rPL = to_int64 (** "revert to long from int53p" *)
+    let _rPF = to_float (** "revert to float from int53p" *)
+
+    [%%if not(re)]
+    let _cPN = of_nativeint (** "convert nativeint to int53p" *)
+    let _rPN = to_nativeint (** "revert to nativeint from int53p" *)
+    [%%endif]
+  end
 end
 include Int53p.Ops
+include Int53p.Pervasives
 
 module Datetime0 : sig
 
