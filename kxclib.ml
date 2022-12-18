@@ -1333,6 +1333,7 @@ module Int53p = struct
     [%%if not(re)]
     let _cPN = of_nativeint (** "convert nativeint to int53p" *)
     let _rPN = to_nativeint (** "revert to nativeint from int53p" *)
+    let () = () (* this is a workaround for ppx_optcomp *)
     [%%endif]
   end
 end
