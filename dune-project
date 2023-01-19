@@ -16,6 +16,10 @@
  (synopsis "KXC maintained common utilities")
  (description "Common OCaml utilities maintained by Kotoi-Xie Consultancy")
  (depends
+  (ppx_optcomp :build)
+  (ppx_deriving :build)
+
   (alcotest :with-test)
   (qtest :with-test)
+
   (ocaml (>= 4.11.0))))
