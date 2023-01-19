@@ -10,6 +10,8 @@ homepage: "https://github.com/kxcteam/kxclib-ocaml"
 bug-reports: "https://github.com/kxcteam/kxclib-ocaml/issues"
 depends: [
   "dune" {>= "3.0"}
+  "ppx_optcomp" {build}
+  "ppx_deriving" {build}
   "alcotest" {with-test}
   "qtest" {with-test}
   "ocaml" {>= "4.11.0"}
