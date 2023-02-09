@@ -101,7 +101,7 @@ module Functionals = struct
   let reptill judge f x =
     let rec loop y =
       if judge y then y
-      else loop (f x) in
+      else loop (f y) in
     loop (f x)
   (** [reptill judge f x] evaluates [f x] repeatedly till [judge (f x)] holds. *)
 
@@ -127,14 +127,14 @@ module Functionals = struct
          if x = x' then x
          else loop (x', f x') in
        loop (x, f x)
-    | Some 0 -> fun _ x -> x
-    | Some n ->
+    | Some 0 -> failwith "fixpoint not reached after 0 tries"
+    | Some maxn ->
        fun f x ->
        let rec loop n (x,x') =
-         if n = 0 then x'
-         else if x = x' then x
+         if x = x' then x
+         else if n = 0 then failwith' "fixpoint not reached after %d tries" maxn
          else loop (pred n) (x', f x') in
-       loop (pred n) (x, f x)
+       loop (pred maxn) (x, f x)
   (** [fixpoint f] try to resolve the fixpoint of f.
       [maxn], an optional argument, limits the number of iterations
       to find the fix point. *)
