@@ -1,0 +1,43 @@
+name: Quick-Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quick-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        ocaml-version:
+          - 4.13.1
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/kxcteam/ocaml-general:${{ matrix.ocaml-version }}
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # https://github.blog/2022-04-12-git-security-vulnerability-announced/
+      - name: Set safe directory
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+      - name: Initialize submodules
+        run: git submodule update --init
+
+      - name: Check OCaml version and workspace info
+        run: ./scripts/ci_print_env.sh
+
+      - name: Install OPAM dependencies
+        run: |
+          opam install -y . --deps-only --with-test || (opam update && opam install -y . --deps-only --with-test)
+
+      - name: Perform dune build
+        run: opam exec -- dune build
+
+      - name: Perform dune runtest
+        run: opam exec -- dune runtest
