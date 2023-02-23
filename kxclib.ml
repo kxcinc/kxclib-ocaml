@@ -396,6 +396,10 @@ module Option0 = struct
     | Some x -> Some x
     | None -> otherwise
 
+  let otherwise' otherwise_f = function
+    | Some x -> Some x
+    | None -> otherwise_f()
+
   let pp vpp ppf = Format.(function
     | Some x -> fprintf ppf "Some(%a)" vpp x
     | None -> fprintf ppf "None")
@@ -429,6 +433,7 @@ let (>>?) o f = Option.bind o f
 let (|?) o v = Option.v v o
 let (|?!) o v = Option.v' v o
 let (||?) o1 o2 = Option.otherwise o2 o1
+let (||?!) o1 o2 = Option.otherwise' o2 o1
 let (&>?) : ('x -> 'y option) -> ('y -> 'z) -> ('x -> 'z option) =
   fun af f -> af &> (Option.map f)
 
