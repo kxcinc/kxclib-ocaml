@@ -1254,8 +1254,10 @@ module Int53p = struct
                  val to_int64 : int53p -> int64
                  val to_float : int53p -> float
 
+                 [%%if not(re)]
                  val of_nativeint : nativeint -> int53p
                  val to_nativeint : int53p -> nativeint
+                 [%%endif]
                end) = struct
       open M
 
