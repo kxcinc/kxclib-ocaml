@@ -192,6 +192,14 @@ module Functionals = struct
     let (?<) : ('a -> 'c) -> ('a*'b -> 'c*'b) =
       fun f -> fun (a, b) -> f a, b
 
+    (** lift to map snd *)
+    let (?&>) : ('y2 -> 'x2) -> ('x1 * 'x2 -> 'r) -> 'x1 * 'y2 -> 'r =
+      fun g f -> fun (x, y) -> f (x, g y)
+
+    (** lift to map fst *)
+    let (?&<) : ('y1 -> 'x1) -> ('x1 * 'x2 -> 'r) -> 'y1 * 'x2 -> 'r =
+      fun g f -> fun (x, y) -> f (g x, y)
+
     (** uncurry *)
     let (!!) : ('a -> 'b -> 'x) -> ('a*'b -> 'x) =
       fun f -> fun (a, b) -> f a b
