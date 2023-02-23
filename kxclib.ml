@@ -298,6 +298,11 @@ let foldr f z l = List.fold_right f l z
 let projected_compare proj a b =
   compare (proj a) (proj b)
 
+let neg = Int.neg
+let mul = Int.mul
+let div = Int.div
+let rem = Int.rem
+
 module Either = struct
   type ('a, 'b) t = Left of 'a | Right of 'b
   let left x = Left x
