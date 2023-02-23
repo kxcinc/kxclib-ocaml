@@ -46,22 +46,28 @@ let failwith' fmt =
 let invalid_arg' fmt =
   Format.kasprintf (invalid_arg) fmt
 
-let iotaf n func =
+let iotaf func n =
   let rec loop acc = function
     | m when m = n -> acc
     | m -> loop (func m :: acc) (succ m) in
   loop [] 0 |> List.rev
 
-let iotaf' n func =
+let iotaf' func n =
   let rec loop = function
     | m when m = n -> ()
     | m -> func m; loop (succ m) in
   loop 0
 
-let iotafl n func acc0 =
+let iotafl binop acc0 n =
   let rec loop acc = function
     | m when m = n -> acc
-    | m -> loop (func acc m) (succ m) in
+    | m -> loop (binop acc m) (succ m) in
+  loop acc0 0
+
+let iotafl' binop acc0 g n =
+  let rec loop acc = function
+    | m when m = n -> acc
+    | m -> loop (binop acc (g m)) (succ m) in
   loop acc0 0
 
 let min_by f x y = if f y > f x then x else y
@@ -656,6 +662,10 @@ module List0 = struct
     | 0 -> []
     | k -> 0 :: (List.init (pred k) succ)
 
+  let iota1 = function
+    | 0 -> []
+    | k -> List.init k succ
+
   let range =
     let helper start end_ = iota (end_ - start) |&> (+) start in
     fun ?include_endpoint:(ie=false) ->
@@ -980,7 +990,7 @@ module String = struct
       adds "\\u";
       adds (Format.sprintf "%04x" x) in
     let addb n k =
-      iotaf' k (fun i -> addc (getc (n + i))) in
+      iotaf' (fun i -> addc (getc (n + i))) k in
     let flush = Format.pp_print_flush ppf in
     let raise' pos =
       invalid_arg' "json_escaped: invalid/incomplete utf-8 string at pos %d" pos in
@@ -2668,7 +2678,7 @@ module Base64 = struct
                 let valid =
                   match String.length rest with
                   | rest_len when rest_len > 0 && rest_len <= 2 ->
-                    iotafl rest_len (fun acc i -> acc && String.get rest i = pad) true
+                    rest_len |> iotafl (fun acc i -> acc && String.get rest i = pad) true
                   | _ -> false
                   in
                 if valid then read stack o
