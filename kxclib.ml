@@ -83,7 +83,7 @@ module Functionals = struct
   let dig2nd f a b = f b a
   (** [f] dig the second argument of [f] to be the first. aka [flip] *)
 
-  let dig3rd f a b c = f c a b
+  let dig3rd f c a b = f a b c
   (** [f] dig the third argument of [f] to be the first *)
 
   let flip = dig2nd
@@ -167,6 +167,12 @@ module Functionals = struct
     (** function composition 2 *)
     let (&>) : ('x -> 'y) -> ('y -> 'z) -> ('x -> 'z) =
       fun g f x -> x |> g |> f
+
+    let (?.) : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
+      = dig2nd
+
+    let (?..) : ('a -> 'b -> 'c -> 'd) -> 'c -> 'a -> 'b -> 'd
+      = dig3rd
 
     (** function composition 2, arity=2 *)
     let (&&>) : ('x -> 'y -> 'z) -> ('z -> 'r) -> ('x -> 'y -> 'r) =
