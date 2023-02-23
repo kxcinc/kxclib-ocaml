@@ -174,6 +174,12 @@ module Functionals = struct
     let (?..) : ('a -> 'b -> 'c -> 'd) -> 'c -> 'a -> 'b -> 'd
       = dig3rd
 
+    let (!.) : 'b -> ('a -> 'b -> 'c) -> 'b -> 'c
+      = fix2nd
+
+    let (!..) : 'c -> ('a -> 'b -> 'c -> 'd) -> 'a -> 'b -> 'd
+      = fix3rd
+
     (** function composition 2, arity=2 *)
     let (&&>) : ('x -> 'y -> 'z) -> ('z -> 'r) -> ('x -> 'y -> 'r) =
       fun g f x y -> g x y |> f
