@@ -13,6 +13,7 @@ jobs:
       matrix:
         ocaml-version:
           - 4.13.1
+          - 5.0.0
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/kxcteam/ocaml-general:${{ matrix.ocaml-version }}
