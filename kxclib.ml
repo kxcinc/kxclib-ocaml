@@ -938,6 +938,7 @@ end
 include List.Ops_piping
 
 let iota = List.iota
+let iota1 = List.iota1
 
 module Hashtbl = struct
   include Hashtbl
