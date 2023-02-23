@@ -1250,43 +1250,6 @@ module Int53p = struct
       let ( /%% ) : int53p -> int53p -> int53p = M.rem
     end
 
-    module MakeConv(M : sig
-                 type int53p
-                 val of_int : int -> int53p
-                 val of_int64 : int64 -> int53p
-                 val of_float : float -> int53p
-                 val to_int : int53p -> int
-                 val to_int64 : int53p -> int64
-                 val to_float : int53p -> float
-
-                 [%%if not(re)]
-                 val of_nativeint : nativeint -> int53p
-                 val to_nativeint : int53p -> nativeint
-                 [%%endif]
-               end) = struct
-      open M
-
-      let _cP = of_int (** "convert to int53p" *)
-
-      let _cPL = of_int64 (** "convert long to int53p" *)
-
-      let _cPF = of_float (** "convert float to int53p" *)
-
-      let _rP = to_int (** "revert to int from int53p" *)
-
-      let _rPL = to_int64 (** "revert to long from int53p" *)
-
-      let _rPF = to_float (** "revert to float from int53p" *)
-
-      [%%if not(re)]
-      let _cPN = of_nativeint (** "convert nativeint to int53p" *)
-
-      let _rPN = to_nativeint (** "revert to nativeint from int53p" *)
-
-      let () = () (* this is a workaround for ppx_optcomp *)
-      [%%endif]
-    end
-
     module IntImpl : S = struct
       let impl_flavor = `int_impl
 
@@ -1398,7 +1361,6 @@ module Int53p = struct
     module CurrentFlavorImpl = (val (impl_of_builtin_flavor current_impl_flavor))
   end
 
-  module Conv = Internals.MakeConv(Internals.CurrentFlavorImpl)
   include Internals.CurrentFlavorImpl
 end
 include Int53p.Ops
