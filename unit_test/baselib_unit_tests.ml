@@ -180,6 +180,46 @@ let base64_range () =
       (Bytes.of_string expected_plain) actual_plain
   )
 
+let base64_decode_pad () =
+  let input_cases = [
+    "Zm8", none;
+    "Zm8=", some "fo";
+    "Zm8==", none;
+    "Zm8===", none;
+    "Zm8=====", none;
+    "Zm9v", some "foo";
+    "Zm9v====", none;
+    "Zg", none;
+    "Zg=", none;
+    "Zg==", some "f";
+    "Zg===", none;
+    "Zg==\n", some "f";
+    "Zg\n==\n", some "f";
+    "Z\ng\n=\n=\n", some "f";
+    "Zm9vYmE=", some "fooba";
+    "Zm9v\nYmE=", some "fooba";
+    "Zm9v\nYmE=\n", some "fooba";
+    "Zm9v\nYmE", none;
+    "Zm9v\nYmE\n", none;
+  ] in
+  input_cases |> List.iter (fun (input_case, expected) ->
+    match expected with
+    | Some v ->
+      let actual_plain_bytes = Base64.decode input_case in
+      let actual_plain_string = Bytes.to_string actual_plain_bytes in
+      check string input_case v actual_plain_string
+    | None ->
+      try
+        let _ = Base64.decode input_case in
+        fail "Invalid_argument expected"
+      with
+      | Invalid_argument e ->
+        Log0.verbose "%s" e;
+        ()
+      | e -> raise e
+  )
+
+
 type jv = Json.jv
 
 
@@ -572,6 +612,7 @@ let () =
     "base64", [
       test_case "base64_known" `Quick base64_known;
       test_case "base64_range" `Quick base64_range;
+      test_case "base64_decode_pad" `Quick base64_decode_pad;
     ];
 
     "json_of_jsonm", [

@@ -2620,6 +2620,19 @@ module Base64 = struct
       encode_buf ?offset ?len output input |> ignore;
       Buffer.contents output
 
+    let len_without_ignore ?(offset=0) ?len (input: Bytes.t): int =
+      let orig_len = Bytes.length input in
+      let len = len |? (orig_len - offset) in
+      let counter acc i =
+        let c = Bytes.get_uint8 input (offset + i) in
+        begin match char_of_int c with
+        | _ when ignore_unknown -> acc
+        | '\r' | '\n' when ignore_newline -> acc
+        | _ -> acc + 1
+        end
+      in
+      len |> iotafl counter 0
+
     let decode_buf ?(offset=0) ?len (output: Buffer.t) (input: string) =
       let input = Bytes.of_string input in
       let input_offset, input_end, input_length =
@@ -2628,8 +2641,11 @@ module Base64 = struct
         let end_index = offset + len in
         if len < 0 || end_index > orig_len then
           invalid_arg' "Base64.encode: the input range (offset:%d, len:%d) is out of bounds" offset len
-        else if pad <> None && len mod 4 <> 0 then
-          invalid_arg "Base64.decode: wrong padding"
+        else if Option.is_some pad then
+          let actual_len = len_without_ignore ~offset ~len input in
+          if actual_len mod 4 <> 0 then
+            invalid_arg "Base64.decode: wrong padding"
+          else offset, end_index, len
         else offset, end_index, len
       in
       let output_buf =
@@ -2669,15 +2685,19 @@ module Base64 = struct
             | c ->
               begin match pad with
               | Some pad when c = pad ->
-                let rest = Bytes.sub_string input i (input_end - i) in
-                let valid =
-                  match String.length rest with
-                  | rest_len when rest_len > 0 && rest_len <= 2 ->
-                    rest_len |> iotafl (fun acc i -> acc && String.get rest i = pad) true
-                  | _ -> false
-                  in
-                if valid then read stack o
-                else invalid_arg' "Base64.decode: invalid char '%c' at index %d" pad i
+                let pad_counter acc ci =
+                  let c = Bytes.get_uint8 input (ci + i + 1) in
+                  begin match char_of_int c with
+                  | _ when ignore_unknown -> acc
+                  | '\r' | '\n' when ignore_newline -> acc
+                  | s when s = pad -> acc + 1
+                  | s -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" s (ci + i + 1)
+                  end
+                in
+                let pad_count = (input_end - i - 1) |> iotafl pad_counter 0 |> ((+) 1) in
+                let is_valid = 0 < pad_count && pad_count <= 2 in
+                if is_valid then read stack o
+                else invalid_arg' "Base64.decode: invalid pad len '%d'" pad_count
               | _ ->
                 invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
               end
@@ -2704,7 +2724,7 @@ module Base64 = struct
     let c62 = '+'
     let c63 = '/'
     let pad = Some '='
-    let ignore_newline = false
+    let ignore_newline = true
     let ignore_unknown = false
   end
   include Make(Config_rfc4648)
@@ -2713,7 +2733,7 @@ module Base64 = struct
     let c62 = '-'
     let c63 = '_'
     let pad = None
-    let ignore_newline = false
+    let ignore_newline = true
     let ignore_unknown = false
   end
   module Url = Make(Config_rfc4648_url)
