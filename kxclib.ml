@@ -2724,17 +2724,25 @@ module Base64 = struct
     let c62 = '+'
     let c63 = '/'
     let pad = Some '='
-    let ignore_newline = true
+    let ignore_newline = false
     let ignore_unknown = false
   end
-  include Make(Config_rfc4648)
+  module Config_rfc4648_relaxed = struct
+    include Config_rfc4648
+    let ignore_newline = true
+  end
+  include Make(Config_rfc4648_relaxed)
 
   module Config_rfc4648_url : Config = struct
     let c62 = '-'
     let c63 = '_'
     let pad = None
-    let ignore_newline = true
+    let ignore_newline = false
     let ignore_unknown = false
   end
-  module Url = Make(Config_rfc4648_url)
+  module Config_rfc4648_url_relaxed = struct
+    include Config_rfc4648_url
+    let ignore_newline = true
+  end
+  module Url = Make(Config_rfc4648_url_relaxed)
 end
