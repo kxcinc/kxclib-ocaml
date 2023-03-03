@@ -2493,6 +2493,9 @@ module Base64 = struct
         [Some '='] in rfc4648. [None] in rfc4648_url. *)
     val pad : char option
 
+    (** if set to true, validate padding length on decoding. *)
+    val validate_padding: bool
+
     (** if set to true, newline characters are ignored on decoding. *)
     val ignore_newline : bool
 
@@ -2533,6 +2536,18 @@ module Base64 = struct
     *)
     val decode : ?offset:int -> ?len:int -> string -> bytes
   end
+
+  exception Invalid_base64_padding_char of [`char of char] * [`index of int]
+  exception Invalid_base64_padding_len of [`len of int]
+
+  let () =
+    Printexc.register_printer begin function
+    | Invalid_base64_padding_char ((`char c), (`index i)) ->
+      some (sprintf "Invalid_base64_padding - char %c at %d" c i)
+    | Invalid_base64_padding_len (`len len) ->
+      some (sprintf "Invalid_base64_padding_len - %d" len)
+    | _ -> none
+    end
 
   module Make (C: Config) : T = struct
     open C
@@ -2688,40 +2703,6 @@ module Base64 = struct
         else
           let c = Bytes.get_uint8 input i in
           match char_to_sixbit c with
-          | None ->
-            begin match char_of_int c with
-            | _ when ignore_unknown -> go stack (i+1) o
-            | '\r' | '\n' when ignore_newline -> go stack (i+1) o
-            | c ->
-              begin match pad with
-              | Some pad when c = pad ->
-                let validate_pad ignore =
-                  let pad_count acc ci =
-                    let c = Bytes.get_uint8 input (ci + i + 1) in
-                    begin match char_of_int c with
-                    | s when s = pad -> acc + 1
-                    | s when ignore s -> acc
-                    | s -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" s (ci + i + 1)
-                    end
-                  in
-                  let pad_num = (input_end - i - 1) |> iotafl pad_count 0 |> ((+) 1) in
-                  let is_valid = 0 < pad_num && pad_num <= 2 in
-                  if is_valid then read stack o
-                  else invalid_arg' "Base64.decode: invalid pad len '%d'" pad_num
-                in
-                begin match ignore_unknown, ignore_newline with
-                | true, _ -> read stack o
-                | false, true ->
-                  validate_pad begin function
-                  | '\r' | '\n' -> true
-                  | _ -> false
-                  end
-                | false, false -> validate_pad (fun _ -> false)
-                end
-              | _ ->
-                invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
-              end
-            end
           | Some s ->
             let stack = s :: stack in
             if List.length stack = 4 then
@@ -2729,6 +2710,38 @@ module Base64 = struct
               go [] (i+1) o
             else
               go stack (i+1) o
+          | None ->
+            begin match char_of_int c with
+            | _ when ignore_unknown -> go stack (i+1) o
+            | '\r' | '\n' when ignore_newline -> go stack (i+1) o
+            | c when pad = some c && not validate_padding -> read stack o
+            | c when pad = some c && validate_padding ->
+              let pad = c in
+              let validate_pad ignore =
+                let pad_count acc ci =
+                  let c = Bytes.get_uint8 input (ci + i + 1) in
+                  begin match char_of_int c with
+                  | s when s = pad -> acc + 1
+                  | s when ignore s -> acc
+                  | s -> raise (Invalid_base64_padding_char (`char s, `index (ci + i + 1)))
+                  end
+                in
+                let pad_num = (input_end - i - 1) |> iotafl pad_count 0 |> ((+) 1) in
+                let is_valid = 0 < pad_num && pad_num <= 2 in
+                if is_valid then read stack o
+                else raise (Invalid_base64_padding_len (`len pad_num))
+              in
+              begin match ignore_unknown, ignore_newline with
+              | true, _ -> read stack o
+              | false, true ->
+                validate_pad begin function
+                | '\r' | '\n' -> true
+                | _ -> false
+                end
+              | false, false -> validate_pad (fun _ -> false)
+              end
+            | c -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
+            end
       in
       let total_bytes = go [] input_offset 0 in
       Buffer.add_buffer output output_buf;
@@ -2744,6 +2757,7 @@ module Base64 = struct
     let c62 = '+'
     let c63 = '/'
     let pad = Some '='
+    let validate_padding = true
     let ignore_newline = false
     let ignore_unknown = false
   end
@@ -2757,6 +2771,7 @@ module Base64 = struct
     let c62 = '-'
     let c63 = '_'
     let pad = None
+    let validate_padding = true
     let ignore_newline = false
     let ignore_unknown = false
   end

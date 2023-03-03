@@ -1,9 +1,11 @@
 open Alcotest
 
+let exn =
+  let fmt ppf e = Format.pp_print_string ppf (Printexc.to_string e) in
+  testable fmt (=)
 
 let sprintf fmt = Format.asprintf fmt
 let float_testable = float 0.0001
-
 
 let trivial () =
   check string "I'm trivial" "hello" "hello"
@@ -181,42 +183,42 @@ let base64_range () =
   )
 
 let base64_decode_pad () =
+  let wrong_padding = Either.left (Invalid_argument "Base64.decode: wrong padding") in
+  let wrong_padding_len len = Either.left (Base64.Invalid_base64_padding_len (`len len)) in
+  let right = Either.right in
   let input_cases = [
-    "Zm8", none;
-    "Zm8=", some "fo";
-    "Zm8==", none;
-    "Zm8===", none;
-    "Zm8=====", none;
-    "Zm9v", some "foo";
-    "Zm9v====", none;
-    "Zg", none;
-    "Zg=", none;
-    "Zg==", some "f";
-    "Zg===", none;
-    "Zg==\n", some "f";
-    "Zg\n==\n", some "f";
-    "Z\ng\n=\n=\n", some "f";
-    "Zm9vYmE=", some "fooba";
-    "Zm9v\nYmE=", some "fooba";
-    "Zm9v\nYmE=\n", some "fooba";
-    "Zm9v\nYmE", none;
-    "Zm9v\nYmE\n", none;
+    "Zm8", wrong_padding;
+    "Zm8=", right "fo";
+    "Zm8==", wrong_padding;
+    "Zm8===", wrong_padding;
+    "Zm8=====", wrong_padding_len 5;
+    "Zm9v", right "foo";
+    "Zm9v====", wrong_padding_len 4;
+    "Zg", wrong_padding;
+    "Zg=", wrong_padding;
+    "Zg==", right "f";
+    "Zg===", wrong_padding;
+    "Zg==\n", right "f";
+    "Zg\n==\n", right "f";
+    "Z\ng\n=\n=\n", right "f";
+    "Zm9vYmE=", right "fooba";
+    "Zm9v\nYmE=", right "fooba";
+    "Zm9v\nYmE=\n", right "fooba";
+    "Zm9v\nYmE", wrong_padding;
+    "Zm9v\nYmE\n", wrong_padding;
   ] in
   input_cases |> List.iter (fun (input_case, expected) ->
     match expected with
-    | Some v ->
+    | Either.Right expected_value ->
       let actual_plain_bytes = Base64.decode input_case in
       let actual_plain_string = Bytes.to_string actual_plain_bytes in
-      check string input_case v actual_plain_string
-    | None ->
+      check string input_case expected_value actual_plain_string
+    | Either.Left expected_exn ->
       try
         let _ = Base64.decode input_case in
         fail "Invalid_argument expected"
       with
-      | Invalid_argument e ->
-        Log0.verbose "%s" e;
-        ()
-      | e -> raise e
+      | e -> check exn input_case expected_exn e
   )
 
 
