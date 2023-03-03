@@ -3,6 +3,9 @@
 let refset r x = r := x
 (** [refset r x] sets [x] to ref [r]. *)
 
+let refget r = !r
+(** [refget r] returns [!r]. *)
+
 let refupdate r f = r := f !r
 (** [refupdate r f] updates referent of [r] by [f]. *)
 
@@ -384,6 +387,10 @@ module Option0 = struct
 
   let return = some
 
+  let get = function
+    | Some x -> x
+    | None -> raise Not_found
+
   let v default = function
     | Some x -> x
     | None -> default
@@ -420,6 +427,25 @@ module Option0 = struct
     | false -> None
 
   let some_if cond x = if cond then Some x else None
+
+  (** [try_make ~capture f] returns [Some (f())] except when
+      - [f()] throws an [exn] s.t. [capture exn = true], it returns [None]
+      - [f()] throws an [exn] s.t. [capture exn = false], it rethrows [exn]
+
+      [~capture] defaults to [fun _exn -> true]
+   *)
+  let try_make : ?capture:(exn -> bool) -> (unit -> 'x) -> 'x option =
+    fun ?(capture = constant true) f ->
+    try f() |> some
+    with exn ->
+      if capture exn then none
+      else raise exn
+
+  (** a specialized version of [try_make] where [~capture] is fixed to
+      [function Not_found -> true | _ -> false] *)
+  let if_found : (unit -> 'x) -> 'x option =
+    fun f -> try_make f ~capture:(function Not_found -> true | _ -> false)
+
 end
 module Option = struct
   include Option0
@@ -823,19 +849,27 @@ module List0 = struct
     | [] -> raise Not_found
     | hd::tl -> foldl f hd tl
 
-  let min cmp = function
-    | [] -> raise Not_found
+  let reduce_opt f = function
+    | [] -> none
+    | hd::tl -> foldl f hd tl |> some
+
+  let min_opt cmp = function
+    | [] -> none
     | hd::l ->
        let f acc x =
          if cmp acc x > 0 then x else acc in
-       fold_left f hd l
+       fold_left f hd l |> some
 
-  let max cmp = function
-    | [] -> raise Not_found
+  let max_opt cmp = function
+    | [] -> none
     | hd::l ->
        let f acc x =
          if cmp acc x < 0 then x else acc in
-       fold_left f hd l
+       fold_left f hd l |> some
+
+  let min cmp = min_opt cmp &> Option.get
+
+  let max cmp = min_opt cmp &> Option.get
 
   let foldl = foldl
   let foldr = foldr
