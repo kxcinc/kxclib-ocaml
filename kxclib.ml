@@ -2623,15 +2623,25 @@ module Base64 = struct
     let count_lenth_ignoring ?(offset=0) ?len (input: Bytes.t): int =
       let orig_len = Bytes.length input in
       let len = len |? (orig_len - offset) in
-      let count acc i =
-        let c = Bytes.get_uint8 input (offset + i) in
-        begin match char_of_int c with
-        | _ when ignore_unknown -> acc
-        | '\r' | '\n' when ignore_newline -> acc
-        | _ -> acc + 1
-        end
-      in
-      len |> iotafl count 0
+      let is_sixbit = char_to_sixbit &> Option.is_some in
+      match ignore_unknown, ignore_newline with
+      | true, _ ->
+        let count acc i =
+          let b = Bytes.get_uint8 input (offset + i) in
+          if (is_sixbit b) then acc + 1 else acc
+        in
+        len |> iotafl count 0
+      | false, true ->
+        let count acc i =
+          let b = Bytes.get_uint8 input (offset + i) in
+          if (is_sixbit b) then acc + 1 else
+          begin match char_of_int b with
+          | '\r' | '\n' -> acc
+          | _ -> acc + 1
+          end
+        in
+        len |> iotafl count 0
+      | false, false -> len
 
     let decode_buf ?(offset=0) ?len (output: Buffer.t) (input: string) =
       let input = Bytes.of_string input in
@@ -2685,19 +2695,29 @@ module Base64 = struct
             | c ->
               begin match pad with
               | Some pad when c = pad ->
-                let pad_count acc ci =
-                  let c = Bytes.get_uint8 input (ci + i + 1) in
-                  begin match char_of_int c with
-                  | _ when ignore_unknown -> acc
-                  | '\r' | '\n' when ignore_newline -> acc
-                  | s when s = pad -> acc + 1
-                  | s -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" s (ci + i + 1)
-                  end
+                let validate_pad ignore =
+                  let pad_count acc ci =
+                    let c = Bytes.get_uint8 input (ci + i + 1) in
+                    begin match char_of_int c with
+                    | s when s = pad -> acc + 1
+                    | s when ignore s -> acc
+                    | s -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" s (ci + i + 1)
+                    end
+                  in
+                  let pad_num = (input_end - i - 1) |> iotafl pad_count 0 |> ((+) 1) in
+                  let is_valid = 0 < pad_num && pad_num <= 2 in
+                  if is_valid then read stack o
+                  else invalid_arg' "Base64.decode: invalid pad len '%d'" pad_num
                 in
-                let pad_num = (input_end - i - 1) |> iotafl pad_count 0 |> ((+) 1) in
-                let is_valid = 0 < pad_num && pad_num <= 2 in
-                if is_valid then read stack o
-                else invalid_arg' "Base64.decode: invalid pad len '%d'" pad_num
+                begin match ignore_unknown, ignore_newline with
+                | true, _ -> read stack o
+                | false, true ->
+                  validate_pad begin function
+                  | '\r' | '\n' -> true
+                  | _ -> false
+                  end
+                | false, false -> validate_pad (fun _ -> false)
+                end
               | _ ->
                 invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
               end
