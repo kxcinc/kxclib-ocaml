@@ -3,6 +3,9 @@
 let refset r x = r := x
 (** [refset r x] sets [x] to ref [r]. *)
 
+let refget r = !r
+(** [refget r] returns [!r]. *)
+
 let refupdate r f = r := f !r
 (** [refupdate r f] updates referent of [r] by [f]. *)
 
