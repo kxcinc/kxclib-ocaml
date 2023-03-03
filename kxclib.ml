@@ -2620,10 +2620,10 @@ module Base64 = struct
       encode_buf ?offset ?len output input |> ignore;
       Buffer.contents output
 
-    let len_without_ignore ?(offset=0) ?len (input: Bytes.t): int =
+    let count_lenth_ignoring ?(offset=0) ?len (input: Bytes.t): int =
       let orig_len = Bytes.length input in
       let len = len |? (orig_len - offset) in
-      let counter acc i =
+      let count acc i =
         let c = Bytes.get_uint8 input (offset + i) in
         begin match char_of_int c with
         | _ when ignore_unknown -> acc
@@ -2631,7 +2631,7 @@ module Base64 = struct
         | _ -> acc + 1
         end
       in
-      len |> iotafl counter 0
+      len |> iotafl count 0
 
     let decode_buf ?(offset=0) ?len (output: Buffer.t) (input: string) =
       let input = Bytes.of_string input in
@@ -2642,7 +2642,7 @@ module Base64 = struct
         if len < 0 || end_index > orig_len then
           invalid_arg' "Base64.encode: the input range (offset:%d, len:%d) is out of bounds" offset len
         else if Option.is_some pad then
-          let actual_len = len_without_ignore ~offset ~len input in
+          let actual_len = count_lenth_ignoring ~offset ~len input in
           if actual_len mod 4 <> 0 then
             invalid_arg "Base64.decode: wrong padding"
           else offset, end_index, len
@@ -2685,7 +2685,7 @@ module Base64 = struct
             | c ->
               begin match pad with
               | Some pad when c = pad ->
-                let pad_counter acc ci =
+                let pad_count acc ci =
                   let c = Bytes.get_uint8 input (ci + i + 1) in
                   begin match char_of_int c with
                   | _ when ignore_unknown -> acc
@@ -2694,10 +2694,10 @@ module Base64 = struct
                   | s -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" s (ci + i + 1)
                   end
                 in
-                let pad_count = (input_end - i - 1) |> iotafl pad_counter 0 |> ((+) 1) in
-                let is_valid = 0 < pad_count && pad_count <= 2 in
+                let pad_num = (input_end - i - 1) |> iotafl pad_count 0 |> ((+) 1) in
+                let is_valid = 0 < pad_num && pad_num <= 2 in
                 if is_valid then read stack o
-                else invalid_arg' "Base64.decode: invalid pad len '%d'" pad_count
+                else invalid_arg' "Base64.decode: invalid pad len '%d'" pad_num
               | _ ->
                 invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
               end
