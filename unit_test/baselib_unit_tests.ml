@@ -1,9 +1,11 @@
 open Alcotest
 
+let exn =
+  let fmt ppf e = Format.pp_print_string ppf (Printexc.to_string e) in
+  testable fmt (=)
 
 let sprintf fmt = Format.asprintf fmt
 let float_testable = float 0.0001
-
 
 let trivial () =
   check string "I'm trivial" "hello" "hello"
@@ -179,6 +181,46 @@ let base64_range () =
         code offset (match len with None -> "None" | Some d -> sprintf "%d" d) expected_plain)
       (Bytes.of_string expected_plain) actual_plain
   )
+
+let base64_decode_pad () =
+  let wrong_padding = Either.left (Invalid_argument "Base64.decode: wrong padding") in
+  let wrong_padding_len len = Either.left (Base64.Invalid_base64_padding (`invalid_padding_length len)) in
+  let right = Either.right in
+  let input_cases = [
+    "Zm8", wrong_padding;
+    "Zm8=", right "fo";
+    "Zm8==", wrong_padding;
+    "Zm8===", wrong_padding;
+    "Zm8=====", wrong_padding_len 5;
+    "Zm9v", right "foo";
+    "Zm9v====", wrong_padding_len 4;
+    "Zg", wrong_padding;
+    "Zg=", wrong_padding;
+    "Zg==", right "f";
+    "Zg===", wrong_padding;
+    "Zg==\n", right "f";
+    "Zg\n==\n", right "f";
+    "Z\ng\n=\n=\n", right "f";
+    "Zm9vYmE=", right "fooba";
+    "Zm9v\nYmE=", right "fooba";
+    "Zm9v\nYmE=\n", right "fooba";
+    "Zm9v\nYmE", wrong_padding;
+    "Zm9v\nYmE\n", wrong_padding;
+  ] in
+  input_cases |> List.iter (fun (input_case, expected) ->
+    match expected with
+    | Either.Right expected_value ->
+      let actual_plain_bytes = Base64.decode input_case in
+      let actual_plain_string = Bytes.to_string actual_plain_bytes in
+      check string input_case expected_value actual_plain_string
+    | Either.Left expected_exn ->
+      try
+        let _ = Base64.decode input_case in
+        fail "Invalid_argument expected"
+      with
+      | e -> check exn input_case expected_exn e
+  )
+
 
 type jv = Json.jv
 
@@ -572,6 +614,7 @@ let () =
     "base64", [
       test_case "base64_known" `Quick base64_known;
       test_case "base64_range" `Quick base64_range;
+      test_case "base64_decode_pad" `Quick base64_decode_pad;
     ];
 
     "json_of_jsonm", [

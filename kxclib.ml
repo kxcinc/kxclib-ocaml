@@ -2527,6 +2527,9 @@ module Base64 = struct
         [Some '='] in rfc4648. [None] in rfc4648_url. *)
     val pad : char option
 
+    (** if set to true, validate padding length on decoding. *)
+    val validate_padding: bool
+
     (** if set to true, newline characters are ignored on decoding. *)
     val ignore_newline : bool
 
@@ -2567,6 +2570,20 @@ module Base64 = struct
     *)
     val decode : ?offset:int -> ?len:int -> string -> bytes
   end
+
+  exception Invalid_base64_padding of [
+    | `invalid_char_with_position of char * int
+    | `invalid_padding_length of int
+    ]
+
+  let () =
+    Printexc.register_printer begin function
+    | Invalid_base64_padding (`invalid_char_with_position (c, i)) ->
+      some (sprintf "Invalid_base64_padding - char %c at %d" c i)
+    | Invalid_base64_padding (`invalid_padding_length len) ->
+      some (sprintf "Invalid_base64_padding_len - %d" len)
+    | _ -> none
+    end
 
   module Make (C: Config) : T = struct
     open C
@@ -2654,6 +2671,29 @@ module Base64 = struct
       encode_buf ?offset ?len output input |> ignore;
       Buffer.contents output
 
+    let count_lenth_ignoring ?(offset=0) ?len (input: Bytes.t): int =
+      let orig_len = Bytes.length input in
+      let len = len |? (orig_len - offset) in
+      let is_sixbit = char_to_sixbit &> Option.is_some in
+      match ignore_unknown, ignore_newline with
+      | true, _ ->
+        let count acc i =
+          let b = Bytes.get_uint8 input (offset + i) in
+          if (is_sixbit b) then acc + 1 else acc
+        in
+        len |> iotafl count 0
+      | false, true ->
+        let count acc i =
+          let b = Bytes.get_uint8 input (offset + i) in
+          if (is_sixbit b) then acc + 1 else
+          begin match char_of_int b with
+          | '\r' | '\n' -> acc
+          | _ -> acc + 1
+          end
+        in
+        len |> iotafl count 0
+      | false, false -> len
+
     let decode_buf ?(offset=0) ?len (output: Buffer.t) (input: string) =
       let input = Bytes.of_string input in
       let input_offset, input_end, input_length =
@@ -2662,8 +2702,11 @@ module Base64 = struct
         let end_index = offset + len in
         if len < 0 || end_index > orig_len then
           invalid_arg' "Base64.encode: the input range (offset:%d, len:%d) is out of bounds" offset len
-        else if pad <> None && len mod 4 <> 0 then
-          invalid_arg "Base64.decode: wrong padding"
+        else if Option.is_some pad then
+          let actual_len = count_lenth_ignoring ~offset ~len input in
+          if actual_len mod 4 <> 0 then
+            invalid_arg "Base64.decode: wrong padding"
+          else offset, end_index, len
         else offset, end_index, len
       in
       let output_buf =
@@ -2696,26 +2739,6 @@ module Base64 = struct
         else
           let c = Bytes.get_uint8 input i in
           match char_to_sixbit c with
-          | None ->
-            begin match char_of_int c with
-            | _ when ignore_unknown -> go stack (i+1) o
-            | '\r' | '\n' when ignore_newline -> go stack (i+1) o
-            | c ->
-              begin match pad with
-              | Some pad when c = pad ->
-                let rest = Bytes.sub_string input i (input_end - i) in
-                let valid =
-                  match String.length rest with
-                  | rest_len when rest_len > 0 && rest_len <= 2 ->
-                    rest_len |> iotafl (fun acc i -> acc && String.get rest i = pad) true
-                  | _ -> false
-                  in
-                if valid then read stack o
-                else invalid_arg' "Base64.decode: invalid char '%c' at index %d" pad i
-              | _ ->
-                invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
-              end
-            end
           | Some s ->
             let stack = s :: stack in
             if List.length stack = 4 then
@@ -2723,6 +2746,40 @@ module Base64 = struct
               go [] (i+1) o
             else
               go stack (i+1) o
+          | None ->
+            begin match char_of_int c with
+            | _ when ignore_unknown -> go stack (i+1) o
+            | '\r' | '\n' when ignore_newline -> go stack (i+1) o
+            | c when pad = some c && not validate_padding -> read stack o
+            | c when pad = some c && validate_padding ->
+              let pad = c in
+              let validate_pad ignore =
+                let pad_count acc ci =
+                  let c = Bytes.get_uint8 input (ci + i + 1) in
+                  begin match char_of_int c with
+                  | s when s = pad -> acc + 1
+                  | s when ignore s -> acc
+                  | s -> raise (Invalid_base64_padding (
+                                    `invalid_char_with_position
+                                      (s, ci + i + 1)))
+                  end
+                in
+                let pad_num = (input_end - i - 1) |> iotafl pad_count 0 |> ((+) 1) in
+                let is_valid = 0 < pad_num && pad_num <= 2 in
+                if is_valid then read stack o
+                else raise (Invalid_base64_padding (`invalid_padding_length pad_num))
+              in
+              begin match ignore_unknown, ignore_newline with
+              | true, _ -> read stack o
+              | false, true ->
+                validate_pad begin function
+                | '\r' | '\n' -> true
+                | _ -> false
+                end
+              | false, false -> validate_pad (fun _ -> false)
+              end
+            | c -> invalid_arg' "Base64.decode: invalid char '%c' at index %d" c i
+            end
       in
       let total_bytes = go [] input_offset 0 in
       Buffer.add_buffer output output_buf;
@@ -2738,17 +2795,27 @@ module Base64 = struct
     let c62 = '+'
     let c63 = '/'
     let pad = Some '='
+    let validate_padding = true
     let ignore_newline = false
     let ignore_unknown = false
   end
-  include Make(Config_rfc4648)
+  module Config_rfc4648_relaxed = struct
+    include Config_rfc4648
+    let ignore_newline = true
+  end
+  include Make(Config_rfc4648_relaxed)
 
   module Config_rfc4648_url : Config = struct
     let c62 = '-'
     let c63 = '_'
     let pad = None
+    let validate_padding = true
     let ignore_newline = false
     let ignore_unknown = false
   end
-  module Url = Make(Config_rfc4648_url)
+  module Config_rfc4648_url_relaxed = struct
+    include Config_rfc4648_url
+    let ignore_newline = true
+  end
+  module Url = Make(Config_rfc4648_url_relaxed)
 end
