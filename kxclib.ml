@@ -424,6 +424,25 @@ module Option0 = struct
     | false -> None
 
   let some_if cond x = if cond then Some x else None
+
+  (** [try_make ~capture f] returns [Some (f())] except when
+      - [f()] throws an [exn] s.t. [capture exn = true], it returns [None]
+      - [f()] throws an [exn] s.t. [capture exn = false], it rethrows [exn]
+
+      [~capture] defaults to [fun _exn -> true]
+   *)
+  let try_make : ?capture:(exn -> bool) -> (unit -> 'x) -> 'x option =
+    fun ?(capture = constant true) f ->
+    try f() |> some
+    with exn ->
+      if capture exn then none
+      else raise exn
+
+  (** a specialized version of [try_make] where [~capture] is fixed to
+      [function Not_found -> true | _ -> false] *)
+  let if_found : (unit -> 'x) -> 'x option =
+    fun f -> try_make f ~capture:(function Not_found -> true | _ -> false)
+
 end
 module Option = struct
   include Option0
