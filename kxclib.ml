@@ -384,6 +384,10 @@ module Option0 = struct
 
   let return = some
 
+  let get = function
+    | Some x -> x
+    | None -> raise Not_found
+
   let v default = function
     | Some x -> x
     | None -> default
@@ -823,19 +827,27 @@ module List0 = struct
     | [] -> raise Not_found
     | hd::tl -> foldl f hd tl
 
-  let min cmp = function
-    | [] -> raise Not_found
+  let reduce_opt f = function
+    | [] -> none
+    | hd::tl -> foldl f hd tl |> some
+
+  let min_opt cmp = function
+    | [] -> none
     | hd::l ->
        let f acc x =
          if cmp acc x > 0 then x else acc in
-       fold_left f hd l
+       fold_left f hd l |> some
 
-  let max cmp = function
-    | [] -> raise Not_found
+  let max_opt cmp = function
+    | [] -> none
     | hd::l ->
        let f acc x =
          if cmp acc x < 0 then x else acc in
-       fold_left f hd l
+       fold_left f hd l |> some
+
+  let min cmp = min_opt cmp &> Option.get
+
+  let max cmp = min_opt cmp &> Option.get
 
   let foldl = foldl
   let foldr = foldr
