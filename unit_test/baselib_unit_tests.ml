@@ -184,7 +184,7 @@ let base64_range () =
 
 let base64_decode_pad () =
   let wrong_padding = Either.left (Invalid_argument "Base64.decode: wrong padding") in
-  let wrong_padding_len len = Either.left (Base64.Invalid_base64_padding_len (`len len)) in
+  let wrong_padding_len len = Either.left (Base64.Invalid_base64_padding (`invalid_padding_length len)) in
   let right = Either.right in
   let input_cases = [
     "Zm8", wrong_padding;

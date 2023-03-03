@@ -2537,14 +2537,16 @@ module Base64 = struct
     val decode : ?offset:int -> ?len:int -> string -> bytes
   end
 
-  exception Invalid_base64_padding_char of [`char of char] * [`index of int]
-  exception Invalid_base64_padding_len of [`len of int]
+  exception Invalid_base64_padding of [
+    | `invalid_char_with_position of char * int
+    | `invalid_padding_length of int
+    ]
 
   let () =
     Printexc.register_printer begin function
-    | Invalid_base64_padding_char ((`char c), (`index i)) ->
+    | Invalid_base64_padding (`invalid_char_with_position (c, i)) ->
       some (sprintf "Invalid_base64_padding - char %c at %d" c i)
-    | Invalid_base64_padding_len (`len len) ->
+    | Invalid_base64_padding (`invalid_padding_length len) ->
       some (sprintf "Invalid_base64_padding_len - %d" len)
     | _ -> none
     end
@@ -2723,13 +2725,15 @@ module Base64 = struct
                   begin match char_of_int c with
                   | s when s = pad -> acc + 1
                   | s when ignore s -> acc
-                  | s -> raise (Invalid_base64_padding_char (`char s, `index (ci + i + 1)))
+                  | s -> raise (Invalid_base64_padding (
+                                    `invalid_char_with_position
+                                      (s, ci + i + 1)))
                   end
                 in
                 let pad_num = (input_end - i - 1) |> iotafl pad_count 0 |> ((+) 1) in
                 let is_valid = 0 < pad_num && pad_num <= 2 in
                 if is_valid then read stack o
-                else raise (Invalid_base64_padding_len (`len pad_num))
+                else raise (Invalid_base64_padding (`invalid_padding_length pad_num))
               in
               begin match ignore_unknown, ignore_newline with
               | true, _ -> read stack o
