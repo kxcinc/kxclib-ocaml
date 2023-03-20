@@ -76,6 +76,8 @@ let iotafl' binop acc0 g n =
 let min_by f x y = if f y > f x then x else y
 let max_by f x y = if f y < f x then x else y
 
+type null = |
+
 module Functionals = struct
   let negate pred x = not (pred x)
   (** negate a predicate *)
