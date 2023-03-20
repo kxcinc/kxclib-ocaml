@@ -76,6 +76,9 @@ let iotafl' binop acc0 g n =
 let min_by f x y = if f y > f x then x else y
 let max_by f x y = if f y < f x then x else y
 
+let dup : 'x -> 'x*'x = fun x -> x, x
+let swap : 'x*'y -> 'y*'x = fun (x, y) -> y, x
+
 type null = |
 
 module Functionals = struct
