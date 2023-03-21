@@ -1139,6 +1139,27 @@ module IntMap = struct
   let pp vpp ppf m = pp' Format.pp_print_int vpp ppf m
 end
 
+module Obj = struct
+  include Obj
+
+  [%%if ocaml_version <= (5, 0, 0)]
+  (* latest known version of OCaml using this implementation *)
+  let hash_variant s =
+    let accu = ref 0 in
+    for i = 0 to String.length s - 1 do
+      accu := 223 * !accu + Char.code s.[i]
+    done;
+    (* reduce to 31 bits *)
+    accu := !accu land (1 lsl 31 - 1);
+    (* make it signed for 64 bits architectures *)
+    if !accu > 0x3FFFFFFF then !accu - (1 lsl 31) else !accu
+  [%%else]
+  let hash_variant _s =
+    failwith "Kxclib.Obj.hash_variant is not support for this OCaml version"
+  [@@alert unavailable "hash_variant is not available for this OCaml version"]
+  [%%endif]
+end
+
 module IoPervasives = struct
 
   let with_input_file path f =
