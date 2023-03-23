@@ -472,6 +472,8 @@ module Seq0 = struct
   include Seq
   include PipeOps(Seq)
 
+  let bind m f = flat_map f m
+
   let from : (unit -> 'x option) -> 'x t =
     fun f ->
     let rec next() = match f() with
@@ -556,8 +558,9 @@ module Seq0 = struct
 end
 module Seq = struct
   include Seq0
+  module Ops_monad = MonadOps(Seq0)
   module Ops_piping = PipeOps(Seq0)
-  module Ops = struct include Ops_piping end
+  module Ops = struct include Ops_piping include Ops_monad end
 end
 type 'x seq = 'x Seq.t
 
