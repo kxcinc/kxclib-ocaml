@@ -471,6 +471,9 @@ let json_escaped_suite =
   in [
     "json_escaped", [
       case "" {||};
+      case "\\" {|\\|};
+      case "\"" {|\"|};
+      case "\x1F" {|\u001f|};
       case "abc" {|abc|};
       case "a\nbc" {|a\nbc|};
       case "a\127bc" {|a\u007fbc|};
