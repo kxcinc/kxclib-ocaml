@@ -345,13 +345,28 @@ end
 
 module ResultOf(E : sig type err end) = struct
   type err = E.err
+  exception Error_result of err
+
   type 'x t = ('x, err) result
   let bind : 'x t -> ('x -> 'y t) -> 'y t = Result.bind
   let return : 'x -> 'x t = Result.ok
+  let error : err -> _ t = Result.error
+end
+
+module ResultOf'(E : sig type err val string_of_err : err -> string option end) = struct
+  include ResultOf(E)
+  let () =
+    let (>?) o f = Option.map f o in
+    Printexc.register_printer (function
+        | Error_result e -> E.string_of_err e >? Format.sprintf "Error_result(%s)"
+        | _ -> None)
+  let get : 'x t -> 'x = function
+    | Ok x -> x
+    | Error e -> raise (Error_result e)
 end
 
 module ResultWithErrmsg0 = struct
-  include ResultOf(struct type err = string end)
+  include ResultOf'(struct type err = string let string_of_err = Option.some end)
   let protect' : handler:(exn -> string) -> ('x -> 'y) -> ('x -> 'y t) =
     fun ~handler f x ->
     try Ok (f x)
