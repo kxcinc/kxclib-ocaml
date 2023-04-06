@@ -2477,7 +2477,6 @@ end = struct
         let addc' c = addc c; continue_quoted ~buf pos' in
         ch pos >>= function
         | '\\' -> (
-          (Log0.verbose "q(\\?) pos=%d @L%d" (pos+1) __LINE__);
           ch (succ pos) >>= function
           | '"' -> addc' '"'
           | '\\' -> addc' '\\'
@@ -2487,7 +2486,6 @@ end = struct
           | 'r' -> addc' '\r'
           | 't' -> addc' '\t'
           | 'u' -> (
-            (Log0.verbose "q(\\u) pos=%d @L%d" (pos+1) __LINE__);
              next ~n:4 pos' >|= (?> (fun s -> Scanf.sscanf_opt s "%04x%!" identity)) >>= function
              | pos, Some ucode ->
                 addu ucode;
@@ -2495,45 +2493,34 @@ end = struct
              | _ -> error (`pos pos'))
           | _ -> error (`pos pos'))
         | '"' ->
-           (Log0.verbose "q(end) pos=%d @L%d" pos __LINE__);
            ok (succ pos, Buffer.contents buf)
         | c ->
-           (Log0.verbose "q(c=%C) pos=%d @L%d" c pos __LINE__);
            addc c; continue_quoted ~buf (succ pos)
       ) in
     let rec go ctx acc pos =
-      (Log0.verbose "go.0 pos=%d c=%s @L%d" pos
-         (if pos = len then "(end)" else sprintf "%C" (String.get input pos)) __LINE__);
       advance_whitespaces false pos >>= fun pos ->
       if pos = len then ok acc else (
-        (Log0.verbose "go.adv pos=%d c=%s @L%d" pos
-           (if pos = len then "(end)" else sprintf "%C" (String.get input pos)) __LINE__);
         let err = error (`pos pos) in
         ch pos >|= (fun x -> ctx, x) >>= function
-        | `root, '.' -> (Log0.verbose "(`root, .) pos=%d @L%d" pos __LINE__); err
+        | `root, '.' -> err
         | (`expect_fname | `root), ('_' | 'a'..'z' | 'A'..'Z') ->
-           (Log0.verbose "(`ef|`root, _Z) pos=%d @L%d" pos __LINE__);
            continue_identifier pos (succ pos) >>= fun (pos, fname) ->
            go `neutral (`f fname :: acc) pos
         | (`neutral | `root), '[' ->
-           (Log0.verbose "(`ef|`root, _Z) pos=%d @L%d" pos __LINE__);
            go `within_bracket acc (succ pos)
         | `neutral, '.' ->
-           (Log0.verbose "(`neut, .) pos=%d @L%d" pos __LINE__);
            go `expect_fname acc (succ pos)
         | `within_bracket, '0'..'9' ->
-           (Log0.verbose "(`brk, 09) pos=%d @L%d" pos __LINE__);
            let pos0 = pos in
            continue_numeric pos (succ pos) >>= fun (pos, idx) ->
            int_of_string_opt idx |> Option.to_result ~none:(`pos pos0) >>= fun idx ->
            expect_ch ']' pos >>= fun pos ->
            go `neutral (`i idx :: acc) pos
         | `within_bracket, '"' ->
-           (Log0.verbose "(`brk, q) pos=%d @L%d" pos __LINE__);
            continue_quoted (succ pos) >>= fun (pos, fname) ->
            expect_ch ']' pos >>= fun pos ->
            go `neutral (`f fname :: acc) pos
-        | (`expect_fname | `root), _ -> (Log0.verbose "(`ef|`root, _) pos=%d @L%d" pos __LINE__); err
+        | (`expect_fname | `root), _ -> err
         | _ -> err
       )
     in

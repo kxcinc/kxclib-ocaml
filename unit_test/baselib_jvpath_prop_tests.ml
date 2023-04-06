@@ -17,10 +17,11 @@ let () =
         try
           let result = unparsed |> Json.parse_jvpath_exn in
           let eq = path = result in
-          Log0.debug "[%s] %a =o=r= %a >> %S"
-            (if eq then "OK" else "FAIL")
+          if not eq then (
+          Log0.debug "[FAIL] %a =o=r= %a >> %S"
             pp_jvpath path pp_jvpath result
             unparsed;
+          );
           eq
         with e ->
           Log0.debug "[FAIL] %a >> %S" pp_jvpath path unparsed;
