@@ -14,5 +14,5 @@ let () =
         match j |> Json.to_jsonm |> Json.of_jsonm with
         | Some (j', rest) -> (rest() = Seq.Nil) && j' = j
         | _ -> false);
-  ] |> QCheck_base_runner.run_tests |> exit
+  ] |> QCheck_base_runner.run_tests_main |> exit
 

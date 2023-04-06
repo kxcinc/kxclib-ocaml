@@ -586,9 +586,8 @@ let json_show =
 
 let jvpath_unparse =
   let counter = ref 0 in
-  let case jvpath unparsed =
-    let id = get_and_incr counter in
-    test_case (sprintf "jvpath_unparse_%d" id) `Quick (fun () ->
+  let case jvpath unparsed id =
+    test_case (sprintf "jvpath_unparse_%d: %s" id unparsed) `Quick (fun () ->
         check string (sprintf "jvpath_unparse_check: %s" unparsed)
           unparsed
           (Json.unparse_jvpath jvpath)
@@ -607,7 +606,43 @@ let jvpath_unparse =
       case [`i 3; `f "b!ar"] ".[3][\"b!ar\"]";
       case [`i 3; `f "in"] ".[3][\"in\"]";
       case [`f "f!oo"] ".[\"f!oo\"]";
-  ]]
+      case [`f "f\"oo"] ".[\"f\\\"oo\"]";
+  ] |&> (fun case -> get_and_incr counter |> case)]
+
+let jvpath_parse_success =
+  let counter = ref 0 in
+  let jvpath = testable Json.pp_jvpath (=) in
+  let case input path id =
+    test_case (sprintf "jvpath_parse_success_%d: %s" id input) `Quick (fun () ->
+        check jvpath (sprintf "jvpath_parse: %s" input)
+          path
+          (Json.parse_jvpath_exn input)
+      ) in
+  ["jvpath_parse_success", [
+      case "." [];
+      case " ." [];
+      case " . " [];
+      case ".foo" [`f "foo"];
+      case ".foo " [`f "foo"];
+      case ".foo.bar" [`f "foo"; `f "bar"];
+      case ".[\"f!oo\"]" [`f "f!oo"];
+      case ".[\"f!oo\"] " [`f "f!oo"];
+      case ". [\"f!oo\"] " [`f "f!oo"];
+      case ".[\"\"]" [`f ""];
+      case ".[\"\\u0000\"]" [`f "\000"];
+      case ".foo[4]" [`f "foo"; `i 4];
+      case ".[3]" [`i 3];
+      case ".[3] " [`i 3];
+      case ".[3][4]" [`i 3; `i 4];
+      case ".[3].bar" [`i 3; `f "bar"];
+      case ".[3][\"b!ar\"]" [`i 3; `f "b!ar"];
+      case ".[3][\"in\"]" [`i 3; `f "in"];
+      case ".foo[\"b!ar\"]" [`f "foo"; `f "b!ar"];
+      case " .[3] [4] " [`i 3; `i 4];
+      case ".[3] .bar " [`i 3; `f "bar"];
+      case ". [3] [\"b!ar\"]" [`i 3; `f "b!ar"];
+      case ". [3] [\"in\"]" [`i 3; `f "in"];
+  ] |&> (fun case -> get_and_incr counter |> case)]
 
 let () =
   Printexc.record_backtrace true;
@@ -640,6 +675,7 @@ let () =
     @ json_escaped_suite
     @ json_unparse @ json_show
     @ jvpath_unparse
+    @ jvpath_parse_success
   @ [
     "base64", [
       test_case "base64_known" `Quick base64_known;
