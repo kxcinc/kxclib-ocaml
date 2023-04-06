@@ -2403,7 +2403,7 @@ end = struct
         else true in
       if needs_escape then (
         if forced_dot then outs ".";
-        outf "[\"%s\"]" (String.json_escaped fname);
+        outf "[\"%a\"]" String.pp_json_escaped fname;
         go (`root false, rest)
       ) else (
         outf ".%s" fname;
@@ -2433,12 +2433,12 @@ end = struct
     let next ~n pos =
       if n + pos > len then error (`premature_end pos)
       else ok (n + pos, sub pos (pos+n)) in
-    let rec advance_whitespaces pos =
-      (* NB: returning [error `immatuare_end] in case where [pos = len] *)
-      ch pos >>= function
-      | ' ' | '\t' | '\r' | '\n' | '\x0C' (* form feed *) ->
-         advance_whitespaces (succ pos)
-      | _ -> ok pos in
+    let rec advance_whitespaces expect_non_whitespace pos =
+      if not expect_non_whitespace && pos = len then ok pos else (
+        ch pos >>= function
+        | ' ' | '\t' | '\r' | '\n' | '\x0C' (* form feed *) ->
+           advance_whitespaces expect_non_whitespace (succ pos)
+        | _ -> ok pos) in
     let expect_ch c pos =
       if pos = len then error (`premature_end pos) else (
         ch pos >>= fun c' ->
@@ -2453,7 +2453,7 @@ end = struct
         error (`pos pos)
       ) else ok (plen + pos) in
     let expect_prefix' prefix pos =
-      advance_whitespaces pos >>= fun pos ->
+      advance_whitespaces (pos <> 0) pos >>= fun pos ->
       expect_prefix prefix pos in
     let rec continue_identifier pos0 pos =
       if pos = len then ok (pos, sub pos0 pos) else (
@@ -2502,8 +2502,12 @@ end = struct
            addc c; continue_quoted ~buf (succ pos)
       ) in
     let rec go ctx acc pos =
+      (Log0.verbose "go.0 pos=%d c=%s @L%d" pos
+         (if pos = len then "(end)" else sprintf "%C" (String.get input pos)) __LINE__);
+      advance_whitespaces false pos >>= fun pos ->
       if pos = len then ok acc else (
-        advance_whitespaces pos >>= fun pos ->
+        (Log0.verbose "go.adv pos=%d c=%s @L%d" pos
+           (if pos = len then "(end)" else sprintf "%C" (String.get input pos)) __LINE__);
         let err = error (`pos pos) in
         ch pos >|= (fun x -> ctx, x) >>= function
         | `root, '.' -> (Log0.verbose "(`root, .) pos=%d @L%d" pos __LINE__); err
@@ -2539,7 +2543,7 @@ end = struct
        expect_prefix' "." 0 >>= go0
     | `no_check, 0 -> ok []
     | `no_check, _ ->
-       advance_whitespaces 0 >>= fun pos ->
+       advance_whitespaces false 0 >>= fun pos ->
        if pos = len then ok []
        else (
          ch pos >>= function

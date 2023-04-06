@@ -88,3 +88,23 @@ let gen_jv' ~has_non_printable_string =
 
 let gen_jv = gen_jv' ~has_non_printable_string:true
 
+let gen_jvpath =
+  let module G = QCheck2.Gen in
+  let open MonadOps(G) in
+  let rec gen_fname() =
+    G.string >>= fun str ->
+    if String.is_valid_utf_8 str then G.pure str
+    else gen_fname() in
+  G.sized (fun size ->
+      let gen_len =
+        sqrt (float_of_int size) |> int_of_float
+        |> function
+          | 0 | 1 -> G.pure 1
+          | n -> G.int_range 1 n in
+      gen_len >>= fun len ->
+      (G.list_size (G.int_bound len) (
+         G.oneof [
+             G.int >|= (fun idx -> `i (abs idx));
+             gen_fname() >|= (fun fname -> `f fname);
+           ])
+       : jvpath G.t))

@@ -1,5 +1,5 @@
 (tests
- (names baselib_unit_tests baselib_json_prop_tests)
+ (names baselib_unit_tests baselib_json_prop_tests baselib_jvpath_prop_tests)
  (libraries
    kxclib baselib_test_lib
    alcotest qcheck)
