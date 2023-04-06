@@ -1075,6 +1075,35 @@ module String = struct
   let of_list = List.to_seq &> of_seq
   let of_array = Array.to_seq &> of_seq
 
+  [%%if ocaml_version < (4, 14, 0)]
+  let is_valid_utf_8 : string -> bool =
+    fun str ->
+    let len = String.length str in
+    let ch pos = String.get str pos |> int_of_char in
+    let rec check_bytek = function
+      | _, 0 -> true
+      | pos, remaining ->
+         pos < len
+         && (ch pos land 0xc0 = 0x80)
+         && check_bytek (succ pos, pred remaining) in
+    let rec check pos =
+      if pos = len then true else (
+        let c = ch pos in
+        if c land 0x80 = 0 then check (succ pos) (* 1byte utf8 *)
+        else if c land 0xe0 = 0xc0 then (
+          check_bytek (succ pos, 1) (* 2byte utf8 *)
+          && check (pos+2)
+        ) else if (c land 0xf0 = 0xe0) then (
+          check_bytek (succ pos, 2) (* 3byte utf8 *)
+          && check (pos+3)
+        ) else if (c land 0xf8 = 0xf0) then (
+          check_bytek (succ pos, 3) (* 4byte utf8 *)
+          && check (pos+4)
+        ) else false (* invalid *)
+      )
+    in check 0
+  [%%endif]
+
   let pp_json_escaped : Format.formatter -> string -> unit =
     fun ppf str ->
     let len = length str in
