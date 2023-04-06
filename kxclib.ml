@@ -2486,7 +2486,9 @@ end = struct
           | 'r' -> addc' '\r'
           | 't' -> addc' '\t'
           | 'u' -> (
-             next ~n:4 pos' >|= (?> (fun s -> Scanf.sscanf_opt s "%04x%!" identity)) >>= function
+             next ~n:4 pos'
+             >|= (?> (Option.protect (fun s -> Scanf.sscanf s "%04x%!" identity)))
+             >>= function
              | pos, Some ucode ->
                 addu ucode;
                 continue_quoted ~buf pos
