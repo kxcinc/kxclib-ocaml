@@ -2092,6 +2092,21 @@ module Json : sig
     ] as 'path_component) list
   (** an empty path designate the root element *)
 
+  val pp_jvpath : ppf -> jvpath -> unit
+  (** print a human-friendly version of the jvpath. e.g.
+      - [pp_jvpath []] prints [.] (a single dot)
+      - [pp_jvpath [`f "foo"]] prints [.foo]
+      - [pp_jvpath [`f "foo"; `f "bar"]] prints [.foo.bar]
+      - [pp_jvpath [`f "foo"; `i 4]] prints [.foo[4]]
+      - [pp_jvpath [`i 3]] prints [.[3]]
+      - [pp_jvpath [`i 3; `i 4]] prints [.[3][4]]
+      - [pp_jvpath [`i 3; `f "bar"]] prints [.[3].bar]
+      - [pp_jvpath [`f "f!oo"]] prints [.["f!oo"]]
+   *)
+
+  val unparse_jvpath : jvpath -> string
+  (** [unparse_jvpath path] converts [path] to string in the same syntax as {!pp_jvpath} *)
+
   type legacy = [
     | `arr of jv list
     | `obj of (string*jv) list
@@ -2267,6 +2282,57 @@ end = struct
     | `f of string
     | `i of int
     ] as 'path_component) list
+
+  module StringSet = Set.Make(String)
+
+  let reserved_javascript_keywords = StringSet.of_list [
+      "break"; "case"; "catch"; "class"; "const"; "continue";
+      "debugger"; "default"; "delete"; "do"; "else"; "export";
+      "extends"; "finally"; "for"; "function"; "if"; "import"; "in";
+      "instanceof"; "new"; "return"; "super"; "switch"; "this";
+      "throw"; "try"; "typeof"; "var"; "void"; "while"; "with"; "yield"; ]
+
+  let pp_jvpath : ppf -> jvpath -> unit =
+    fun ppf ->
+    let outf fmt = fprintf ppf fmt in
+    let outs string = Format.pp_print_string ppf string in
+    let rec go : [`root of bool ] * jvpath -> unit = function
+    | `root true, [] -> outs "."
+    | `root false, [] -> ()
+    | `root is_root, `f fname :: rest ->
+       continue_fname is_root fname rest
+    | `root is_root, `i idx :: rest ->
+       if is_root then outs ".";
+       outf "[%d]" idx; go (`root false, rest)
+    | _ -> .
+    and continue_fname forced_dot fname rest =
+      let initial_char = function
+        | '_' | 'a'..'z' | 'A'..'Z' -> true
+        | _ -> false in
+      let identifier_char = function
+        | '0'..'9' | '_' | 'a'..'z' | 'A'..'Z' -> true
+        | _ -> false in
+      let needs_escape =
+        let len = String.length fname in
+        if len = 0 then true
+        else if StringSet.mem fname reserved_javascript_keywords then true
+        else if (
+          (String.get fname 0 |> initial_char)
+          && (String.for_all identifier_char fname)
+        ) then false
+        else true in
+      if needs_escape then (
+        if forced_dot then outs ".";
+        outf "[\"%s\"]" (String.json_escaped fname);
+        go (`root false, rest)
+      ) else (
+        outf ".%s" fname;
+        go (`root false, rest)
+      )
+    in fun path -> go (`root true, path)
+
+  let unparse_jvpath : jvpath -> string = sprintf "%a" pp_jvpath
+
   type legacy = [
     | `arr of jv list
     | `obj of (string*jv) list

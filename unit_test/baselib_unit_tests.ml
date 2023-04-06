@@ -505,6 +505,7 @@ let json_unparse =
       case (`num 4.5e12) {|4.5e+12|};
       case (`num (-3.)) {|-3|};
       case (`num (-4.6e-24)) {|-4.6e-24|};
+      case (`str "\000") {|"\u0000"|};
       case (`str "abc") {|"abc"|};
       case (`str "a\nbc") {|"a\nbc"|};
       case (`str "a\127bc") {|"a\u007fbc"|};
@@ -583,6 +584,31 @@ let json_show =
     ];
   ]
 
+let jvpath_unparse =
+  let counter = ref 0 in
+  let case jvpath unparsed =
+    let id = get_and_incr counter in
+    test_case (sprintf "jvpath_unparse_%d" id) `Quick (fun () ->
+        check string (sprintf "jvpath_unparse_check: %s" unparsed)
+          unparsed
+          (Json.unparse_jvpath jvpath)
+      ) in
+  ["jvpath_unparse", [
+      case [] ".";
+      case [`f "foo"] ".foo";
+      case [`f "foo"; `f "b!ar"] ".foo[\"b!ar\"]";
+      case [`f "foo"; `f "bar"] ".foo.bar";
+      case [`f ""] ".[\"\"]";
+      case [`f "\000"] ".[\"\\u0000\"]";
+      case [`f "foo"; `i 4] ".foo[4]";
+      case [`i 3] ".[3]";
+      case [`i 3; `i 4] ".[3][4]";
+      case [`i 3; `f "bar"] ".[3].bar";
+      case [`i 3; `f "b!ar"] ".[3][\"b!ar\"]";
+      case [`i 3; `f "in"] ".[3][\"in\"]";
+      case [`f "f!oo"] ".[\"f!oo\"]";
+  ]]
+
 let () =
   Printexc.record_backtrace true;
   run "Datecode_unit_tests" ([
@@ -613,6 +639,7 @@ let () =
   ] @ stream_suite
     @ json_escaped_suite
     @ json_unparse @ json_show
+    @ jvpath_unparse
   @ [
     "base64", [
       test_case "base64_known" `Quick base64_known;
