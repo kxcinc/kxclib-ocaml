@@ -2158,6 +2158,35 @@ module Json : sig
   val unparse_jvpath : jvpath -> string
   (** [unparse_jvpath path] converts [path] to string in the same syntax as {!pp_jvpath} *)
 
+  val parse_jvpath' :
+    ?check_root:[
+      | `check_root_prefix (** default, check the prefix dot denoting the document root *)
+      | `no_check (** do not care whether there is a prefix dot or not *)
+      ]
+    -> string
+    -> (jvpath,
+        [`pos of int | `premature_end of int]
+       ) result
+  (** parse jvpath conforming the syntax of {!pp_jvpath} *)
+
+  val parse_jvpath_opt :
+    ?check_root:[
+      | `check_root_prefix (** default, check the prefix dot denoting the document root *)
+      | `no_check (** do not care whether there is a prefix dot or not *)
+      ]
+    -> string
+    -> jvpath option
+  (** see {!parse_jvpath'} *)
+
+  val parse_jvpath_exn :
+    ?check_root:[
+      | `check_root_prefix (** default, check the prefix dot denoting the document root *)
+      | `no_check (** do not care whether there is a prefix dot or not *)
+      ]
+    -> string
+    -> jvpath
+  (** see {!parse_jvpath'} *)
+
   type legacy = [
     | `arr of jv list
     | `obj of (string*jv) list
@@ -2383,6 +2412,143 @@ end = struct
     in fun path -> go (`root true, path)
 
   let unparse_jvpath : jvpath -> string = sprintf "%a" pp_jvpath
+
+  module ParseJvpathResult =
+    ResultOf'(struct
+        type err = [`pos of int | `premature_end of int]
+        let string_of_err = function
+          | `pos p -> sprintf "Bad_input(pos=%d)" p |> some
+          | `premature_end p -> sprintf "Premature_end(pos=%d)" p |> some
+      end)
+
+  let parse_jvpath' : ?check_root:_ -> string -> (jvpath, [`pos of int | `premature_end of int]) result =
+    let open Result in
+    let open MonadOps(ParseJvpathResult) in
+    fun ?(check_root = `check_root_prefix) input ->
+    let len = String.length input in
+    let sub start end_ = StringLabels.sub input ~pos:start ~len:(end_ - start) in
+    let ch pos =
+      if pos >= len then error (`premature_end pos)
+      else String.get input pos |> ok in
+    let next ~n pos =
+      if n + pos > len then error (`premature_end pos)
+      else ok (n + pos, sub pos (pos+n)) in
+    let rec advance_whitespaces pos =
+      (* NB: returning [error `immatuare_end] in case where [pos = len] *)
+      ch pos >>= function
+      | ' ' | '\t' | '\r' | '\n' | '\x0C' (* form feed *) ->
+         advance_whitespaces (succ pos)
+      | _ -> ok pos in
+    let expect_ch c pos =
+      if pos = len then error (`premature_end pos) else (
+        ch pos >>= fun c' ->
+        if c' = c then ok (succ pos)
+        else error (`pos pos)
+      ) in
+    let expect_prefix prefix pos =
+      let plen = String.length prefix in
+      if plen + pos > len then (
+        error (`premature_end pos)
+      ) else if prefix <> StringLabels.sub input ~pos ~len:plen then (
+        error (`pos pos)
+      ) else ok (plen + pos) in
+    let expect_prefix' prefix pos =
+      advance_whitespaces pos >>= fun pos ->
+      expect_prefix prefix pos in
+    let rec continue_identifier pos0 pos =
+      if pos = len then ok (pos, sub pos0 pos) else (
+        ch pos >>= function
+        | '0'..'9' | '_' | 'a'..'z' | 'A'..'Z' ->
+           continue_identifier pos0 (succ pos)
+        | _ -> ok (pos, sub pos0 pos)
+      ) in
+    let rec continue_numeric pos0 pos =
+      if pos = len then ok (pos, sub pos0 pos) else (
+        ch pos >>= function
+        | '0'..'9' ->
+           continue_numeric pos0 (succ pos)
+        | _ -> ok (pos, sub pos0 pos)
+      ) in
+    let rec continue_quoted ?(buf = Buffer.create 8) pos =
+      let addc c = Buffer.add_char buf c in
+      let addu ucode = Uchar.of_int ucode |> Buffer.add_utf_8_uchar buf in
+      if pos = len then error (`premature_end pos) else (
+        let pos' = pos+2 in
+        let addc' c = addc c; continue_quoted ~buf pos' in
+        ch pos >>= function
+        | '\\' -> (
+          (Log0.verbose "q(\\?) pos=%d @L%d" (pos+1) __LINE__);
+          ch (succ pos) >>= function
+          | '"' -> addc' '"'
+          | '\\' -> addc' '\\'
+          | 'b' -> addc' '\b'
+          | 'f' -> addc' '\012'
+          | 'n' -> addc' '\n'
+          | 'r' -> addc' '\r'
+          | 't' -> addc' '\t'
+          | 'u' -> (
+            (Log0.verbose "q(\\u) pos=%d @L%d" (pos+1) __LINE__);
+             next ~n:4 pos' >|= (?> (fun s -> Scanf.sscanf_opt s "%04x%!" identity)) >>= function
+             | pos, Some ucode ->
+                addu ucode;
+                continue_quoted ~buf pos
+             | _ -> error (`pos pos'))
+          | _ -> error (`pos pos'))
+        | '"' ->
+           (Log0.verbose "q(end) pos=%d @L%d" pos __LINE__);
+           ok (succ pos, Buffer.contents buf)
+        | c ->
+           (Log0.verbose "q(c=%C) pos=%d @L%d" c pos __LINE__);
+           addc c; continue_quoted ~buf (succ pos)
+      ) in
+    let rec go ctx acc pos =
+      if pos = len then ok acc else (
+        advance_whitespaces pos >>= fun pos ->
+        let err = error (`pos pos) in
+        ch pos >|= (fun x -> ctx, x) >>= function
+        | `root, '.' -> (Log0.verbose "(`root, .) pos=%d @L%d" pos __LINE__); err
+        | (`expect_fname | `root), ('_' | 'a'..'z' | 'A'..'Z') ->
+           (Log0.verbose "(`ef|`root, _Z) pos=%d @L%d" pos __LINE__);
+           continue_identifier pos (succ pos) >>= fun (pos, fname) ->
+           go `neutral (`f fname :: acc) pos
+        | (`neutral | `root), '[' ->
+           (Log0.verbose "(`ef|`root, _Z) pos=%d @L%d" pos __LINE__);
+           go `within_bracket acc (succ pos)
+        | `neutral, '.' ->
+           (Log0.verbose "(`neut, .) pos=%d @L%d" pos __LINE__);
+           go `expect_fname acc (succ pos)
+        | `within_bracket, '0'..'9' ->
+           (Log0.verbose "(`brk, 09) pos=%d @L%d" pos __LINE__);
+           let pos0 = pos in
+           continue_numeric pos (succ pos) >>= fun (pos, idx) ->
+           int_of_string_opt idx |> Option.to_result ~none:(`pos pos0) >>= fun idx ->
+           expect_ch ']' pos >>= fun pos ->
+           go `neutral (`i idx :: acc) pos
+        | `within_bracket, '"' ->
+           (Log0.verbose "(`brk, q) pos=%d @L%d" pos __LINE__);
+           continue_quoted (succ pos) >>= fun (pos, fname) ->
+           expect_ch ']' pos >>= fun pos ->
+           go `neutral (`f fname :: acc) pos
+        | (`expect_fname | `root), _ -> (Log0.verbose "(`ef|`root, _) pos=%d @L%d" pos __LINE__); err
+        | _ -> err
+      )
+    in
+    let go0 pos = go `root [] pos >|= List.rev in
+    match check_root, len with
+    | `check_root_prefix, _ ->
+       expect_prefix' "." 0 >>= go0
+    | `no_check, 0 -> ok []
+    | `no_check, _ ->
+       advance_whitespaces 0 >>= fun pos ->
+       if pos = len then ok []
+       else (
+         ch pos >>= function
+         | '.' -> go0 (succ pos)
+         | _ -> go0 (pos))
+
+  let parse_jvpath_opt ?check_root = parse_jvpath' ?check_root &> Result.to_option
+
+  let parse_jvpath_exn ?check_root = parse_jvpath' ?check_root &> ParseJvpathResult.get
 
   type legacy = [
     | `arr of jv list
