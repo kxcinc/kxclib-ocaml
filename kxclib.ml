@@ -1979,6 +1979,7 @@ module FmtPervasives = struct
   let pp_int = Format.pp_print_int
   let pp_float = Format.pp_print_float
   let pp_string = Format.pp_print_string
+  let pp_string_quoted ppf = Format.fprintf ppf "%S"
   let pp_char = Format.pp_print_char
   let pp_bool = Format.pp_print_bool
   let pp_unit ppf () = pp_string ppf "unit"
