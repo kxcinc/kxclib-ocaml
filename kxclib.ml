@@ -242,6 +242,7 @@ include Functionals.CommonTypes
 module PipeOps(S : sig
              type _ t
              val map : ('x -> 'y) -> 'x t -> 'y t
+             val concat_map : ('x -> 'y t) -> 'x t -> 'y t
              val iter : ('x -> unit) -> 'x t -> unit
              val fold_left : ('acc -> 'x -> 'acc) -> 'acc -> 'x t -> 'acc
              val filter : ('x -> bool) -> 'x t -> 'x t
@@ -251,6 +252,9 @@ module PipeOps(S : sig
 
   (** piping map *)
   let (|&>) : 'x t -> ('x -> 'y) -> 'y t = fun xs f -> map f xs
+
+  (** piping flat-map *)
+  let (|&>>) : 'x t -> ('x -> 'y t) -> 'y t = fun xs f -> concat_map f xs
 
   (** piping map to snd *)
   let (|+&>) : 'x t -> ('x -> 'y) -> ('x*'y) t =
@@ -591,13 +595,18 @@ module Array0 = struct
 
   let filter f arr =
     arr |> to_seq |> Seq.filter f |> of_seq
+
   let filter_map f arr =
     arr |> to_seq |> Seq.filter_map f |> of_seq
+
+  let concat_map f arr =
+    arr |> to_seq |> Seq.flat_map (f &> to_seq) |> of_seq
 
   include PipeOps(struct
               include Array
               let filter = filter
               let filter_map = filter_map
+              let concat_map = concat_map
             end)
 
   let of_list_of_length len list =
