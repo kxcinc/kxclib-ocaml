@@ -2134,6 +2134,7 @@ module Json : sig
     | `obj
     ]
 
+  val classify_jv : jv -> jv_kind
   val string_of_jv_kind : jv_kind -> string
 
   val normalize : jv -> jv
@@ -2311,6 +2312,14 @@ end = struct
     | `arr
     | `obj
     ]
+
+  let classify_jv : jv -> jv_kind = function
+    | `null -> `null
+    | `bool _ -> `bool
+    | `num _ -> `num
+    | `str _ -> `str
+    | `arr _ -> `arr
+    | `obj _ -> `obj
 
   let string_of_jv_kind : jv_kind -> string = function
     | `null -> "null"
