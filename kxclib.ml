@@ -2135,6 +2135,7 @@ module Json : sig
     ]
 
   val string_of_jv_kind : jv_kind -> string
+  val jv_kind_of_jv : jv -> jv_kind
 
   val normalize : jv -> jv
   val normalize_fields : jv_fields -> jv_fields
@@ -2319,6 +2320,14 @@ end = struct
     | `str -> "string"
     | `arr -> "array"
     | `obj -> "object"
+
+  let jv_kind_of_jv : jv -> jv_kind = function
+    | `null -> `null
+    | `bool _ -> `bool
+    | `num _ -> `num
+    | `str _ ->`str
+    | `arr _ -> `arr
+    | `obj _ -> `obj
 
   let rec normalize : jv -> jv = function
     | (`null | `bool _ | `num _ | `str _) as x -> x
