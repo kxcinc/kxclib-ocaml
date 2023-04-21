@@ -289,11 +289,21 @@ module type Monadic = sig
   val bind : 'x t -> ('x -> 'y t) -> 'y t
 end
 
+module type MonadOpsS = sig
+  type _ t
+  val return : 'a -> 'a t
+  val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
+  val ( >> ) : 'x t -> 'y t -> 'y t
+  val ( >|= ) : 'x t -> ('x -> 'y) -> 'y t
+  val sequence_list : 'a t list -> 'a list t
+  val ( >>=* ) : 'x t list -> ('x list -> 'y t) -> 'y t
+end
 module MonadOps(M : sig
              type _ t
              val return : 'x -> 'x t
              val bind : 'x t -> ('x -> 'y t) -> 'y t
-           end) = struct
+           end)
+       : MonadOpsS with type 'x t := 'x M.t = struct
   let return x = M.return x
   let (>>=) = M.bind
   let (>>) : 'x M.t -> 'y M.t -> 'y M.t =
