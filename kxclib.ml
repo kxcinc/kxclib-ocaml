@@ -347,7 +347,18 @@ module Result = struct
     loop [] (List.rev rs)
 end
 
-module ResultOf(E : sig type err end) = struct
+module type ResultOfS = sig
+  type err
+  exception Error_result of err
+
+  type 'x t = ('x, err) result
+  val bind : 'x t -> ('x -> 'y t) -> 'y t
+  val return : 'x -> 'x t
+  val error : err -> _ t
+end
+
+module ResultOf(E : sig type err end)
+       : ResultOfS with type err = E.err = struct
   type err = E.err
   exception Error_result of err
 
@@ -357,7 +368,16 @@ module ResultOf(E : sig type err end) = struct
   let error : err -> _ t = Result.error
 end
 
-module ResultOf'(E : sig type err val string_of_err : err -> string option end) = struct
+module type ResultOfS' = sig
+  include ResultOfS
+  val get : 'x t -> 'x
+end
+
+module ResultOf'(E : sig
+             type err
+             val string_of_err : err -> string option
+           end)
+       : ResultOfS' with type err = E.err = struct
   include ResultOf(E)
   let () =
     let (>?) o f = Option.map f o in
