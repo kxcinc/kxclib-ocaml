@@ -681,6 +681,21 @@ let of_seq i =
     i;
   sub !buf 0 !n
 
+let exists p s =
+  let n = length s in
+  let rec loop i =
+    if i = n then false
+    else if p (unsafe_get s i) then true
+    else loop (succ i) in
+  loop 0
+
+let for_all p s =
+  let n = length s in
+  let rec loop i =
+    if i = n then true
+    else if p (unsafe_get s i) then loop (succ i)
+    else false in
+  loop 0
 end
 
 module String = struct
@@ -691,6 +706,10 @@ let bts = B.unsafe_to_string
 let to_seq s = bos s |> B.to_seq
 let to_seqi s = bos s |> B.to_seqi
 let of_seq g = B.of_seq g |> bts
+let exists f s =
+  B.exists f (bos s)
+let for_all f s =
+  B.for_all f (bos s)
 end
 
 module Int = struct

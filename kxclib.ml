@@ -79,7 +79,11 @@ let max_by f x y = if f y < f x then x else y
 let dup : 'x -> 'x*'x = fun x -> x, x
 let swap : 'x*'y -> 'y*'x = fun (x, y) -> y, x
 
+[%%if not(re)]
 type null = |
+[%%else]
+type null
+[%%endif]
 
 module Functionals = struct
   let negate pred x = not (pred x)
@@ -282,6 +286,23 @@ module PipeOps(S : sig
   let (|+&?>) : 'x t -> ('x -> 'y option) -> ('x*'y) t =
     fun xs f -> filter_map (fun x -> match f x with Some y -> Some (x, y) | None -> None) xs
 end
+[%%if re]
+module PipeOps_flat_map(S : sig
+             type _ t
+             val map : ('x -> 'y) -> 'x t -> 'y t
+             val flat_map : ('x -> 'y t) -> 'x t -> 'y t
+             val iter : ('x -> unit) -> 'x t -> unit
+             val fold_left : ('acc -> 'x -> 'acc) -> 'acc -> 'x t -> 'acc
+             val filter : ('x -> bool) -> 'x t -> 'x t
+             val filter_map : ('x -> 'y option) -> 'x t -> 'y t
+           end) = struct
+  module S' = struct
+    include S
+    let concat_map : ('x -> 'y t) -> 'x t -> 'y t = S.flat_map
+  end
+  include PipeOps(S')
+end
+[%%endif]
 
 module type Monadic = sig
   type _ t
@@ -526,7 +547,13 @@ let (&>?) : ('x -> 'y option) -> ('y -> 'z) -> ('x -> 'z option) =
 
 module Seq0 = struct
   include Seq
-  include PipeOps(Seq)
+
+  [%%if not(re)]
+  module Ops_piping = PipeOps(Seq)
+  [%%else]
+  module Ops_piping = PipeOps_flat_map(Seq)
+  [%%endif]
+  open Ops_piping
 
   let bind m f = flat_map f m
 
@@ -615,7 +642,6 @@ end
 module Seq = struct
   include Seq0
   module Ops_monad = MonadOps(Seq0)
-  module Ops_piping = PipeOps(Seq0)
   module Ops = struct include Ops_piping include Ops_monad end
 end
 type 'x seq = 'x Seq.t
@@ -2497,10 +2523,11 @@ end = struct
           | `pos p -> sprintf "Bad_input(pos=%d)" p |> some
           | `premature_end p -> sprintf "Premature_end(pos=%d)" p |> some
       end)
+  module ParseJvpathResult_ops = MonadOps(ParseJvpathResult)
 
   let parse_jvpath' : ?check_root:_ -> string -> (jvpath, [`pos of int | `premature_end of int]) result =
     let open Result in
-    let open MonadOps(ParseJvpathResult) in
+    let open ParseJvpathResult_ops in
     fun ?(check_root = `check_root_prefix) input ->
     let len = String.length input in
     let sub start end_ = StringLabels.sub input ~pos:start ~len:(end_ - start) in
