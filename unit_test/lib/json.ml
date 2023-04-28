@@ -24,14 +24,19 @@ let gen_jv' ~has_non_printable_string =
           5, gen_int;
           2, gen_float;
         ] in
+    let rec gen_valid_utf_8_string ~small () =
+      (if small then G.small_string ~gen:G.char else G.string)
+      >>= fun str ->
+      if String.is_valid_utf_8 str then G.pure str
+      else gen_valid_utf_8_string () ~small in
     let gen_str =
       G.frequency (
           if has_non_printable_string
           then [
               5, G.small_string ~gen:G.printable;
-              1, G.small_string ~gen:G.char;
+              1, gen_valid_utf_8_string() ~small:true;
               1, G.string_printable;
-              1, G.string;
+              1, gen_valid_utf_8_string() ~small:false;
             ]
           else [
               5, G.small_string ~gen:G.printable;
@@ -55,9 +60,9 @@ let gen_jv' ~has_non_printable_string =
           if has_non_printable_string
           then [
               10, G.small_string ~gen:G.printable;
-              2, G.small_string ~gen:G.char;
+              2, gen_valid_utf_8_string() ~small:true;
               2, G.string_printable;
-              1, G.string;
+              1, gen_valid_utf_8_string() ~small:false;
             ]
           else [
               10, G.small_string ~gen:G.printable;
