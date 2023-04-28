@@ -1,4 +1,4 @@
-open Baselib_test_lib.Json
+open Kxclib_priv_test_lib.Json
 
 let pp_jvpath_component ppf = function
   | `f str -> fprintf ppf "`f %S" str

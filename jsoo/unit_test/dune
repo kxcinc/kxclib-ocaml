@@ -4,7 +4,7 @@
  (libraries
    alcotest qcheck
    kxclib kxclib_jsoo
-   baselib_test_lib
+   kxclib_priv_test_lib
    js_of_ocaml
  )
  (modes js)

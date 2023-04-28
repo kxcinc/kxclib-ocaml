@@ -1,4 +1,4 @@
-open Baselib_test_lib.Json
+open Kxclib_priv_test_lib.Json
 
 let () =
   let that ?(count=200) name =

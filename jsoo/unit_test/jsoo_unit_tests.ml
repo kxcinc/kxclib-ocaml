@@ -1,5 +1,5 @@
 open Js_of_ocaml
-open Baselib_test_lib.Json
+open Kxclib_priv_test_lib.Json
 
 type jv = Kxclib.Json.jv
 
