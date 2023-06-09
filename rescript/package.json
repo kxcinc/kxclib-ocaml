@@ -1,6 +1,6 @@
 {
   "name": "kxclib-re",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Kxclib packaged to be used with ReScript",
   "keywords": ["kxclib", "rescript", "ocaml"],
   "main": "src/kxclib.bs.js",
