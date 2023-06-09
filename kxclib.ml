@@ -1169,6 +1169,22 @@ module String = struct
     in check 0
   [%%endif]
 
+  let valid_ascii_js_identifier s =
+    let at = String.get s in
+    let len = String.length s in
+    let rec loop n =
+      if n >= len then true
+      else match at n with
+        | '_' | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' ->
+           loop (succ n)
+        | _ -> false
+    in
+    if len = 0 then false
+    else match at 0 with
+      | '_' | 'a' .. 'z' | 'A' .. 'Z' ->
+         loop 1
+      | _ -> false
+
   let pp_json_escaped : Format.formatter -> string -> unit =
     fun ppf str ->
     let len = length str in
