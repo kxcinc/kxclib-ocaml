@@ -644,6 +644,40 @@ let jvpath_parse_success =
       case ". [3] [\"in\"]" [`i 3; `f "in"];
   ] |&> (fun case -> get_and_incr counter |> case)]
 
+let jv_pump_fields =
+  let counter = ref 0 in
+  let pos_case fns j m id =
+    let nr = Json.normalize in
+    let pumped = Jv.pump_fields fns j in
+    test_case (sprintf "jv_pump_fields_pos_%d" id) `Quick (fun () ->
+        check jv "pumped eqv original" (nr j) (nr pumped);
+        check bool
+          (sprintf "pumped pass matcher test; pumped: %a"
+             pp_jv pumped)
+          true (m pumped))
+  in
+  let neg_case fns j id =
+    let pumped = Jv.pump_fields fns j in
+    test_case (sprintf "jv_pump_fields_neg_%d" id) `Quick (fun () ->
+        check jv "pumped equal original" j pumped;)
+  in
+  ["jv_pump_fields", [
+      pos_case [] (`obj [])
+        (fun _ -> true);
+      pos_case [] (`obj ["a", `num 1.; "b", `num 2.; "c", `num 3.])
+        (fun _ -> true);
+      pos_case ["a"] (`obj ["a", `num 1.; "b", `num 2.; "c", `num 3.]) (
+        function `obj (("a", `num 1.) :: _) -> true | _ -> false);
+      pos_case ["a"; "b"] (`obj ["a", `num 1.; "b", `num 2.; "c", `num 3.]) (
+        function `obj (("a", `num 1.) :: ("b", `num 2.) :: _) -> true | _ -> false);
+      pos_case ["c"; "b"] (`obj ["a", `num 1.; "b", `num 2.; "c", `num 3.]) (
+        function `obj (("c", `num 3.) :: ("b", `num 2.) :: _) -> true | _ -> false);
+      neg_case [] (`num 0.);
+      neg_case ["d";] (`obj ["a", `num 1.; "b", `num 2.; "c", `num 3.]);
+      neg_case ["a"; "d";] (`obj ["a", `num 1.; "b", `num 2.; "c", `num 3.]);
+      neg_case ["d"; "a";] (`obj ["a", `num 1.; "b", `num 2.; "c", `num 3.]);
+  ] |&> (fun case -> get_and_incr counter |> case)]
+
 let () =
   Printexc.record_backtrace true;
   run "Datecode_unit_tests" ([
@@ -676,6 +710,7 @@ let () =
     @ json_unparse @ json_show
     @ jvpath_unparse
     @ jvpath_parse_success
+    @ jv_pump_fields
   @ [
     "base64", [
       test_case "base64_known" `Quick base64_known;

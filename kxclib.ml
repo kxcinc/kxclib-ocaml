@@ -2857,6 +2857,7 @@ module Jv : sig
   open Json
 
   val pump_field : string -> jv -> jv
+  val pump_fields : string list -> jv -> jv
 
   val access : jvpath -> jv -> jv option
   val access_null : jvpath -> jv -> unit option
@@ -2874,12 +2875,38 @@ end = struct
   open Json
 
   let pump_field fname : jv -> jv = function
-    | `obj [(_, _)] as jv -> jv
+    | `obj ([(_, _)] | []) as jv -> jv
     | `obj fs as jv -> (
       match List.deassoc_opt fname fs with
       | Some fval, fs' ->
          `obj ((fname, fval) :: fs')
       | None, _ -> jv)
+    | jv -> jv
+
+  module SSet = Set.Make(String)
+  module SMap = Map.Make(String)
+
+  let pump_fields fnames : jv -> jv = function
+    | `obj ([(_, _)] | []) as jv -> jv
+    | `obj fs as jv ->
+       let fnset = SSet.of_list fnames in
+       let len = SSet.cardinal fnset in
+       let hit, miss =
+         fs |@> (
+           (SMap.empty, []),
+           fun ((hit, miss), (fn, fv)) ->
+           if SSet.mem fn fnset
+           then SMap.add fn fv hit, miss
+           else hit, (fn, fv) :: miss) in
+       if SMap.cardinal hit = len
+       then
+         `obj
+           (List.rev_append
+              (fnames
+               |> List.rev_map (fun fn ->
+                      fn, SMap.find fn hit))
+              miss)
+       else jv
     | jv -> jv
 
   let access : jvpath -> jv -> jv option = fun path jv ->
