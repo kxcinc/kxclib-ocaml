@@ -16,7 +16,7 @@ jobs:
           - 5.0.0
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/kxcteam/ocaml-general:${{ matrix.ocaml-version }}
+      image: ghcr.io/kxcinc/ocaml-general:${{ matrix.ocaml-version }}
     timeout-minutes: 25
 
     steps:
