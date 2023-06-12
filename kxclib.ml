@@ -359,7 +359,13 @@ let div = Int.div
 let rem = Int.rem
 
 module Either = struct
+
+  [%%if ocaml_version < (4, 12, 0)]
   type ('a, 'b) t = Left of 'a | Right of 'b
+  [%%else]
+  include Either
+  [%%endif]
+
   let left x = Left x
   let right x = Right x
 end
