@@ -22,7 +22,13 @@
 (library
  (name kxclib_src)
  (modules kxclib_src)
- (preprocess (pps ppx_deriving.std ppx_optcomp)))
+ (libraries re_stubs)
+ (preprocess (pps ppx_deriving.std ppx_optcomp))
+ (flags (:standard -open Re_stubs)))
+
+(library
+ (name re_stubs)
+ (modules re_stubs))
 
 (rule
  (target kxclib.pp.ml)

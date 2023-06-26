@@ -2190,6 +2190,99 @@ end
 
 include Log0.Pervasives
 
+module Runtime_info = struct
+  type runtime_type =
+    [ `classic_ocaml
+    | `js_of_ocaml
+    | `buckle_script (** ReScript or Melange *)
+    | `unknown of string
+    ]
+
+  let pp_runtime_type ppf : runtime_type -> unit =
+    let print_string = pp_string ppf in
+    function
+    | `classic_ocaml -> print_string "classic_ocaml"
+    | `js_of_ocaml -> print_string "js_of_ocaml"
+    | `buckle_script -> print_string "buckle_script"
+    | `unknown x -> fprintf ppf "unknown(%s)" x
+
+  let current_runtime_type : runtime_type =
+    match Sys.backend_type with
+    | Native | Bytecode -> `classic_ocaml
+    | Other "BS" -> `buckle_script
+    | Other "js_of_ocaml" -> `js_of_ocaml
+    | Other x -> `unknown x
+end
+
+type backtrace_info =
+  [ `ocaml_backtrace of Printexc.raw_backtrace
+  | `string_stacktrace of string
+  ]
+module Backtrace_info = struct
+  type t = backtrace_info
+  let pp : ppf -> t -> unit =
+    fun ppf ->
+    function
+    | `ocaml_backtrace rb ->
+       Format.fprintf ppf "%s" (Printexc.raw_backtrace_to_string rb)
+    | `string_stacktrace s -> Format.fprintf ppf "%s" s
+end
+
+module type Io_style = sig
+  (** exceptions thrown in executing second argument of [bind] is expected to be
+      caught and could be retrieved using extract_error *)
+
+  type 'x t
+  val return : 'x -> 'x t
+  val bind : 'x t -> ('x -> 'y t) -> 'y t
+
+  val inject_error : exn -> 'x t
+  val inject_error' : exn * backtrace_info option -> 'x t
+  val extract_error : 'x t -> ('x, exn * backtrace_info option) result t
+
+  val trace : string -> unit t
+end
+
+module Direct_io = struct
+  type 'x t = ('x, exn * Backtrace_info.t) result [@@deriving show]
+
+  let return : 'x -> 'x t = fun x -> Result.ok x
+  let bind : 'x t -> ('x -> 'y t) -> 'y t = fun x f -> Result.bind x f
+
+  [%%if re]
+  let inject_error' : exn * backtrace_info option -> 'x t =
+    fun (exn, bt) ->
+    let bt =
+      match bt with
+      | Some x -> some x
+      | None -> (
+        let stack = Js_exn.asJsExn exn >>? Js_exn.stack in
+        match stack with
+        | Some stack -> `string_stacktrace stack |> some
+        | None -> none) in
+    let bt = bt |? `string_stacktrace "*no_stacktrace*" in
+    Result.error (exn, bt)
+  [%%else]
+  let inject_error' : exn * backtrace_info option -> 'x t =
+    fun (exn, bt) ->
+    let bt =
+      bt |> Option.v' (fun () -> `ocaml_backtrace (Printexc.get_raw_backtrace ()))
+    in
+    Result.error (exn, bt)
+  [%%endif]
+
+  let inject_error : exn -> 'x t = fun exn -> inject_error' (exn, none)
+  let extract_error : 'x t -> ('x, exn * backtrace_info option) result t
+    = function
+    | Ok x -> Ok x |> return
+    | Error (e, bt) -> Error (e, some bt) |> return
+  let trace s =
+      Log0.log ~label:"trace" ~header_style:(Some `Thin) ~header_color:`Yellow
+        "%s" s;
+      Ok ()
+end
+module CheckDirectIo : Io_style = Direct_io
+
 module Json : sig
   type jv = [
     | `null
