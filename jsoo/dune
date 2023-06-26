@@ -4,5 +4,5 @@
  (optional)
  (libraries
    js_of_ocaml
-   kxclib)
- (preprocess (pps ppx_optcomp)))
+   kxclib prr)
+ (preprocess (pps ppx_optcomp js_of_ocaml-ppx)))

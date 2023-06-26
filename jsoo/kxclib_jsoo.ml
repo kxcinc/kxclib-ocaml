@@ -129,3 +129,6 @@ end = struct
     with Js_error.Exn _ ->
       None
 end
+
+module Futexn_io = Futexn_io
+module CheckFutexnIo : Io_style = Futexn_io
