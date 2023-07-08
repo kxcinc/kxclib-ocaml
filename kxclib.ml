@@ -286,7 +286,6 @@ module PipeOps(S : sig
   let (|+&?>) : 'x t -> ('x -> 'y option) -> ('x*'y) t =
     fun xs f -> filter_map (fun x -> match f x with Some y -> Some (x, y) | None -> None) xs
 end
-[%%if re]
 module PipeOps_flat_map(S : sig
              type _ t
              val map : ('x -> 'y) -> 'x t -> 'y t
@@ -296,13 +295,11 @@ module PipeOps_flat_map(S : sig
              val filter : ('x -> bool) -> 'x t -> 'x t
              val filter_map : ('x -> 'y option) -> 'x t -> 'y t
            end) = struct
-  module S' = struct
+  include PipeOps(struct
     include S
     let concat_map : ('x -> 'y t) -> 'x t -> 'y t = S.flat_map
-  end
-  include PipeOps(S')
+  end)
 end
-[%%endif]
 
 module type Monadic = sig
   type _ t
@@ -554,7 +551,7 @@ let (&>?) : ('x -> 'y option) -> ('y -> 'z) -> ('x -> 'z option) =
 module Seq0 = struct
   include Seq
 
-  [%%if not(re)]
+  [%%if not(re) && ocaml_version >= (4, 13, 0)]
   module Ops_piping = PipeOps(Seq)
   [%%else]
   module Ops_piping = PipeOps_flat_map(Seq)
@@ -643,10 +640,6 @@ module Seq0 = struct
          | 0 -> Nil
          | _ -> Cons(x, h (i - 1)) in
        h n
-
-  [%%if ocaml_version < (4, 13, 0)]
-  let concat_map = flat_map
-  [%%endif]
 end
 module Seq = struct
   include Seq0
@@ -815,7 +808,24 @@ end
 [%%endif]
 
 module List0 = struct
-  include PipeOps(List)
+
+  [%%if ocaml_version >= (4, 13, 0)]
+  module Ops_piping = PipeOps(List)
+  [%%else]
+  module Ops_piping =
+    PipeOps(struct
+        include List
+        let concat_map f l =
+          let rec aux f acc = function
+            | [] -> rev acc
+            | x :: l ->
+               let xs = f x in
+               aux f (rev_append xs acc) l
+          in aux f [] l
+      end)
+  [%%endif]
+  include Ops_piping
+
   include List
 
   let iota = function
@@ -1069,7 +1079,6 @@ module List0 = struct
 end
 module List = struct
   include List0
-  module Ops_piping = PipeOps(List0)
   module Ops_monad = PipeOps(List0)
   module Ops = struct include Ops_piping include Ops_monad end
 end
