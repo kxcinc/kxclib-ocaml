@@ -22,6 +22,7 @@
   (alcotest :with-test)
   (qtest :with-test)
   (js_of_ocaml :with-test)
+  (js_of_ocaml-ppx :with-test)
   (prr :with-test)
 
   (ocaml (>= 4.11.0))))
