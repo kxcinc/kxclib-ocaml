@@ -644,6 +644,9 @@ module Seq0 = struct
          | _ -> Cons(x, h (i - 1)) in
        h n
 
+  [%%if ocaml_version < (4, 13, 0)]
+  let concat_map = flat_map
+  [%%endif]
 end
 module Seq = struct
   include Seq0
@@ -1097,6 +1100,28 @@ module Hashtbl = struct
     table
 end
 
+module Bytes = struct
+  include Bytes
+
+  [%%if ocaml_version < (4, 13, 0)]
+  let exists p s =
+    let n = length s in
+    let rec loop i =
+      if i = n then false
+      else if p (unsafe_get s i) then true
+      else loop (succ i) in
+    loop 0
+
+  let for_all p s =
+    let n = length s in
+    let rec loop i =
+      if i = n then true
+      else if p (unsafe_get s i) then loop (succ i)
+      else false in
+    loop 0
+  [%%endif]
+end
+
 module String = struct
   include String
 
@@ -1145,6 +1170,11 @@ module String = struct
 
   let of_list = List.to_seq &> of_seq
   let of_array = Array.to_seq &> of_seq
+
+  [%%if ocaml_version < (4, 13, 0)]
+  let exists p s = Bytes.exists p (to_bytes s)
+  let for_all p s = Bytes.for_all p (to_bytes s)
+  [%%endif]
 
   [%%if ocaml_version < (4, 14, 0)]
   let is_valid_utf_8 : string -> bool =
