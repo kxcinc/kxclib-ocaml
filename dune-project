@@ -3,8 +3,8 @@
 (version ~dev)
 
 (license MIT)
-(maintainers "Haochen Xie <hx@kxc.io>" "KXC Members <info@kxc.io>")
-(authors "Haochen Xie" "KXC Members and Contributors")
+(maintainers "Haochen Xie <hx@kxc.inc>" "KXC Members <info@kxc.inc>")
+(authors "Haochen Kotoi-Xie" "KXC Members and Contributors")
 
 (source
  (github kxcinc/kxclib-ocaml))
@@ -14,7 +14,7 @@
 (package
  (name kxclib)
  (synopsis "KXC maintained common utilities")
- (description "Common OCaml utilities maintained by Kotoi-Xie Consultancy")
+ (description "Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc.")
  (depends
   (ppx_optcomp :build)
   (ppx_deriving :build)

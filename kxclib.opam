@@ -2,9 +2,10 @@
 opam-version: "2.0"
 version: "~dev"
 synopsis: "KXC maintained common utilities"
-description: "Common OCaml utilities maintained by Kotoi-Xie Consultancy"
-maintainer: ["Haochen Xie <hx@kxc.io>" "KXC Members <info@kxc.io>"]
-authors: ["Haochen Xie" "KXC Members and Contributors"]
+description:
+  "Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc."
+maintainer: ["Haochen Xie <hx@kxc.inc>" "KXC Members <info@kxc.inc>"]
+authors: ["Haochen Kotoi-Xie" "KXC Members and Contributors"]
 license: "MIT"
 homepage: "https://github.com/kxcinc/kxclib-ocaml"
 bug-reports: "https://github.com/kxcinc/kxclib-ocaml/issues"
