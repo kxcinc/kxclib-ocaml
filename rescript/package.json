@@ -26,11 +26,16 @@
     "url": "https://github.com/kxcinc/kxclib-ocaml/issues"
   },
   "homepage": "https://github.com/kxcinc/kxclib-ocaml",
+  "overrides": {
+    "semver": "^7.5.4"
+  },
+  "resolutions": {
+    "semver": "7.5.4"
+  },
   "devDependencies": {
     "bs-platform": "^9.0.2",
     "gentype": "^4.4.0",
     "jest": "^29.6.1",
-    "semver": "7.5.4",
     "rescript": "^9.1.4"
   },
   "peerDependencies": {
