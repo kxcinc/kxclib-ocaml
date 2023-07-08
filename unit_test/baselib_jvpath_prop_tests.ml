@@ -10,6 +10,7 @@ let () =
   let that ?(count=200) name =
     QCheck2.Test.make
       ~name ~count in
+  let run_tests tests = QCheck_base_runner.run_tests_main tests in
   [
     that "parse/unparse_jvpath" gen_jvpath ~print:show_jvpath
       (fun path ->
@@ -27,4 +28,4 @@ let () =
           Log0.debug "[FAIL] %a >> %S" pp_jvpath path unparsed;
           raise e
       );
-  ] |> QCheck_base_runner.run_tests_main |> exit
+  ] |> run_tests |> exit

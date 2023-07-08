@@ -1,6 +1,5 @@
-(executables
+(tests
  (names jsoo_unit_tests)
- (optional)
  (libraries
    alcotest qcheck
    kxclib kxclib_jsoo
@@ -13,9 +12,3 @@
  (flags (:standard
           -open Kxclib
           -open Kxclib_jsoo)))
-
-(rule
- (action (run %{bin:node} %{deps}))
- ; (deps ./jsoo_unit_tests.js)
- (deps ./jsoo_unit_tests.bc.js)
- (alias runtest))

@@ -286,7 +286,6 @@ module PipeOps(S : sig
   let (|+&?>) : 'x t -> ('x -> 'y option) -> ('x*'y) t =
     fun xs f -> filter_map (fun x -> match f x with Some y -> Some (x, y) | None -> None) xs
 end
-[%%if re]
 module PipeOps_flat_map(S : sig
              type _ t
              val map : ('x -> 'y) -> 'x t -> 'y t
@@ -296,13 +295,11 @@ module PipeOps_flat_map(S : sig
              val filter : ('x -> bool) -> 'x t -> 'x t
              val filter_map : ('x -> 'y option) -> 'x t -> 'y t
            end) = struct
-  module S' = struct
+  include PipeOps(struct
     include S
     let concat_map : ('x -> 'y t) -> 'x t -> 'y t = S.flat_map
-  end
-  include PipeOps(S')
+  end)
 end
-[%%endif]
 
 module type Monadic = sig
   type _ t
@@ -554,7 +551,7 @@ let (&>?) : ('x -> 'y option) -> ('y -> 'z) -> ('x -> 'z option) =
 module Seq0 = struct
   include Seq
 
-  [%%if not(re)]
+  [%%if not(re) && ocaml_version >= (4, 13, 0)]
   module Ops_piping = PipeOps(Seq)
   [%%else]
   module Ops_piping = PipeOps_flat_map(Seq)
@@ -643,7 +640,6 @@ module Seq0 = struct
          | 0 -> Nil
          | _ -> Cons(x, h (i - 1)) in
        h n
-
 end
 module Seq = struct
   include Seq0
@@ -812,7 +808,26 @@ end
 [%%endif]
 
 module List0 = struct
-  include PipeOps(List)
+
+  [%%if ocaml_version >= (4, 13, 0)]
+  module Ops_piping = PipeOps(List)
+  [%%else]
+  let concat_map f l =
+    let open List in
+    let rec aux f acc = function
+      | [] -> rev acc
+      | x :: l ->
+         let xs = f x in
+         aux f (rev_append xs acc) l
+    in aux f [] l
+  module Ops_piping =
+    PipeOps(struct
+        include List
+        let concat_map = concat_map
+      end)
+  [%%endif]
+  include Ops_piping
+
   include List
 
   let iota = function
@@ -1066,7 +1081,6 @@ module List0 = struct
 end
 module List = struct
   include List0
-  module Ops_piping = PipeOps(List0)
   module Ops_monad = PipeOps(List0)
   module Ops = struct include Ops_piping include Ops_monad end
 end
@@ -1095,6 +1109,28 @@ module Hashtbl = struct
     let table = Hashtbl.create ?random n in
     Seq.iota n |> Seq.map genfunc |> Hashtbl.add_seq table;
     table
+end
+
+module Bytes = struct
+  include Bytes
+
+  [%%if ocaml_version < (4, 13, 0)]
+  let exists p s =
+    let n = length s in
+    let rec loop i =
+      if i = n then false
+      else if p (unsafe_get s i) then true
+      else loop (succ i) in
+    loop 0
+
+  let for_all p s =
+    let n = length s in
+    let rec loop i =
+      if i = n then true
+      else if p (unsafe_get s i) then loop (succ i)
+      else false in
+    loop 0
+  [%%endif]
 end
 
 module String = struct
@@ -1145,6 +1181,11 @@ module String = struct
 
   let of_list = List.to_seq &> of_seq
   let of_array = Array.to_seq &> of_seq
+
+  [%%if ocaml_version < (4, 13, 0)]
+  let exists p s = Bytes.exists p (to_bytes s)
+  let for_all p s = Bytes.for_all p (to_bytes s)
+  [%%endif]
 
   [%%if ocaml_version < (4, 14, 0)]
   let is_valid_utf_8 : string -> bool =
