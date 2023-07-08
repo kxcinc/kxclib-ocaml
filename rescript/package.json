@@ -18,14 +18,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kxcteam/kxclib-ocaml.git"
+    "url": "git+https://github.com/kxcinc/kxclib-ocaml.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/kxcteam/kxclib-ocaml/issues"
+    "url": "https://github.com/kxcinc/kxclib-ocaml/issues"
   },
-  "homepage": "https://github.com/kxcteam/kxclib-ocaml",
+  "homepage": "https://github.com/kxcinc/kxclib-ocaml",
   "devDependencies": {
     "bs-platform": "^9.0.2",
     "gentype": "^4.4.0",

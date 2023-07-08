@@ -6,8 +6,8 @@ description: "Common OCaml utilities maintained by Kotoi-Xie Consultancy"
 maintainer: ["Haochen Xie <hx@kxc.io>" "KXC Members <info@kxc.io>"]
 authors: ["Haochen Xie" "KXC Members and Contributors"]
 license: "MIT"
-homepage: "https://github.com/kxcteam/kxclib-ocaml"
-bug-reports: "https://github.com/kxcteam/kxclib-ocaml/issues"
+homepage: "https://github.com/kxcinc/kxclib-ocaml"
+bug-reports: "https://github.com/kxcinc/kxclib-ocaml/issues"
 depends: [
   "dune" {>= "3.0"}
   "ppx_optcomp" {build}
@@ -31,4 +31,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/kxcteam/kxclib-ocaml.git"
+dev-repo: "git+https://github.com/kxcinc/kxclib-ocaml.git"

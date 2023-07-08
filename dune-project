@@ -7,8 +7,8 @@
 (authors "Haochen Xie" "KXC Members and Contributors")
 
 (source
- (github kxcteam/kxclib-ocaml))
-(bug_reports "https://github.com/kxcteam/kxclib-ocaml/issues")
+ (github kxcinc/kxclib-ocaml))
+(bug_reports "https://github.com/kxcinc/kxclib-ocaml/issues")
 
 (generate_opam_files true)
 (package

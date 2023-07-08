@@ -9,7 +9,7 @@ Currently, reading [kxclib.ml](kxclib.ml) is probably the best option.
 to use Kxclib in a new project that uses dune, simply do the following:
 
 ```
-git submodule add https://github.com/kxcteam/kxclib-ocaml.git vendors/kxclib
+git submodule add https://github.com/kxcinc/kxclib-ocaml.git vendors/kxclib
 echo (vendored_dirs vendors) >> dune
 ```
 at the project root, then add something like the below to the stanza's of your dune files:
