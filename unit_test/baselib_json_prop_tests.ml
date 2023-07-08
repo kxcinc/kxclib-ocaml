@@ -4,6 +4,7 @@ let () =
   let that ?(count=200) name =
     QCheck2.Test.make
       ~name ~count in
+  let run_tests tests = QCheck_base_runner.run_tests_main tests in
   [
     that "to/of_yojson" gen_jv ~print:string_of_jv
       (fun j ->
@@ -14,5 +15,5 @@ let () =
         match j |> Json.to_jsonm |> Json.of_jsonm with
         | Some (j', rest) -> (rest() = Seq.Nil) && j' = j
         | _ -> false);
-  ] |> QCheck_base_runner.run_tests_main |> exit
+  ] |> run_tests |> exit
 
