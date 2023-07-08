@@ -1,6 +1,6 @@
 (executables
  (names jsoo_unit_tests)
- (optional)
+ (enabled_if %{bin-available:js_of_ocaml})
  (libraries
    alcotest qcheck
    kxclib kxclib_jsoo
