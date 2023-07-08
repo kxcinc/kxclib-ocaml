@@ -22,4 +22,6 @@
   (alcotest :with-test)
   (qtest :with-test)
 
+  (js_of_ocaml :with-test)
+
   (ocaml (>= 4.11.0))))
