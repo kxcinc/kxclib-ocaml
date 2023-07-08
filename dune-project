@@ -25,4 +25,4 @@
   (js_of_ocaml-ppx :with-test)
   (prr :with-test)
 
-  (ocaml (>= 4.08.0))))
+  (ocaml (>= 4.11.0))))
