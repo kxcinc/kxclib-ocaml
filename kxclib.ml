@@ -812,16 +812,18 @@ module List0 = struct
   [%%if ocaml_version >= (4, 13, 0)]
   module Ops_piping = PipeOps(List)
   [%%else]
+  let concat_map f l =
+    let open List in
+    let rec aux f acc = function
+      | [] -> rev acc
+      | x :: l ->
+         let xs = f x in
+         aux f (rev_append xs acc) l
+    in aux f [] l
   module Ops_piping =
     PipeOps(struct
         include List
-        let concat_map f l =
-          let rec aux f acc = function
-            | [] -> rev acc
-            | x :: l ->
-               let xs = f x in
-               aux f (rev_append xs acc) l
-          in aux f [] l
+        let concat_map = concat_map
       end)
   [%%endif]
   include Ops_piping
