@@ -1,0 +1,10 @@
+src/*.ml
+src/*.mli
+src/*.bs.js
+
+lib/bs
+lib/ocaml
+.merlin
+yarn-error.log
+node_modules
+.bsb.lock

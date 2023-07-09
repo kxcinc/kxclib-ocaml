@@ -1,0 +1,40 @@
+(rule
+ (target kxclib_melange.ml)
+ (deps kxclib.pp.ml kxclib_comp_mel.ml)
+ (action
+  (with-stdout-to %{target}
+   (progn
+    (cat kxclib_comp_mel.ml)
+    (echo "\nopen Kxclib_comp\n")
+    (echo "\n[@@@warning \"-3-44\"]\n")
+    (cat kxclib.pp.ml)
+    (echo "\n\n")
+    (echo "\nmodule Promise = Promise\n")))))
+
+(library
+ (name kxclib_melange)
+ (public_name kxclib.melange)
+ (modes melange)
+ (modules kxclib_melange promise))
+
+(rule
+ (target kxclib_src.ml)
+ (deps ../kxclib.ml)
+ (action
+  (with-stdout-to %{target}
+   (progn
+    (echo "[%%define os_type \"re\"]\n")
+    (cat %{deps})))))
+
+(rule
+ (target kxclib.pp.ml)
+ (deps kxclib_src.pp.ml)
+ (action
+  (with-stderr-to %{target}
+    (run %{bin:ocamlc} -stop-after parsing -dsource %{deps}))))
+
+(library
+ (name kxclib_src_melange)
+ (modules kxclib_src)
+ (preprocess (pps ppx_deriving.std ppx_optcomp))
+ (flags (:standard)))

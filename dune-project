@@ -1,6 +1,8 @@
-(lang dune 3.0)
+(lang dune 3.9)
 (name kxclib)
 (version ~dev)
+
+(using melange 0.1)
 
 (license MIT)
 (maintainers "Haochen Xie <hx@kxc.inc>" "KXC Members <info@kxc.inc>")
