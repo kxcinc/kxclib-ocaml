@@ -36,17 +36,19 @@ const samples = [
     expectedJv: { NAME: 'arr', VAL: { hd: { NAME: 'num', VAL: 1 }, tl: { hd: { NAME: 'str', VAL: "(a number)"}, tl: 0 }} } },
   { value: { best: [], friend: 23 },
     expectedJv: { NAME: 'obj', VAL: { hd: [ "best", { NAME: 'arr', VAL: 0 } ], tl: { hd: [ "friend", { NAME: 'num', VAL: 23 }], tl: 0 }} } },
+  { value: { best: undefined, friend: 23 }, normalizedValue: {friend: 23},
+    expectedJv: { NAME: 'obj', VAL: { hd: [ "friend", { NAME: 'num', VAL: 23 }], tl: 0 } } },
   { value: [ true, "hello?" ],
     expectedJv: { NAME: 'arr', VAL: { hd: { NAME: 'bool', VAL: true }, tl: { hd: { NAME: 'str', VAL: "hello?"}, tl: 0 }} } },
 ];
 
 test('Json_ext with samples', () => {
-  for (const { value, expectedJv } of samples) {
+  for (const { value, normalizedValue, expectedJv } of samples) {
     const jv = JsonExt.of_xjv(value);
-    const xjv = JsonExt.to_xjv(jv);
-    expect(xjv).toStrictEqual(value);
-
     expect(jv).toStrictEqual(expectedJv);
+
+    const xjv = JsonExt.to_xjv(jv);
+    expect(xjv).toStrictEqual(normalizedValue || value);
 
     const str = JsonExt.to_json_string(jv);
     const jv_of_str = JsonExt.of_json_string_opt(str);
@@ -61,14 +63,14 @@ test('failure of Json_ext.of_json_string_opt', () => {
 });
 
 test('successes of Json_ext.of_json_string_opt & Json_ext.to_json_string', () => {
-  for (const { value } of samples) {
+  for (const { value, normalizedValue } of samples) {
     const json = JSON.stringify(value);
     const parsed = JsonExt.of_json_string_opt(json);
-    expect(JsonExt.to_xjv(parsed)).toStrictEqual(value);
+    expect(JsonExt.to_xjv(parsed)).toStrictEqual(normalizedValue || value);
 
     const jv = JsonExt.of_xjv(value);
     const json2 = JsonExt.to_json_string(jv);
     const parsed2 = JSON.parse(json2);
-    expect(parsed2).toStrictEqual(value);
+    expect(parsed2).toStrictEqual(normalizedValue || value);
   }
 });
