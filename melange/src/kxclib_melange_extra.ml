@@ -1,7 +1,7 @@
 module Json_ext : sig
   type xjv
   (** external json value, simply a JavaScript value *)
-  
+
   val to_xjv : Json.jv -> xjv
   val of_xjv : xjv -> Json.jv
 
@@ -12,7 +12,7 @@ end = struct
   let _stringify : 'a. 'a -> string = fun x -> [%bs.raw {| function(x){return ''+x;} |}] (_cast x)
 
   type xjv
-    
+
   let to_xjv : Json.jv -> xjv =
     let rec to_json = function
       | `null -> Js.Json.null
@@ -46,7 +46,7 @@ end = struct
         |> Array.map (fun (k, v) -> (k, of_xjv v))
         |> fun xs -> `obj (Array.to_list xs)
       )
-      
+
   let to_json_string: Json.jv -> string = to_xjv &> _cast &> Js.Json.stringify
   let of_json_string_opt: string -> Json.jv option =
     fun str ->
