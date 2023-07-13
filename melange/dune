@@ -1,6 +1,6 @@
 (rule
  (target kxclib_melange.ml)
- (deps kxclib.pp.ml kxclib_comp_mel.ml)
+ (deps kxclib.pp.ml kxclib_comp_mel.ml kxclib_melange_extra.ml)
  (action
   (with-stdout-to %{target}
    (progn
@@ -8,6 +8,8 @@
     (echo "\nopen Kxclib_comp\n")
     (echo "\n[@@@warning \"-3-44\"]\n")
     (cat kxclib.pp.ml)
+    (echo "\n\n")
+    (cat kxclib_melange_extra.ml)
     (echo "\n\n")
     (echo "\nmodule Promise = Promise\n")))))
 
@@ -37,4 +39,12 @@
  (name kxclib_src_melange)
  (modules kxclib_src)
  (preprocess (pps ppx_deriving.std ppx_optcomp))
+ (modes melange)
  (flags (:standard)))
+
+(melange.emit
+ (target _output)
+ (emit_stdlib false)
+ (modules)
+ (promote (until-clean))
+ (libraries kxclib_melange))

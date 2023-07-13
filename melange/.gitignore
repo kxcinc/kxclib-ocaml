@@ -8,3 +8,5 @@ lib/ocaml
 yarn-error.log
 node_modules
 .bsb.lock
+
+_output/melange
