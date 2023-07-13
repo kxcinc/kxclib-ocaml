@@ -104,10 +104,24 @@ end = struct
       | Error (exn, _backtrace) ->
         to_strict_equal (expect exn) error;
         return ()
+        
+  let test03 () =
+    let module M = MonadOps(PromiseIo) in
+    let open M in
+    return ()
+    
+  let test04 () =
+    let module M = MonadOps(PromiseIo) in
+    let open M in
+    return 40 >>= fun x ->
+      to_be (expect (x + 2)) 42;
+      return ()
 
   let tests = [|
     PromiseIo.return;
     test01;
-    test02
+    test02;
+    test03;
+    test04;
   |]
 end
