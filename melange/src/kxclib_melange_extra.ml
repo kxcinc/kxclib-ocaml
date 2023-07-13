@@ -32,11 +32,12 @@ end = struct
       | `bool x -> Js.Json.boolean x
       | `num x -> Js.Json.number x
       | `str x -> Js.Json.string x
-      | `arr arr -> arr |> Array.of_list |> Array.map to_json |> Js.Json.array
+      | `arr arr -> arr |. Belt.List.toArray |. Belt.Array.map to_json |> Js.Json.array
       | `obj kvs ->
         Js.Dict.empty()
         |-> (fun o ->
-          kvs |!> (fun (key, value) -> Js.Dict.set o key (to_json value)))
+          kvs |. Belt.List.forEach (fun (key, value) ->
+                     Js.Dict.set o key (to_json value)))
         |> Js.Json.object_
     in to_json &> _cast
 
@@ -44,7 +45,7 @@ end = struct
     match Js.Types.classify x with
     | JSUndefined -> invalid_arg "of_xjv: 'undefined' not expected"
     | JSFunction f -> invalid_arg ("of_xjv: function not expected: "^(_stringify f))
-    | JSSymbol symb -> invalid_arg ("of_xjv: function not expected: "^(_stringify symb))
+    | JSSymbol symb -> invalid_arg ("of_xjv: symbol not expected: "^(_stringify symb))
     | JSNull -> `null
     | JSFalse -> `bool false
     | JSTrue -> `bool true
@@ -52,11 +53,14 @@ end = struct
     | JSString x -> `str x
     | JSObject obj ->
       if Js.Array.isArray obj then (
-        `arr (_cast obj |> Array.map of_xjv |> Array.to_list)
+        `arr (_cast obj |. Belt.Array.map of_xjv |> Belt.List.fromArray)
       ) else (
+        let fs = Belt.Array.makeUninitialized 0 |> _cast in
         Js.Dict.entries (_cast obj)
-        |> Array.map (fun (k, v) -> (k, of_xjv v))
-        |> fun xs -> `obj (Array.to_list xs)
+        |. Belt.Array.forEach (fun (k, v) ->
+               if not Js.Types.(test v Undefined)
+               then Belt.Array.push fs (k, of_xjv v));
+        `obj (fs |> Belt.List.fromArray)
       )
       
   let to_json_string: Json.jv -> string = to_xjv &> _cast &> Js.Json.stringify
