@@ -49,3 +49,22 @@
  (modules)
  (promote (until-clean))
  (libraries kxclib_melange))
+
+(rule
+ (alias init)
+ (targets (dir node_modules))
+ (deps package.json yarn.lock)
+ (action (run yarn install --frozen-lockfile)))
+ 
+(rule
+ (alias runtest)
+ (deps
+  (sandbox none)
+  node_modules
+  (alias melange)
+  (source_tree tests))
+ (action
+  (with-accepted-exit-codes 0
+   (run yarn test))))
+
+(dirs :standard \ node_modules)

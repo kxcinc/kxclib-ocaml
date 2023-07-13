@@ -1,0 +1,17 @@
+{
+  "name": "kxclib-melange",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "test": "npx jest"
+  },
+  "files": [
+    "*.ml",
+    "*.mli",
+    "output/node_modules/*.js",
+    "tests/*.spec.js"
+  ],
+  "devDependencies": {
+    "jest": "^29.6.1"
+  }
+}

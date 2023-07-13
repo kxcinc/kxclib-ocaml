@@ -2,6 +2,7 @@
 (name kxclib)
 (version ~dev)
 
+(using directory-targets 0.1)
 (using melange 0.1)
 
 (license MIT)
