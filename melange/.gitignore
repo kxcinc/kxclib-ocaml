@@ -1,7 +1,3 @@
-src/*.ml
-src/*.mli
-src/*.bs.js
-
 lib/bs
 lib/ocaml
 .merlin

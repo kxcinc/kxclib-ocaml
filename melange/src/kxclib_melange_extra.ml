@@ -9,7 +9,6 @@ module Json_ext : sig
   val of_json_string_opt : string -> Json.jv option
 end = struct
   external _cast : 'a -> 'b = "%identity"
-  external _stringify : 'a -> string = "JSON.stringify" [@@bs.val]
 
   type xjv
   
@@ -59,7 +58,6 @@ end = struct
         |> fun xs -> `obj (Array.to_list xs)
       )
       
-  let to_json_string: Json.jv -> string = to_xjv &> _stringify
   let of_json_string_opt: string -> Json.jv option =
     fun str ->
     try Js.Json.parseExn str |> _cast |> of_xjv |> some
