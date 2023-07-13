@@ -31,7 +31,8 @@ end = struct
     match Js.Types.classify x with
     | JSUndefined -> invalid_arg "of_xjv: 'undefined' not expected"
     | JSFunction f -> invalid_arg ("of_xjv: function not expected: "^(_stringify f))
-    | JSSymbol symb -> invalid_arg ("of_xjv: function not expected: "^(_stringify symb))
+    | JSSymbol symb -> invalid_arg ("of_xjv: symbol not expected: "^(_stringify symb))
+    | JSBigInt x -> invalid_arg ("of_xjv: bigint not expected: "^(_stringify x))
     | JSNull -> `null
     | JSFalse -> `bool false
     | JSTrue -> `bool true
