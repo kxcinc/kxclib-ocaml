@@ -12,19 +12,6 @@ end = struct
   let _stringify : 'a. 'a -> string = fun x -> [%bs.raw {| function(x){return ''+x;} |}] (_cast x)
 
   type xjv
-  
-  type xjv_type = [
-    | `_undefined
-    | `_null
-    | `_boolean
-    | `_number
-    | `_bigint
-    | `_string
-    | `_symbol
-    | `_function
-    | `_object
-    | `_array
-    ]
     
   let to_xjv : Json.jv -> xjv =
     let rec to_json = function
