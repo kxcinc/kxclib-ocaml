@@ -591,6 +591,10 @@ module Seq0 = struct
         )
       )
 
+  let iotaf f n = iota n |&> f
+
+  let iotaf' f n = iota n |!> f
+
   let length s =
     fold_left (fun c _ -> succ c) 0 s
 
