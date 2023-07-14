@@ -3427,3 +3427,146 @@ module Base64 = struct
   end
   module Url = Make(Config_rfc4648_url_relaxed)
 end
+
+(** encode / decode a string according to the RFC 3986 Section 2.1
+    {i URI Generic Syntax - Percent-Encoding} syntax *)
+module Url_encoding : sig
+
+  (**
+     Takes an input [bytes], and writes the encoded string to [Buffer.t].
+     @param offset   the offset of input which the encoder should start reading from.
+     @param len      the length of input which the encoder should read.
+     @return the number of bytes written to [Buffer.t].
+   *)
+  val encode_buf : ?offset:int -> ?len:int -> Buffer.t -> bytes -> int (* bytes written *)
+
+  (**
+     Takes an input [string], and writes the decoded bytes to [Buffer.t].
+     @param offset   the offset of input which the decoder should start reading from.
+     @param len      the length of input which the decoder should read.
+     @return the number of bytes written to [Buffer.t].
+   *)
+  val decode_buf : ?offset:int -> ?len:int -> Buffer.t -> string -> int (* bytes written *)
+
+  (**
+     Takes an input [bytes], and returns the encoded [string].
+     @param offset   the offset of input which the encoder should start reading from.
+     @param len      the length of input which the encoder should read.
+   *)
+  val encode : ?offset:int -> ?len:int -> bytes -> string
+
+  (**
+     Takes an input [string], and returns the decoded [bytes].
+     @param offset   the offset of input which the decoder should start reading from.
+     @param len      the length of input which the decoder should read.
+   *)
+  val decode : ?offset:int -> ?len:int -> string -> bytes
+
+  exception Invalid_url_encoded_string of [
+    | `reserved_character_in_encoded_string of char * int
+    | `invalid_percent_encoded_character of string * int
+    | `percent_encoded_character_end_of_input of int ]
+
+end = struct
+
+  exception Invalid_url_encoded_string of [
+    | `reserved_character_in_encoded_string of char * int
+    | `invalid_percent_encoded_character of string * int
+    | `percent_encoded_character_end_of_input of int ]
+  let () =
+    Printexc.register_printer (function
+        | Invalid_url_encoded_string (
+            `reserved_character_in_encoded_string (c, p))
+          -> sprintf "Invalid_url_encoded_string
+                      (reserved character %C at %d)"
+               c p |> some
+        | Invalid_url_encoded_string (
+            `invalid_percent_encoded_character (s, p))
+          -> sprintf "Invalid_url_encoded_string
+                      (invalid percent encoding %S at %d)"
+               s p |> some
+        | Invalid_url_encoded_string (
+            `percent_encoded_character_end_of_input p)
+          -> sprintf "Invalid_url_encoded_string\
+                      ('%%' too close to the end-of-input at %d)"
+               p |> some
+        | _ -> none)
+
+  let safe_char = function
+    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9'
+      | '-' | '.' | '_' | '~' -> true
+    | _ -> false
+
+  let encoding_table =
+    lazy (iotaf (sprintf "%%%02X") 256  |> List.to_function)
+
+  let decoding_table =
+    lazy (
+      let table1 = Lazy.force encoding_table in
+      let table2 = Seq.iotaf (?+< (sprintf "%%%02x")) 256 in
+      iotaf (?+< table1) 256
+      |> List.to_seq
+      |> Seq.append table2
+      |> StringMap.of_seq)
+
+  let encode_buf ?(offset = 0) ?len buf data =
+    let table = int_of_char &> Lazy.force encoding_table in
+    let dlen = Bytes.length data in
+    let olen = len |? dlen - offset in
+    if olen < 0 || offset + olen > dlen then (
+      invalid_arg' "Url_encoding.encode: the input range (offset:%d, len:%d) is out of bounds" offset olen;
+    );
+    let rec loop p = function
+      | 0 -> olen
+      | n ->
+         let c = Bytes.get data p in
+         (if safe_char c
+          then Buffer.add_char buf c
+          else Buffer.add_string buf (table c)
+         );
+         loop (succ p) (pred n)
+    in
+    loop offset olen
+
+  let decode_buf ?(offset = 0) ?len buf data =
+    let lookup =
+      let table = Lazy.force decoding_table in
+      fun s -> StringMap.find_opt s table in
+    let dlen = String.length data in
+    let ilen = len |? dlen - offset in
+    if ilen < 0 || offset + ilen > dlen then (
+      invalid_arg' "Url_encoding.decode: the input range (offset:%d, len:%d) is out of bounds" offset ilen;
+    );
+    let rec loop p = function
+      | 0 -> ilen
+      | n -> (
+        match String.get data p with
+        | '%' when n < 3 ->
+           raise (Invalid_url_encoded_string (`percent_encoded_character_end_of_input p))
+        | '%' ->
+           let s = String.sub data p 3 in
+           lookup s
+           |> (Option.or_raise (
+                   Invalid_url_encoded_string (
+                       `invalid_percent_encoded_character (s, p))))
+           |> Buffer.add_uint8 buf;
+           loop (p + 3) (n - 3)
+        | c when safe_char c ->
+           Buffer.add_char buf c;
+           loop (succ p) (pred n)
+        | c ->
+           raise (Invalid_url_encoded_string (
+                      `reserved_character_in_encoded_string (c, p))))
+    in
+    loop offset ilen
+
+    let encode ?offset ?len input =
+      let output = Buffer.create 0 in
+      encode_buf ?offset ?len output input |> ignore;
+      Buffer.contents output
+
+    let decode ?offset ?len input =
+      let output = Buffer.create 0 in
+      decode_buf ?offset ?len output input |> ignore;
+      Buffer.to_bytes output
+end

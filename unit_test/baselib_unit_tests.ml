@@ -221,6 +221,32 @@ let base64_decode_pad () =
       | e -> check exn input_case expected_exn e
   )
 
+let urlenc_known () =
+  let bidirectional_cases = [
+      "a", "a";
+      "abc", "abc";
+      "~abc", "~abc";
+      "_", "_";
+      "kxclib.ml", "kxclib.ml";
+      "kxc.dev/kxclib", "kxc.dev%2Fkxclib";
+      "kxc\xaa.~", "kxc%AA.~";
+    ] in
+  let decode_only_cases = [
+      "kxc\xaa.~", "kxc%aa.~";
+      "kxc.dev/kxclib", "kxc.dev%2fkxclib";
+    ] in
+  bidirectional_cases
+  |> List.iter (fun (raw, encoded) ->
+         check string (sprintf "urlenc_encode: %S" raw)
+           encoded (Url_encoding.encode (Bytes.of_string raw));
+         check string (sprintf "urlenc_decode: %S" raw)
+           raw (Url_encoding.decode encoded |> Bytes.to_string);
+       );
+  decode_only_cases
+  |> List.iter (fun (raw, encoded) ->
+         check string (sprintf "urlenc_decode: %S" raw)
+           raw (Url_encoding.decode encoded |> Bytes.to_string);
+       )
 
 type jv = Json.jv
 
@@ -717,6 +743,10 @@ let () =
       test_case "base64_range" `Quick base64_range;
       test_case "base64_decode_pad" `Quick base64_decode_pad;
     ];
+
+    "url_encoding", [
+        test_case "urlenc_known" `Quick urlenc_known;
+      ];
 
     "json_of_jsonm", [
       test_case "json_of_jsonm_null" `Quick json_of_jsonm_null;
