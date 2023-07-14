@@ -3316,7 +3316,7 @@ module Base64 = struct
           invalid_arg' "Base64.encode: the input range (offset:%d, len:%d) is out of bounds" offset len
         else if Option.is_some pad then
           let actual_len = count_lenth_ignoring ~offset ~len input in
-          if actual_len mod 4 <> 0 then
+          if validate_padding && actual_len mod 4 <> 0 then
             invalid_arg "Base64.decode: wrong padding"
           else offset, end_index, len
         else offset, end_index, len
