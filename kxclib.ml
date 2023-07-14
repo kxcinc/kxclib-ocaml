@@ -485,6 +485,10 @@ module Option0 = struct
     | Some x -> x
     | None -> gen_default()
 
+  let or_raise e = function
+    | Some x -> x
+    | None -> raise e
+
   let otherwise otherwise = function
     | Some x -> Some x
     | None -> otherwise
