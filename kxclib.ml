@@ -559,6 +559,8 @@ let (||?) o1 o2 = Option.otherwise o2 o1
 let (||?!) o1 o2 = Option.otherwise' o2 o1
 let (&>?) : ('x -> 'y option) -> ('y -> 'z) -> ('x -> 'z option) =
   fun af f -> af &> (Option.map f)
+let (&>>?) : ('x -> 'y option) -> ('y -> 'z option) -> ('x -> 'z option) =
+  fun af g x -> af x >>? g
 
 module Seq0 = struct
   include Seq
