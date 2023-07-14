@@ -2251,7 +2251,7 @@ include Log0.Pervasives
 
 module Runtime_info = struct
   type runtime_type =
-    [ `classic_ocaml
+    [ `classic_ocaml of [ `native | `bytecode ]
     | `js_of_ocaml
     | `buckle_script (** ReScript or Melange *)
     | `unknown of string
@@ -2260,14 +2260,16 @@ module Runtime_info = struct
   let pp_runtime_type ppf : runtime_type -> unit =
     let print_string = pp_string ppf in
     function
-    | `classic_ocaml -> print_string "classic_ocaml"
+    | `classic_ocaml `native -> print_string "classic_ocaml(native)"
+    | `classic_ocaml `bytecode -> print_string "classic_ocaml(bytecode)"
     | `js_of_ocaml -> print_string "js_of_ocaml"
     | `buckle_script -> print_string "buckle_script"
     | `unknown x -> fprintf ppf "unknown(%s)" x
 
   let current_runtime_type : runtime_type =
     match Sys.backend_type with
-    | Native | Bytecode -> `classic_ocaml
+    | Native -> `classic_ocaml `native
+    | Bytecode -> `classic_ocaml `bytecode
     | Other "BS" -> `buckle_script
     | Other "js_of_ocaml" -> `js_of_ocaml
     | Other x -> `unknown x
