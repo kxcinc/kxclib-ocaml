@@ -86,16 +86,16 @@ end = struct
     )
 end
 
-module PromiseIo_test : sig
-  val tests : (unit -> unit PromiseIo.t) array
+module Promise_io_test : sig
+  val tests : (unit -> unit Promise_io.t) array
 end = struct
   let test01 () =
-    PromiseIo.(bind (return 1) @@ fun x ->
+    Promise_io.(bind (return 1) @@ fun x ->
       to_be (expect (x + 1)) 2;
       return ())
 
   let test02 () =
-    let open PromiseIo in
+    let open Promise_io in
     let error = Failure "error test" in
     inject_error error
     |> extract_error
@@ -106,19 +106,19 @@ end = struct
         return ()
         
   let test03 () =
-    let module M = MonadOps(PromiseIo) in
+    let module M = MonadOps(Promise_io) in
     let open M in
     return ()
     
   let test04 () =
-    let module M = MonadOps(PromiseIo) in
+    let module M = MonadOps(Promise_io) in
     let open M in
     return 40 >>= fun x ->
       to_be (expect (x + 2)) 42;
       return ()
 
   let tests = [|
-    PromiseIo.return;
+    Promise_io.return;
     test01;
     test02;
     test03;

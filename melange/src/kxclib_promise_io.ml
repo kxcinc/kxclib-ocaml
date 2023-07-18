@@ -1,4 +1,4 @@
-module PromiseIo : sig
+module Promise_io : sig
   include Io_style with type 'a t = 'a Promise.t
 end = struct
   type 'x t = 'x Promise.t

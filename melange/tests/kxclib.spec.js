@@ -4,7 +4,7 @@ const kxclib_melange_test = require('../_output/melange/tests/kxclib_melange_tes
 const JsonExt = kxclib.Json_ext;
 
 const Json_ext_test = kxclib_melange_test.Json_ext_test;
-const PromiseIo_test = kxclib_melange_test.PromiseIo_test;
+const Promise_io_test = kxclib_melange_test.Promise_io_test;
 
 test('it loads', () => {
   expect(kxclib).toBeDefined();
@@ -12,7 +12,7 @@ test('it loads', () => {
   
   expect(kxclib_melange_test).toBeDefined();
   expect(Json_ext_test).toBeDefined();
-  expect(PromiseIo_test).toBeDefined();
+  expect(Promise_io_test).toBeDefined();
 });
 
 const samples = [
@@ -95,8 +95,8 @@ test('successes of Json_ext.of_json_string_opt & Json_ext.to_json_string (ported
   Json_ext_test.test_string_success();
 });
 
-test('PromiseIo (ported)', async () => {
-  for (const test of PromiseIo_test.tests) {
+test('Promise_io (ported)', async () => {
+  for (const test of Promise_io_test.tests) {
     await test();
   }
 });
