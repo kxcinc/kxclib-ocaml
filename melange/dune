@@ -1,6 +1,10 @@
 (rule
  (target kxclib_melange.ml)
- (deps kxclib.pp.ml src/kxclib_comp_mel.ml src/kxclib_melange_extra.ml)
+ (deps
+  kxclib.pp.ml
+  src/kxclib_comp_mel.ml
+  src/kxclib_melange_extra.ml
+  src/kxclib_promise_io.ml)
  (action
   (with-stdout-to %{target}
    (progn
@@ -10,6 +14,8 @@
     (cat kxclib.pp.ml)
     (echo "\n\n")
     (cat src/kxclib_melange_extra.ml)
+    (echo "\n\n")
+    (cat src/kxclib_promise_io.ml)
     (echo "\n\n")
     (echo "\nmodule Promise = Promise\n")))))
 
@@ -48,7 +54,7 @@
  (target _output)
  (modules)
  (promote (until-clean))
- (libraries kxclib_melange))
+ (libraries kxclib_melange kxclib_melange_test))
 
 (rule
  (alias init)
@@ -61,10 +67,14 @@
  (deps
   (sandbox none)
   node_modules
-  (alias melange)
-  (source_tree tests))
+  (source_tree src)
+  (source_tree tests)
+  (:outputs
+    _output/node_modules/kxclib.melange/kxclib_melange.js
+    _output/melange/tests/kxclib_melange_test.js))
  (action
-  (with-accepted-exit-codes 0
-   (run yarn test))))
+   (progn
+    (run yarn prepare-packages)
+    (with-accepted-exit-codes 0 (run yarn test)))))
 
 (dirs :standard \ node_modules)

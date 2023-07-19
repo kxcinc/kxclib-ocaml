@@ -1,10 +1,18 @@
 const kxclib = require('../_output/node_modules/kxclib.melange/kxclib_melange');
+const kxclib_melange_test = require('../_output/melange/tests/kxclib_melange_test');
 
 const JsonExt = kxclib.Json_ext;
+
+const Json_ext_test = kxclib_melange_test.Json_ext_test;
+const Promise_io_test = kxclib_melange_test.Promise_io_test;
 
 test('it loads', () => {
   expect(kxclib).toBeDefined();
   expect(JsonExt).toBeDefined();
+  
+  expect(kxclib_melange_test).toBeDefined();
+  expect(Json_ext_test).toBeDefined();
+  expect(Promise_io_test).toBeDefined();
 });
 
 const samples = [
@@ -56,10 +64,18 @@ test('Json_ext with samples', () => {
   }
 });
 
+test('Json_ext with samples (ported', () => {
+  Json_ext_test.test_with_samples();
+});
+
 test('failure of Json_ext.of_json_string_opt', () => {
   expect(JsonExt.of_json_string_opt('{')).toBeUndefined();
   expect(JsonExt.of_json_string_opt('{age: 12}')).toBeUndefined(); // violating JSON spec as field name not properly quoted
   expect(JsonExt.of_json_string_opt("{'age': 12}")).toBeUndefined(); // violating JSON spec as field name not properly quoted
+});
+
+test('failure of Json_ext.of_json_string_opt (ported)', () => {
+  Json_ext_test.test_of_json_string_opt_failure();
 });
 
 test('successes of Json_ext.of_json_string_opt & Json_ext.to_json_string', () => {
@@ -72,5 +88,15 @@ test('successes of Json_ext.of_json_string_opt & Json_ext.to_json_string', () =>
     const json2 = JsonExt.to_json_string(jv);
     const parsed2 = JSON.parse(json2);
     expect(parsed2).toStrictEqual(normalizedValue || value);
+  }
+});
+
+test('successes of Json_ext.of_json_string_opt & Json_ext.to_json_string (ported)', () => {
+  Json_ext_test.test_string_success();
+});
+
+test('Promise_io (ported)', async () => {
+  for (const test of Promise_io_test.tests) {
+    await test();
   }
 });

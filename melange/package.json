@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "test": "npx jest"
+    "test": "npx jest",
+    "prepare-packages": "cp -r _output/node_modules/* ./node_modules/"
   },
   "files": [
     "*.ml",
