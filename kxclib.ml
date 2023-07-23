@@ -1099,7 +1099,7 @@ module List0 = struct
 end
 module List = struct
   include List0
-  module Ops_monad = PipeOps(List0)
+  module Ops_monad = MonadOps(List0)
   module Ops = struct include Ops_piping include Ops_monad end
 end
 include List.Ops_piping
