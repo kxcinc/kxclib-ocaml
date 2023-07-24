@@ -2,7 +2,7 @@ name: OCaml General
 
 on:
   push:
-    branches: [main, adopt-og-gha]
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -47,8 +47,7 @@ jobs:
 
     needs: quick-check-finished
 
-    ## FIXME: change ref to main before merging
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/adopt-og-gha' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
     environment:
       name: github-pages
