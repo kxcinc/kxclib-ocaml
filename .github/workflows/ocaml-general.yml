@@ -2,7 +2,7 @@ name: OCaml General
 
 on:
   push:
-    branches: [main]
+    branches: [main, adopt-og-gha]
   pull_request:
     types: [opened, synchronize, reopened]
 
