@@ -63,3 +63,9 @@ jobs:
 
       - name: Perform dune runtest
         run: opam exec -- dune runtest
+
+  matrix-check-finished:
+    needs: matrix-check
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "all set"
