@@ -34,7 +34,7 @@ jobs:
         uses: kxcdev/ocaml-general-gha@v3
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
-          node-version: ${{ matrix.node-version }}
+          node-version: 'latest'
           pr-report-test-result: ${{ matrix.ocaml-version == '5.0.0' }}
 
   quick-check-finished:
