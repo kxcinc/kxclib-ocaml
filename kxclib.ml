@@ -1154,6 +1154,22 @@ end
 module String = struct
   include String
 
+  (** [partition_opt n s] returns [None] if [n] is greater than the length of [s] or
+      [Some (s1, s2)] where [s = s1^s2 && n = length s1] otherwise *)
+  let partition_opt n str =
+    let len = length str in
+    if n > len then None
+    else Some (sub str 0 n, sub str n (len - n))
+
+  (** [partition n s] returns [Some (s1, s2)] where [s = s1^s2 && n = length s1].
+
+      {!Invalid_argument} will be thrown if [n] is greater than the length of [s] *)
+  let partition n str =
+    partition_opt n str
+    |> Option.v' (fun () ->
+           invalid_arg'
+             "Kxclib.String.partition - n (= %d) is greater than the length (=%d) of %S"
+             n (length str) str)
 
   (** [empty str] returns true when str is of zero length *)
   let empty str = length str = 0

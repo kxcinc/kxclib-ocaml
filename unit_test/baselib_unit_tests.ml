@@ -66,6 +66,50 @@ let seq_drop_0 = seq_drop (list int) 2 [2; 3; 4] [4]
 let seq_drop_1 = seq_drop (list string) 0 ["A"; "B"; "C"] ["A"; "B"; "C"]
 let seq_drop_2 = seq_drop (list string) 3 ["A"; "B"; "C"] []
 
+let string_partition =
+  let counter = ref 0 in
+  let case str n (p1, p2) =
+    let id = get_and_decr counter |> (~-) in
+    test_case (sprintf "string_partition_%d" id) `Quick (fun () ->
+        check (option (pair string string))
+          (sprintf "string_partition_opt.case %S %d (%S, %S)"
+             str n p1 p2)
+          (Some (p1, p2))
+          (String.partition_opt n str);
+        check (pair string string)
+          (sprintf "string_partition_exn.case %S %d (%S, %S)"
+             str n p1 p2)
+          (p1, p2)
+          (String.partition n str);
+      ) in
+  let case_fail str n = (* failure cases *)
+    let id = get_and_decr counter |> (~-) in
+    test_case (sprintf "string_partition_%d" id) `Quick (fun () ->
+        check (option (pair string string))
+          (sprintf "string_partition_opt.should_fail %S %d"
+             str n)
+          (None)
+          (String.partition_opt n str);
+        try
+          let p1, p2 = String.partition n str in
+          failf "string_partition_exn.should_fail %S %d but got (%S, %S)"
+            str n p1 p2
+        with Invalid_argument _ -> ()
+      )
+  in [
+    "string_partition", [
+      case "" 0 ("", "");
+      case_fail "" 1;
+      case "a" 0 ("", "a");
+      case "a" 1 ("a", "");
+      case_fail "a" 2;
+      case "hello" 0 ("", "hello");
+      case "hello" 3 ("hel", "lo");
+      case "hello" 5 ("hello", "");
+      case_fail "hello" 7;
+    ];
+  ]
+
 
 [%%if ocaml_version < (4, 14, 0)]
 let stream_take tstbl n org_lst expected_lst () =
@@ -732,6 +776,7 @@ let () =
       test_case "seq_drop_2" `Quick seq_drop_2
     ];
   ] @ stream_suite
+    @ string_partition
     @ json_escaped_suite
     @ json_unparse @ json_show
     @ jvpath_unparse
