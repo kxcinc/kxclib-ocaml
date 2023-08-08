@@ -1003,7 +1003,7 @@ module List0 = struct
 
   let min cmp = min_opt cmp &> Option.get
 
-  let max cmp = min_opt cmp &> Option.get
+  let max cmp = max_opt cmp &> Option.get
 
   let foldl = foldl
   let foldr = foldr
