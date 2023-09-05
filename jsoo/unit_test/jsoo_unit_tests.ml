@@ -67,11 +67,14 @@ let () =
     (`str "日本語")
     (json_parse (Js.string {|"日本語"|}) |> cast |> of_xjv);
   go_raw ~print:identity
-    (to_json_string (`arr [`bool true; `str "hello?"]))
-    {|[true,"hello?"]|};
+    {|[true,"hello?"]|}
+    (to_json_string (`arr [`bool true; `str "hello?"]));
   go_raw ~print:(sprintf "%a" Option.(pp pp_jv))
-    (of_json_string_opt {|[true,"hello?"]|})
-    (`arr [`bool true; `str "hello?"] |> some);
+    (`arr [`bool true; `str "hello?"] |> some)
+    (of_json_string_opt {|[true,"hello?"]|});
+  go_raw ~print:(sprintf "%a" pp_jv)
+    (`obj [ "prop1", `num 1.; "prop3", `str "test" ])
+    (of_xjv @@ Js.Unsafe.pure_js_expr {|{ prop1: 1, prop2: undefined, prop3: "test", prop4: undefined }|});
   go (`null);
   go (`bool true);
   go (`bool false);
