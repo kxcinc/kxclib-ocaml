@@ -72,6 +72,9 @@ let () =
   go_raw ~print:(sprintf "%a" Option.(pp pp_jv))
     (`arr [`bool true; `str "hello?"] |> some)
     (of_json_string_opt {|[true,"hello?"]|});
+  go_raw ~print:(sprintf "%a" pp_jv)
+    (`obj [ "prop1", `num 1.; "prop3", `str "test" ])
+    (of_xjv @@ Js.Unsafe.pure_js_expr {|{ prop1: 1, prop2: undefined, prop3: "test", prop4: undefined }|});
   go (`null);
   go (`bool true);
   go (`bool false);
