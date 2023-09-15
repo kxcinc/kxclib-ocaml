@@ -4,8 +4,10 @@ version: "~dev"
 synopsis: "KXC maintained common utilities"
 description:
   "Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc."
-maintainer: ["Haochen Xie <hx@kxc.inc>" "KXC Members <info@kxc.inc>"]
-authors: ["Haochen Kotoi-Xie" "KXC Members and Contributors"]
+maintainer: [
+  "Haochen M. Kotoi-Xie <hx@kxc.inc>" "KXC Members <info@kxc.inc>"
+]
+authors: ["Haochen M. Kotoi-Xie" "KXC Members and Contributors"]
 license: "MIT"
 homepage: "https://github.com/kxcinc/kxclib-ocaml"
 bug-reports: "https://github.com/kxcinc/kxclib-ocaml/issues"
