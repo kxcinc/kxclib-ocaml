@@ -29,4 +29,4 @@
   (prr :with-test)
  
   (ocaml (>= 4.13.0))
-  (melange (>= 1.0.0))))
+  (melange (>= 2.0.0))))
