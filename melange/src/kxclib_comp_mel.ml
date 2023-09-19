@@ -29,8 +29,7 @@ end
 module Float = struct
   module Imported = struct
     external cast : 'a -> 'b = "%identity"
-    external _isInteger : float -> bool = "isInteger"
-    [@@bs.val][@@bs.scope "Number"]
+    external _isInteger : float -> bool = "isInteger" [@@mel.scope "Number"]
   end open Imported
 
   let ceil = Js.Math.ceil_float

@@ -7,26 +7,26 @@ exception JsError of Js.Exn.t
 external unsafeToJsExn : exn -> Js.Exn.t = "%identity"
 
 external make :
-  ((('a -> unit) -> ('e -> unit) -> unit)[@bs.uncurry])
+  ((('a -> unit) -> ('e -> unit) -> unit)[@mel.uncurry])
   -> 'a t
   = "Promise"
-  [@@bs.new]
+  [@@mel.new]
 
-external resolve : 'a -> 'a t = "resolve" [@@bs.val] [@@bs.scope "Promise"]
+external resolve : 'a -> 'a t = "resolve" [@@mel.scope "Promise"]
 
-external then_ : 'a t -> ('a -> 'b t) -> 'b t = "then" [@@bs.send]
+external then_ : 'a t -> ('a -> 'b t) -> 'b t = "then" [@@mel.send]
 
-external thenResolve : 'a t -> ('a -> 'b) -> 'b t = "then" [@@bs.send]
+external thenResolve : 'a t -> ('a -> 'b) -> 'b t = "then" [@@mel.send]
 
-external finally : 'a t -> (unit -> unit) -> 'b t = "finally" [@@bs.send]
+external finally : 'a t -> (unit -> unit) -> 'b t = "finally" [@@mel.send]
 
-external reject : exn -> _ t = "reject" [@@bs.val] [@@bs.scope "Promise"]
+external reject : exn -> _ t = "reject" [@@mel.scope "Promise"]
 
-external all : 'a t array -> 'a array t = "all" [@@bs.val] [@@bs.scope "Promise"]
+external all : 'a t array -> 'a array t = "all" [@@mel.scope "Promise"]
 
-external race : 'a t array -> 'a t = "race" [@@bs.val] [@@bs.scope "Promise"]
+external race : 'a t array -> 'a t = "race" [@@mel.scope "Promise"]
 
-external _catch : 'a t -> ((exn -> 'a t)) -> 'a t = "catch" [@@bs.send]
+external _catch : 'a t -> ((exn -> 'a t)) -> 'a t = "catch" [@@mel.send]
 
 let catch p callback =
   _catch p (fun err ->

@@ -6,10 +6,10 @@ end
 
 module Jest = struct
   type t
-  external expect : 'a -> t = "expect" [@@bs.val]
-  external to_be : t -> 'a -> unit = "toBe" [@@bs.send]
-  external to_strict_equal : t -> 'a -> unit = "toStrictEqual" [@@bs.send]
-  external to_be_undefined : t -> unit = "toBeUndefined" [@@bs.send]
+  external expect : 'a -> t = "expect"
+  external to_be : t -> 'a -> unit = "toBe" [@@mel.send]
+  external to_strict_equal : t -> 'a -> unit = "toStrictEqual" [@@mel.send]
+  external to_be_undefined : t -> unit = "toBeUndefined" [@@mel.send]
 end
 
 open Jest
@@ -25,33 +25,33 @@ end = struct
   
   let samples: test_sample array = [|
     { jv = `null;
-      json = [%bs.raw {| null |}] };
+      json = [%mel.raw {| null |}] };
     { jv = `bool true;
-      json = [%bs.raw {| true |}] };
+      json = [%mel.raw {| true |}] };
     { jv = `bool false;
-      json = [%bs.raw {| false |}] };
+      json = [%mel.raw {| false |}] };
     { jv = `num 131.;
-      json = [%bs.raw {| 131 |}] };
+      json = [%mel.raw {| 131 |}] };
     { jv = `num 131.338;
-      json = [%bs.raw {| 131.338 |}] };
+      json = [%mel.raw {| 131.338 |}] };
     { jv = `str "hello?";
-      json = [%bs.raw {| "hello?" |}] };
+      json = [%mel.raw {| "hello?" |}] };
     { jv = `str "\x58";
-      json = [%bs.raw {| "\x58" |}] };
+      json = [%mel.raw {| "\x58" |}] };
     { jv = `str "日本語";
       json = Js.Json.string "日本語" };
     { jv = `arr [];
-      json = [%bs.raw {| [] |}] };
+      json = [%mel.raw {| [] |}] };
     { jv = `obj [ "", `obj [] ];
-      json = [%bs.raw {| {"": {}} |}] };
+      json = [%mel.raw {| {"": {}} |}] };
     { jv = `arr [ `arr [] ];
-      json = [%bs.raw {| [ [] ] |}] };
+      json = [%mel.raw {| [ [] ] |}] };
     { jv = `arr [ `num 1.; `str "(a number)" ];
-      json = [%bs.raw {| [ 1, "(a number)" ] |}] };
+      json = [%mel.raw {| [ 1, "(a number)" ] |}] };
     { jv = `obj [ "best", `arr []; "friend", `num 23. ];
-      json = [%bs.raw {| { best: [], friend: 23 } |}] };
+      json = [%mel.raw {| { best: [], friend: 23 } |}] };
     { jv = `arr [ `bool true; `str "hello?" ];
-      json = [%bs.raw {| [ true, "hello?" ] |}] }
+      json = [%mel.raw {| [ true, "hello?" ] |}] }
   |]
   
   let test_with_samples () =

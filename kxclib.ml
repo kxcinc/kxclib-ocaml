@@ -2333,7 +2333,7 @@ module Direct_io = struct
       match bt with
       | Some x -> some x
       | None -> (
-        let stack = Js_exn.asJsExn exn >>? Js_exn.stack in
+        let stack = Js.Exn.asJsExn exn >>? Js.Exn.stack in
         match stack with
         | Some stack -> `string_stacktrace stack |> some
         | None -> none) in
