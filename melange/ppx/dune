@@ -1,0 +1,5 @@
+(executable
+ (name kxc_melange_ppx)
+ (libraries kxclib ppxlib)
+ (preprocess
+  (pps ppxlib.metaquot)))

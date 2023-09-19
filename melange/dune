@@ -41,7 +41,7 @@
  (deps kxclib_src.pp.ml)
  (action
   (with-stderr-to %{target}
-    (run %{bin:ocamlc} -stop-after parsing -dsource %{deps}))))
+    (run %{bin:ocamlc} -pp %{dep:ppx/kxc_melange_ppx.exe} -stop-after parsing -dsource %{deps}))))
 
 (library
  (name kxclib_src_melange)
