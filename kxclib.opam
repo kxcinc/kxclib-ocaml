@@ -10,7 +10,7 @@ license: "MIT"
 homepage: "https://github.com/kxcinc/kxclib-ocaml"
 bug-reports: "https://github.com/kxcinc/kxclib-ocaml/issues"
 depends: [
-  "dune" {>= "3.0"}
+  "dune" {>= "3.9"}
   "ppx_optcomp" {build}
   "ppx_deriving" {build}
   "alcotest" {with-test}
