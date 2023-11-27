@@ -210,13 +210,13 @@ module Functionals = struct
     let (/<) : 'a*'b -> ('a -> 'c) -> 'c*'b =
       fun (a, b) f -> f a, b
 
-    (** piping calc snd *)
+    (** piping calc to snd *)
     let (|+>) : 'a -> ('a -> 'b) -> 'a * 'b =
       fun x f -> x, f x
 
-    (** piping calc fst *)
+    (** piping calc to fst *)
     let (|+<) : 'a -> ('a -> 'b) -> 'b * 'a =
-      fun x f -> x, f x
+      fun x f -> f x, x
 
     (** lift to snd *)
     let (?>) : ('b -> 'c) -> ('a*'b -> 'a*'c) =
