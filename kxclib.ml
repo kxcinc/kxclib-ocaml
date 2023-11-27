@@ -328,6 +328,7 @@ end
 module type MonadOpsS = sig
   type _ t
   val return : 'a -> 'a t
+  val returning : 'a -> _ -> 'a t
   val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
   val ( >> ) : 'x t -> 'y t -> 'y t
   val ( >|= ) : 'x t -> ('x -> 'y) -> 'y t
@@ -346,6 +347,8 @@ module MonadOps(M : sig
     fun ma mb -> ma >>= fun _ -> mb
   let (>|=) : 'x M.t -> ('x -> 'y) -> 'y M.t =
     fun ma f -> ma >>= fun x -> return (f x)
+
+  let returning x = fun _ -> return x
 
   let sequence_list ms =
     List.fold_left (fun acc m ->
