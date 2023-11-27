@@ -202,11 +202,21 @@ module Functionals = struct
     let (//) : ('a -> 'x) -> ('b -> 'y) -> ('a*'b -> 'x*'y) =
       fun fa fb (a, b) -> fa a, fb b
 
+    (** piping calc on snd *)
     let (/>) : 'a*'b -> ('b -> 'c) -> 'a*'c =
       fun (a, b) f -> a, f b
 
+    (** piping calc on fst *)
     let (/<) : 'a*'b -> ('a -> 'c) -> 'c*'b =
       fun (a, b) f -> f a, b
+
+    (** piping calc snd *)
+    let (|+>) : 'a -> ('a -> 'b) -> 'a * 'b =
+      fun x f -> x, f x
+
+    (** piping calc fst *)
+    let (|+<) : 'a -> ('a -> 'b) -> 'b * 'a =
+      fun x f -> x, f x
 
     (** lift to snd *)
     let (?>) : ('b -> 'c) -> ('a*'b -> 'a*'c) =
