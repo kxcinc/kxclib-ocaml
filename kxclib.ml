@@ -168,6 +168,9 @@ module Functionals = struct
     converge' (fun _ x x' -> judge x x') f x
 
   module BasicInfix = struct
+    (** function application; reverse of [(|>)], same as [(@@)] *)
+    let (&) : ('x -> 'y) -> 'x -> 'y = fun f x -> f x
+
     (** function composition 1 *)
     let (%) : ('y -> 'z) -> ('x -> 'y) -> ('x -> 'z) =
       fun f g x -> x |> g |> f
