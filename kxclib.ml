@@ -9,6 +9,14 @@ let refget r = !r
 let refupdate r f = r := f !r
 (** [refupdate r f] updates referent of [r] by [f]. *)
 
+let refupdate_and_calc : 'x ref -> ('x -> 'a * 'x) -> 'a =
+  fun r f ->
+  let a, x' = f !r in
+  r := x'; a
+(** [refupdate_and_calc r f]
+    calculate a result and the a updated referent value
+    from the current referent value of [r] using [f]. *)
+
 let refappend r x = r := x :: !r
 (** [refappend r x] appends [x] to referent of [r]. *)
 
