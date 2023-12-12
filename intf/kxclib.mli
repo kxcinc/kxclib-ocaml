@@ -291,7 +291,7 @@ type 'x queue = 'x Queue.t
 
 module Option : sig
   include module type of Stdlib.Option
-  include Monadic with type 'x t = 'x t
+  include Monadic with type 'x t := 'x t
 
   module Ops_monad : MonadOpsS with type 'x t := 'x t
 
@@ -353,7 +353,7 @@ val ( &>>? ) : ('x -> 'y option) -> ('y -> 'z option) -> 'x -> 'z option
 
 module Seq : sig
   include module type of Stdlib.Seq
-  include Monadic with type 'x t = 'x t
+  include Monadic with type 'x t := 'x t
 
   module Ops_monad : MonadOpsS with type 'x t := 'x t
   module Ops_piping : PipeOpsS with type 'x pipeable := 'x t
@@ -386,7 +386,7 @@ type 'x seq = 'x Seq.t
 
 module Array : sig
   include module type of Stdlib.Array
-  include Monadic with type 'x t = 'x t
+  include Monadic with type 'x t := 'x t
 
   module Ops_monad : MonadOpsS with type 'x t := 'x t
   module Ops_piping : PipeOpsS with type 'x pipeable := 'x t
@@ -427,7 +427,7 @@ end
 
 module List : sig
   include module type of Stdlib.List
-  include Monadic with type 'x t = 'x t
+  include Monadic with type 'x t := 'x t
 
   module Ops_monad : MonadOpsS with type 'x t := 'x t
   module Ops_piping : PipeOpsS with type 'x pipeable := 'x t
@@ -696,10 +696,12 @@ module Int53p : sig
   module type S = sig
     val impl_flavor : int53p_impl_flavor
 
-    module Ops : Ops
+    type int53p
 
-    include Ops with type int53p = Ops.int53p
-    include Prims with type int53p = int53p
+    module Ops : Ops with type int53p = int53p
+
+    include module type of Ops with type int53p := int53p
+    include Prims with type int53p := int53p
 
     val zero : int53p
     val one : int53p
