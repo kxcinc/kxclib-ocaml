@@ -1,0 +1,88 @@
+name: OCaml General
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  quick-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        ocaml-version:
+          - 4.13.1
+          - 5.0.0
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 2
+
+      - name: OCaml Checks
+        uses: kxcdev/ocaml-general-gha@v3
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+          node-version: 'latest'
+          pr-report-test-result: ${{ matrix.ocaml-version == '5.0.0' }}
+
+  quick-check-finished:
+    needs: quick-check
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "all set"
+
+  odoc-github-pages:
+
+    needs: quick-check-finished
+
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+    environment:
+      name: github-pages
+
+      ## waiting for resolution of actions/runner#2009
+      #url: ${{ steps.camlbuild.outputs.odoc-github-pages-url }}
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 2
+
+      - name: Build odoc document
+        id: camlbuild
+        uses: kxcdev/ocaml-general-gha@v3
+        with:
+          skip-testing: true
+          report-test-result: false
+
+          with-odoc: true
+          odoc-upload-artifact: true
+          odoc-upload-artifact-name: "github-pages"
+
+          ## waiting for resolution of actions/runner#2009
+          # odoc-deploy-github-pages: true
+
+      - name: Setup Pages
+        if: ${{ inputs.odoc-deploy-github-pages }}
+        uses: actions/configure-pages@v3
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2

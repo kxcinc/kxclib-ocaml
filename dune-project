@@ -6,8 +6,8 @@
 (using melange 0.1)
 
 (license MIT)
-(maintainers "Haochen Xie <hx@kxc.inc>" "KXC Members <info@kxc.inc>")
-(authors "Haochen Kotoi-Xie" "KXC Members and Contributors")
+(maintainers "Haochen M. Kotoi-Xie <hx@kxc.inc>" "KXC Members <info@kxc.inc>")
+(authors "Haochen M. Kotoi-Xie" "KXC Members and Contributors")
 
 (source
  (github kxcinc/kxclib-ocaml))

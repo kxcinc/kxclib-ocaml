@@ -750,7 +750,7 @@ let jv_pump_fields =
 
 let () =
   Printexc.record_backtrace true;
-  run "Datecode_unit_tests" ([
+  run "Kxclib_baselib_unit_tests" ([
     "trivial", [
       test_case "trivial_case" `Quick trivial
     ];

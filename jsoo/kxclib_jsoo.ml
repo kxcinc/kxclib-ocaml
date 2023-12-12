@@ -113,10 +113,17 @@ end = struct
          | (-1) -> acc
          | n ->
             let entry = Js.Unsafe.get es n in
-            let field =
-              Js.Unsafe.get entry 0 |> ocstr,
-              Js.Unsafe.get entry 1 |> _cast |> of_xjv in
-            loop (field :: acc) (pred n) in
+            let field_value = Js.Unsafe.get entry 1 in
+            let acc =
+              if _is_undefined field_value then acc
+              else
+                let field =
+                  Js.Unsafe.get entry 0 |> ocstr,
+                  field_value |> _cast |> of_xjv
+                in
+                (field :: acc)
+            in
+            loop acc (pred n) in
        `obj (loop [] (pred len))
     | _ -> invalid_arg' "of_xjv: unable to convert non-JSON encodable value %s" (
                _to_jstr x |> ocstr)

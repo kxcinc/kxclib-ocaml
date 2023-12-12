@@ -9,6 +9,14 @@ let refget r = !r
 let refupdate r f = r := f !r
 (** [refupdate r f] updates referent of [r] by [f]. *)
 
+let refupdate_and_calc : 'x ref -> ('x -> 'a * 'x) -> 'a =
+  fun r f ->
+  let a, x' = f !r in
+  r := x'; a
+(** [refupdate_and_calc r f]
+    calculate a result and the a updated referent value
+    from the current referent value of [r] using [f]. *)
+
 let refappend r x = r := x :: !r
 (** [refappend r x] appends [x] to referent of [r]. *)
 
@@ -168,6 +176,9 @@ module Functionals = struct
     converge' (fun _ x x' -> judge x x') f x
 
   module BasicInfix = struct
+    (** function application; reverse of [(|>)], same as [(@@)] *)
+    let (&) : ('x -> 'y) -> 'x -> 'y = fun f x -> f x
+
     (** function composition 1 *)
     let (%) : ('y -> 'z) -> ('x -> 'y) -> ('x -> 'z) =
       fun f g x -> x |> g |> f
@@ -202,11 +213,21 @@ module Functionals = struct
     let (//) : ('a -> 'x) -> ('b -> 'y) -> ('a*'b -> 'x*'y) =
       fun fa fb (a, b) -> fa a, fb b
 
+    (** piping calc on snd *)
     let (/>) : 'a*'b -> ('b -> 'c) -> 'a*'c =
       fun (a, b) f -> a, f b
 
+    (** piping calc on fst *)
     let (/<) : 'a*'b -> ('a -> 'c) -> 'c*'b =
       fun (a, b) f -> f a, b
+
+    (** piping calc to snd *)
+    let (|+>) : 'a -> ('a -> 'b) -> 'a * 'b =
+      fun x f -> x, f x
+
+    (** piping calc to fst *)
+    let (|+<) : 'a -> ('a -> 'b) -> 'b * 'a =
+      fun x f -> f x, x
 
     (** lift to snd *)
     let (?>) : ('b -> 'c) -> ('a*'b -> 'a*'c) =
@@ -318,6 +339,7 @@ end
 module type MonadOpsS = sig
   type _ t
   val return : 'a -> 'a t
+  val returning : 'a -> _ -> 'a t
   val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
   val ( >> ) : 'x t -> 'y t -> 'y t
   val ( >|= ) : 'x t -> ('x -> 'y) -> 'y t
@@ -336,6 +358,8 @@ module MonadOps(M : sig
     fun ma mb -> ma >>= fun _ -> mb
   let (>|=) : 'x M.t -> ('x -> 'y) -> 'y M.t =
     fun ma f -> ma >>= fun x -> return (f x)
+
+  let returning x = fun _ -> return x
 
   let sequence_list ms =
     List.fold_left (fun acc m ->
@@ -1099,7 +1123,7 @@ module List0 = struct
 end
 module List = struct
   include List0
-  module Ops_monad = PipeOps(List0)
+  module Ops_monad = MonadOps(List0)
   module Ops = struct include Ops_piping include Ops_monad end
 end
 include List.Ops_piping
@@ -1358,7 +1382,7 @@ end
 module Obj = struct
   include Obj
 
-  [%%if ocaml_version <= (5, 0, 0)]
+  [%%if ocaml_version <= (5, 1, 0)]
   (* latest known version of OCaml using this implementation *)
   let hash_variant s =
     let accu = ref 0 in
