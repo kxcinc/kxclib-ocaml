@@ -1,0 +1,5 @@
+(library
+ (name kxclib_intf)
+ (preprocess (pps ppx_optcomp))
+ ; (virtual_modules kxclib)
+)
