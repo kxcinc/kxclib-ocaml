@@ -1,4 +1,5 @@
-open Kxclib_melange
+open Kxclib
+open Kxclib_js
 
 open struct
   external _cast : 'a -> 'b = "%identity"

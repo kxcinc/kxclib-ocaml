@@ -1,4 +1,4 @@
-[%%define re (os_type = "re")]
+[%%define mel (os_type = "mel")]
 
 let refset r x = r := x
 (** [refset r x] sets [x] to ref [r]. *)
@@ -258,11 +258,7 @@ module Functionals = struct
 
   module CommonTypes = struct
     type 'x endo = 'x -> 'x
-    [%%if not(re)]
     type null = |
-    [%%else]
-    type null
-    [%%endif]
   end
 
   module Infix = BasicInfix
@@ -664,7 +660,7 @@ let (&>>?) : ('x -> 'y option) -> ('y -> 'z option) -> ('x -> 'z option) =
 module Seq0 = struct
   include Seq
 
-  [%%if not(re) && ocaml_version >= (4, 13, 0)]
+  [%%if ocaml_version >= (4, 13, 0)]
   module Ops_piping = PipeOps(Seq)
   [%%else]
   module Ops_piping = PipeOps_flat_map(Seq)
@@ -1439,10 +1435,8 @@ module MapPlus (M : Map.S) = struct
              vpp value);
     pp_close_box ppf ()
 
-  [%%if not(re)]
   let of_list : (M.key * 'v) list -> 'v M.t =
     fun kvs -> kvs |> M.of_seq % List.to_seq
-  [%%endif]
 end
 
 module StringMap = struct
@@ -1639,9 +1633,12 @@ module Int53p = struct
       let to_float = float_of_int
       let of_float = int_of_float
 
-      [%%if not(re)]
+      [%%if not(mel)]
       let to_nativeint = Nativeint.of_int
       let of_nativeint = Nativeint.to_int
+      [%%else]
+      let to_nativeint = Int64.(to_nativeint % of_int)
+      let of_nativeint = Int64.(to_int % of_nativeint)
       [%%endif]
 
       let of_string = int_of_string
@@ -1709,9 +1706,12 @@ module Int53p = struct
       let to_int64 = Int64.of_float
       let of_int64 = Int64.to_float
 
-      [%%if not(re)]
+      [%%if not(mel)]
       let to_nativeint = Nativeint.of_float
       let of_nativeint = Nativeint.to_float
+      [%%else]
+      let to_nativeint = Int64.(to_nativeint % of_float)
+      let of_nativeint = Int64.(to_float % of_nativeint)
       [%%endif]
 
       let of_string = float_of_string
@@ -1772,7 +1772,7 @@ module Datetime0 : sig
          ?subsec (yy, mm, dd) (hour, min, sec)]
         calculates the normalized timestamp *)
   end
-  module EpochNormalizedTimestamp (Conf : sig
+  module EpochNormalizedTimestamp (_ : sig
                (** see NormalizedTimestamp *)
 
                val epoch_year : int
@@ -2420,7 +2420,7 @@ module Direct_io = struct
   let return : 'x -> 'x t = fun x -> Result.ok x
   let bind : 'x t -> ('x -> 'y t) -> 'y t = fun x f -> Result.bind x f
 
-  [%%if re]
+  [%%if mel]
   let inject_error' : exn * backtrace_info option -> 'x t =
     fun (exn, bt) ->
     let bt =

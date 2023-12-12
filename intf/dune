@@ -1,5 +1,7 @@
 (library
- (name kxclib_intf)
+ (name kxclib)
+ (public_name kxclib)
  (preprocess (pps ppx_optcomp))
- ; (virtual_modules kxclib)
-)
+ (modes byte native melange)
+ (virtual_modules kxclib)
+ (default_implementation kxclib_classic))

@@ -1,0 +1,5 @@
+(library
+ (name kxclib_classic)
+ (public_name kxclib.classic)
+ (preprocess (pps ppx_optcomp))
+ (implements kxclib))

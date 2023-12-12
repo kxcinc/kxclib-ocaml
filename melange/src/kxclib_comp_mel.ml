@@ -1,3 +1,5 @@
+[@@@warning "-32-34"]
+
 module Kxclib_comp_mel = struct
 
 module BaseCompInternals = struct

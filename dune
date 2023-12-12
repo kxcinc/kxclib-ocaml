@@ -1,11 +1,3 @@
-(library
- (name kxclib)
- (public_name kxclib)
- (wrapped false)
- (modules kxclib)
- (preprocess (pps ppx_optcomp))
- (libraries))
-
 (env
  (dev
   (flags (:standard -warn-error -A)))

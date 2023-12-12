@@ -1,43 +1,60 @@
 (rule
- (target kxclib_melange.ml)
+ (target kxclib.ml)
  (deps
-  kxclib.pp.ml
-  src/kxclib_comp_mel.ml
-  src/kxclib_melange_extra.ml
-  src/kxclib_promise_io.ml)
+  kxclib_melange.pp.ml
+  src/kxclib_comp_mel.ml)
  (action
   (with-stdout-to %{target}
    (progn
     (cat src/kxclib_comp_mel.ml)
     (echo "\nopen Kxclib_comp\n")
     (echo "\n[@@@warning \"-3-44\"]\n")
-    (cat kxclib.pp.ml)
-    (echo "\n\n")
-    (cat src/kxclib_melange_extra.ml)
-    (echo "\n\n")
-    (cat src/kxclib_promise_io.ml)
-    (echo "\n\n")
-    (echo "\nmodule Promise = Promise\n")))))
+    (cat kxclib_melange.pp.ml)))))
 
 (library
  (name kxclib_melange)
  (public_name kxclib.melange)
+ (optional)
  (modes melange)
- (modules kxclib_melange promise)
+ (modules kxclib)
+ (implements kxclib)
+ (libraries kxclib_melange__promise)
+ (flags :standard -open Kxclib_melange__promise)
  (preprocess
    (pps melange.ppx)))
 
+(library
+ (name kxclib_js_melange)
+ (public_name kxclib.js-melange)
+ (optional)
+ (modes melange)
+ (modules kxclib_js)
+ (libraries kxclib_melange)
+ (implements kxclib_js)
+ (flags :standard -open Kxclib_melange__promise)
+ (preprocess
+   (pps melange.ppx)))
+
+(library
+ (name kxclib_melange__promise)
+ (public_name kxclib.js-melange.promise)
+ (optional)
+ (modes melange)
+ (modules promise)
+ (preprocess
+  (pps melange.ppx)))
+
 (rule
  (target kxclib_src.ml)
- (deps ../kxclib.ml)
+ (deps ../classic/kxclib.ml)
  (action
   (with-stdout-to %{target}
    (progn
-    (echo "[%%define os_type \"re\"]\n")
+    (echo "[%%define os_type \"mel\"]\n")
     (cat %{deps})))))
 
 (rule
- (target kxclib.pp.ml)
+ (target kxclib_melange.pp.ml)
  (deps kxclib_src.pp.ml)
  (action
   (with-stderr-to %{target}
@@ -45,6 +62,7 @@
 
 (library
  (name kxclib_src_melange)
+ (optional)
  (modules kxclib_src)
  (preprocess (pps ppx_deriving.std ppx_optcomp))
  (modes melange)
@@ -70,7 +88,7 @@
   (source_tree src)
   (source_tree tests)
   (:outputs
-    _output/node_modules/kxclib.melange/kxclib_melange.js
+    _output/node_modules/kxclib.melange/kxclib.js
     _output/melange/tests/kxclib_melange_test.js))
  (action
    (progn

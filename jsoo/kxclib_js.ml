@@ -1,9 +1,11 @@
 open Kxclib
 
+type js_val = Js_of_ocaml.Js.Unsafe.any
+
 module Json_ext : sig
   open Kxclib.Json
 
-  type xjv
+  type xjv = js_val
   (** external json value, simply a JavaScript value *)
 
   val to_xjv : jv -> xjv
@@ -14,7 +16,7 @@ module Json_ext : sig
 end = struct
   external _cast : 'a -> 'b = "%identity"
   open Js_of_ocaml
-  type any = Js.Unsafe.any
+  type any = js_val
 
   type jv = Kxclib.Json.jv
   let jstr : string -> any = Js.string &> _cast
@@ -23,7 +25,7 @@ end = struct
   let _is_null : any -> bool = fun x -> x == (Js.null |> _cast)
   let _is_undefined : any -> bool = fun x -> x == (Js.undefined |> _cast)
 
-  type xjv = any
+  type xjv = js_val
   type xjv_type = [
     | `_undefined
     | `_null
@@ -137,5 +139,49 @@ end = struct
       None
 end
 
-module Futexn_io = Futexn_io
-module CheckFutexnIo : Io_style = Futexn_io
+module Promise' = Prr.Jv.Promise
+
+module Promise = struct
+  open Promise'
+  type nonrec _ t = t
+end
+
+module Promise_io : sig
+  include Io_style with type 'a t = 'a Promise.t
+end = struct
+  type 'x t = 'x Promise.t
+
+  let return x : _ t = Promise'.resolve x
+
+  let bind : 'x t -> ('x -> 'y t) -> 'y t =
+    fun m af ->
+    let then_ p res =
+      Prr.Jv.(call p "then" [| callback ~arity:1 res;|])
+    in
+    then_ m af
+
+  let inject_error (e: exn) : _ t =
+    let e = Prr.Jv.(Error.v (Printexc.to_string e |> to_jstr % of_string)) in
+    Promise'.reject e
+
+  let inject_error' ((e, _): exn * backtrace_info option): 'x t =
+    let e = Prr.Jv.(Error.v (Printexc.to_string e |> to_jstr % of_string)) in
+    Promise'.reject e
+
+  let extract_error : 'x t -> ('x, exn * backtrace_info option) result t =
+    fun m ->
+    let _cast = Obj.magic in
+    Promise'.then' m (fun x -> Result.ok x |> return) (fun exn ->
+      let stack =
+        let open Prr.Jv in
+        (exn |> to_option _cast)
+        >? (fun e -> get (Obj.magic e) "stack")
+        >>? to_option (to_string) in
+      let bt : backtrace_info option =
+        match stack with
+        | Some stack -> `string_stacktrace stack |> some
+        | None -> none in
+      Result.error (exn, bt) |> return)
+
+  let trace (s: string) = Prr.Console.(log [ Prr.Jv.of_string s ]); return ()
+end

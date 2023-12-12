@@ -1,14 +1,23 @@
 (tests
- (names jsoo_unit_tests)
+ (names
+   jsoo_unit_tests
+   baselib_unit_tests
+   baselib_json_prop_tests
+   baselib_jvpath_prop_tests)
  (libraries
    alcotest qcheck
-   kxclib kxclib_jsoo
+   kxclib_jsoo kxclib_js_jsoo
    kxclib_priv_test_lib
    js_of_ocaml
  )
  (modes js)
  (js_of_ocaml
   (javascript_files additional_stubs.js))
+ (preprocess (pps ppx_optcomp))
  (flags (:standard
           -open Kxclib
-          -open Kxclib_jsoo)))
+          -open Kxclib_js)))
+
+(rule (copy ../../unit_test/baselib_unit_tests.ml baselib_unit_tests.ml))
+(rule (copy ../../unit_test/baselib_json_prop_tests.ml baselib_json_prop_tests.ml))
+(rule (copy ../../unit_test/baselib_jvpath_prop_tests.ml baselib_jvpath_prop_tests.ml))
