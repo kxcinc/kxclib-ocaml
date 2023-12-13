@@ -1,6 +1,6 @@
 (lang dune 3.9)
 (name kxclib)
-(version ~dev)
+(version 0.9.1)
 
 (using directory-targets 0.1)
 (using melange 0.1)
@@ -33,7 +33,7 @@
  (synopsis "Js_of_ocaml version of kxclib")
  (description "Js_of_ocaml version of kxclib - Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc.")
  (depends
-  (kxclib (= version))
+  (kxclib (= :version))
 
   prr
   js_of_ocaml
@@ -46,5 +46,5 @@
  (synopsis "Melange version of kxclib")
  (description "Melange version of kxclib - Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc.")
  (depends
-  (kxclib (= version))
+  (kxclib (= :version))
   (melange (>= 2.0.0))))

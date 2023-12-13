@@ -2,7 +2,7 @@
 
 ## Documentation
 
-Currently, reading [kxclib.ml](kxclib.ml) is probably the best option.
+Currently, reading [kxclib.mli](intf/kxclib.ml) is probably the best option.
 
 ## Get started
 
