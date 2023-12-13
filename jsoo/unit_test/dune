@@ -6,7 +6,7 @@
    baselib_jvpath_prop_tests)
  (libraries
    alcotest qcheck
-   kxclib_jsoo kxclib_js_jsoo
+   kxclib_jsoo_core kxclib_jsoo_js
    kxclib_priv_test_lib
    js_of_ocaml
  )

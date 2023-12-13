@@ -1,7 +1,16 @@
 (library
  (name kxclib_jsoo)
- (public_name kxclib.jsoo)
- (optional)
+ (public_name kxclib-jsoo)
+ (libraries
+   kxclib_jsoo_core
+   kxclib_jsoo_js
+   js_of_ocaml prr)
+ (modules kxclib_jsoo futexn_io)
+ (preprocess (pps ppx_optcomp js_of_ocaml-ppx)))
+
+(library
+ (name kxclib_jsoo_core)
+ (public_name kxclib-jsoo.core)
  (libraries
    js_of_ocaml prr)
  (implements kxclib)
@@ -11,12 +20,11 @@
 (rule (copy ../classic/kxclib.ml kxclib.ml))
 
 (library
- (name kxclib_js_jsoo)
- (public_name kxclib.js-jsoo)
- (optional)
+ (name kxclib_jsoo_js)
+ (public_name kxclib-jsoo.js)
  (libraries
-   kxclib
+   kxclib_jsoo_core
    js_of_ocaml prr)
  (implements kxclib_js)
- (modules kxclib_js futexn_io)
+ (modules kxclib_js)
  (preprocess (pps ppx_optcomp js_of_ocaml-ppx)))
