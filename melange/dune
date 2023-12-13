@@ -17,8 +17,6 @@
  (modes melange)
  (modules kxclib)
  (implements kxclib)
- (libraries kxclib_melange__promise)
- (flags :standard -open Kxclib_melange__promise)
  (preprocess
    (pps melange.ppx)))
 
@@ -27,25 +25,24 @@
  (public_name kxclib-melange)
  (modes melange)
  (modules kxclib_melange)
- (libraries kxclib_melange_core kxclib_js_melange)
+ (libraries kxclib_melange_core kxclib_melange_js)
  (preprocess
    (pps melange.ppx)))
 
 (library
- (name kxclib_js_melange)
+ (name kxclib_melange_js)
  (public_name kxclib-melange.js)
  (optional)
  (modes melange)
  (modules kxclib_js)
- (libraries kxclib_melange_core)
+ (libraries kxclib_melange_core kxclib_melange_promise)
  (implements kxclib_js)
- (flags :standard -open Kxclib_melange__promise)
  (preprocess
    (pps melange.ppx)))
 
 (library
- (name kxclib_melange__promise)
- (public_name kxclib.js-melange.promise)
+ (name kxclib_melange_promise)
+ (public_name kxclib-melange.promise)
  (optional)
  (modes melange)
  (modules promise)

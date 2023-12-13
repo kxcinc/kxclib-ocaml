@@ -1,7 +1,7 @@
 (library
  (name kxclib_melange_test)
  (modules kxclib_melange_test)
- (libraries kxclib_melange kxclib_js_melange)
+ (libraries kxclib_melange kxclib_melange_js)
  (modes melange)
  (preprocess
   (pps melange.ppx)))

@@ -1,25 +1,23 @@
+open Prr
 open Kxclib
-
-module Pjv = Prr.Jv
-module Jstr = Prr.Jstr
-module Fut = Prr.Fut
 
 open struct
   let cast = Obj.magic
   let jstr x = Jstr.v x |> cast
+
+  module F = struct
+    open Prr.Fut
+    let return0 = return
+    let ( >>=! ) = bind
+  end
+
+  type backtrace = backtrace_info [@@deriving show]
 end
 
-module F = struct
-  open Prr.Fut
-  type 'x fut = 'x t
-  let return0 = return
-  let ( >>=! ) = bind
-end
 open F
+type 'x fut = 'x Prr.Fut.t
 
-let pp_fut pp_x ppf fut = Fut.await fut (pp_x ppf)
-
-type backtrace = backtrace_info [@@deriving show]
+let pp_fut pp_x ppf (fut : _ fut) = Fut.await fut (pp_x ppf)
 
 let current_backtrace () : backtrace =
   match Sys.backend_type with
@@ -64,28 +62,28 @@ let extract_error : 'x t -> ('x, exn * backtrace_info option) result t =
 
 let tick_ms ms = Fut.tick ~ms |> Fut.map Result.ok
 
-let to_promise : error:(exn * backtrace -> Pjv.t) -> Pjv.t t -> Pjv.Promise.t =
+let to_promise : error:(exn * backtrace -> Prr.Jv.t) -> Prr.Jv.t t -> Prr.Jv.Promise.t =
   fun ~error m -> Fut.to_promise' m ~ok:identity ~error
 
-let wrap_js_result : (Pjv.t, Pjv.Error.t) result t -> Pjv.t t =
+let wrap_js_result : (Prr.Jv.t, Prr.Jv.Error.t) result t -> Prr.Jv.t t =
   fun m ->
   let ( >>= ) m f = bind m f in
   m >>= function
   | Ok v -> return v
   | Error je ->
-    let module Err = Pjv.Error in
+    let module Err = Prr.Jv.Error in
     Error
       ( Failure (Err.message je |> Jstr.to_string),
         `string_stacktrace (Err.stack je |> Jstr.to_string) )
     |> return0
 
-let wrap_future_result : ('a, Pjv.Error.t) result Fut.t -> 'a t =
+let wrap_future_result : ('a, Prr.Jv.Error.t) result fut -> 'a t =
   fun m ->
   let ( >>= ) m f = Fut.bind m f in
   m >>= function
   | Ok v -> return v
   | Error je ->
-    let module Err = Pjv.Error in
+    let module Err = Prr.Jv.Error in
     Error
       ( Failure (Err.message je |> Jstr.to_string),
         `string_stacktrace (Err.stack je |> Jstr.to_string) )
@@ -98,5 +96,5 @@ let of_promise : 'a =
     (match err_message with
     | None -> msg
     | Some m -> m ^ ": " ^ msg)
-    |> jstr |> Pjv.Error.v)
+    |> jstr |> Prr.Jv.Error.v)
   |> wrap_future_result

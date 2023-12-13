@@ -2,10 +2,10 @@ open Kxclib
 
 type js_val
 
-module Promise' = Promise
+module Promise' = Kxclib_melange_promise.Promise
 
 module Promise : sig
-  type 'x t = 'x Promise.t
+  type 'x t = 'x Promise'.t
 end = Promise'
 
 module Promise_io : sig
