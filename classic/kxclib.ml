@@ -1375,11 +1375,9 @@ module String = struct
       adds (Format.sprintf "%04x" x) in
     let addb n k =
       iotaf' (fun i -> addc (getc (n + i))) k in
-    let flush = Format.pp_print_flush ppf in
     let raise' pos =
       invalid_arg' "json_escaped: invalid/incomplete utf-8 string at pos %d" pos in
     let rec loop n =
-      if (n-1) mod 64 = 0 then flush();
       let adv k = loop (n + k) in
       let check k =
         if not (n + k <= len)
