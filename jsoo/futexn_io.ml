@@ -1,21 +1,23 @@
-open Prr
-module Bjv = Jv
 open Kxclib
+
+module Pjv = Prr.Jv
+module Jstr = Prr.Jstr
+module Fut = Prr.Fut
 
 open struct
   let cast = Obj.magic
-
   let jstr x = Jstr.v x |> cast
 end
 
 module F = struct
-  type 'x fut = 'x Fut.t
-
-  let return0 = Fut.return
-
-  let ( >>=! ) = Fut.bind
+  open Prr.Fut
+  type 'x fut = 'x t
+  let return0 = return
+  let ( >>=! ) = bind
 end
 open F
+
+let pp_fut pp_x ppf fut = Fut.await fut (pp_x ppf)
 
 type backtrace = backtrace_info [@@deriving show]
 
@@ -62,28 +64,28 @@ let extract_error : 'x t -> ('x, exn * backtrace_info option) result t =
 
 let tick_ms ms = Fut.tick ~ms |> Fut.map Result.ok
 
-let to_promise : error:(exn * backtrace -> Bjv.t) -> Bjv.t t -> Bjv.Promise.t =
+let to_promise : error:(exn * backtrace -> Pjv.t) -> Pjv.t t -> Pjv.Promise.t =
   fun ~error m -> Fut.to_promise' m ~ok:identity ~error
 
-let wrap_js_result : (Bjv.t, Bjv.Error.t) result t -> Bjv.t t =
+let wrap_js_result : (Pjv.t, Pjv.Error.t) result t -> Pjv.t t =
   fun m ->
   let ( >>= ) m f = bind m f in
   m >>= function
   | Ok v -> return v
   | Error je ->
-    let module Err = Bjv.Error in
+    let module Err = Pjv.Error in
     Error
       ( Failure (Err.message je |> Jstr.to_string),
         `string_stacktrace (Err.stack je |> Jstr.to_string) )
     |> return0
 
-let wrap_future_result : ('a, Bjv.Error.t) result Fut.t -> 'a t =
+let wrap_future_result : ('a, Pjv.Error.t) result Fut.t -> 'a t =
   fun m ->
   let ( >>= ) m f = Fut.bind m f in
   m >>= function
   | Ok v -> return v
   | Error je ->
-    let module Err = Bjv.Error in
+    let module Err = Pjv.Error in
     Error
       ( Failure (Err.message je |> Jstr.to_string),
         `string_stacktrace (Err.stack je |> Jstr.to_string) )
@@ -92,9 +94,9 @@ let wrap_future_result : ('a, Bjv.Error.t) result Fut.t -> 'a t =
 let of_promise : 'a =
   fun ?err_message js_promise ->
   Fut.of_promise' js_promise ~ok:identity ~error:(fun err ->
-    let msg = Brr.Console.str err |> Jstr.to_string in
+    let msg = Prr.Console.str err |> Jstr.to_string in
     (match err_message with
     | None -> msg
     | Some m -> m ^ ": " ^ msg)
-    |> jstr |> Bjv.Error.v)
+    |> jstr |> Pjv.Error.v)
   |> wrap_future_result
