@@ -1,7 +1,7 @@
 (rule
  (target kxclib.ml)
  (deps
-  kxclib_melange.pp.ml
+  kxclib_melange_core.pp.ml
   src/kxclib_comp_mel.ml)
  (action
   (with-stdout-to %{target}
@@ -9,12 +9,11 @@
     (cat src/kxclib_comp_mel.ml)
     (echo "\nopen Kxclib_comp\n")
     (echo "\n[@@@warning \"-3-44\"]\n")
-    (cat kxclib_melange.pp.ml)))))
+    (cat kxclib_melange_core.pp.ml)))))
 
 (library
- (name kxclib_melange)
- (public_name kxclib.melange)
- (optional)
+ (name kxclib_melange_core)
+ (public_name kxclib-melange.core)
  (modes melange)
  (modules kxclib)
  (implements kxclib)
@@ -24,12 +23,21 @@
    (pps melange.ppx)))
 
 (library
+ (name kxclib_melange)
+ (public_name kxclib-melange)
+ (modes melange)
+ (modules kxclib_melange)
+ (libraries kxclib_melange_core kxclib_js_melange)
+ (preprocess
+   (pps melange.ppx)))
+
+(library
  (name kxclib_js_melange)
- (public_name kxclib.js-melange)
+ (public_name kxclib-melange.js)
  (optional)
  (modes melange)
  (modules kxclib_js)
- (libraries kxclib_melange)
+ (libraries kxclib_melange_core)
  (implements kxclib_js)
  (flags :standard -open Kxclib_melange__promise)
  (preprocess
@@ -54,7 +62,7 @@
     (cat %{deps})))))
 
 (rule
- (target kxclib_melange.pp.ml)
+ (target kxclib_melange_core.pp.ml)
  (deps kxclib_src.pp.ml)
  (action
   (with-stderr-to %{target}
@@ -72,7 +80,7 @@
  (target _output)
  (modules)
  (promote (until-clean))
- (libraries kxclib_melange kxclib_melange_test))
+ (libraries kxclib_melange_core kxclib_melange_test))
 
 (rule
  (alias init)
@@ -88,7 +96,8 @@
   (source_tree src)
   (source_tree tests)
   (:outputs
-    _output/node_modules/kxclib.melange/kxclib.js
+    _output/node_modules/kxclib-melange/kxclib_melange.js
+    _output/node_modules/kxclib-melange.core/kxclib.js
     _output/melange/tests/kxclib_melange_test.js))
  (action
    (progn

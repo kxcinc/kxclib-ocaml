@@ -1,5 +1,5 @@
-const kxclib = require('../_output/node_modules/kxclib.melange/kxclib');
-const kxclib_js = require('../_output/node_modules/kxclib.js-melange/kxclib_js');
+const kxclib = require('../_output/node_modules/kxclib-melange.core/kxclib');
+const kxclib_js = require('../_output/node_modules/kxclib-melange.js/kxclib_js');
 const kxclib_melange_test = require('../_output/melange/tests/kxclib_melange_test');
 
 const JsonExt = kxclib_js.Json_ext;

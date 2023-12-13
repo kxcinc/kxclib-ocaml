@@ -14,6 +14,7 @@
 (bug_reports "https://github.com/kxcinc/kxclib-ocaml/issues")
 
 (generate_opam_files true)
+
 (package
  (name kxclib)
  (synopsis "KXC maintained common utilities")
@@ -24,9 +25,26 @@
 
   (alcotest :with-test)
   (qtest :with-test)
-  (js_of_ocaml :with-test)
-  (js_of_ocaml-ppx :with-test)
-  (prr :with-test)
- 
-  (ocaml (>= 4.13.0))
+
+  (ocaml (>= 4.13.0))))
+
+(package
+ (name kxclib-jsoo)
+ (synopsis "Js_of_ocaml version of kxclib")
+ (description "Js_of_ocaml version of kxclib - Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc.")
+ (depends
+  (kxclib (= version))
+
+  prr
+  js_of_ocaml
+  js_of_ocaml-ppx
+
+  (ocaml (>= 4.13.0))))
+
+(package
+ (name kxclib-melange)
+ (synopsis "Melange version of kxclib")
+ (description "Melange version of kxclib - Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc.")
+ (depends
+  (kxclib (= version))
   (melange (>= 2.0.0))))
