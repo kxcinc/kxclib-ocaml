@@ -1382,7 +1382,7 @@ end
 module Obj = struct
   include Obj
 
-  [%%if ocaml_version <= (5, 1, 0)]
+  [%%if ocaml_version <= (5, 1, 1)]
   (* latest known version of OCaml using this implementation *)
   let hash_variant s =
     let accu = ref 0 in
