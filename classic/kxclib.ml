@@ -946,6 +946,10 @@ module List0 = struct
 
   include List
 
+  let conj_rev x xs = x :: xs |> rev
+
+  let conj x xs' = conj_rev x (rev xs')
+
   let iota = function
     | 0 -> []
     | k -> 0 :: (List.init (pred k) succ)

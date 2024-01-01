@@ -437,6 +437,12 @@ module List : sig
     include module type of Ops_piping
   end
 
+  val conj : 'x -> 'x list -> 'x list
+  (** [conj x xs] append [x] as the last element of [xs] *)
+
+  val conj_rev : 'x -> 'x list -> 'x list
+  (** [conj_rev x xs'] is the equiv of [conj x (List.rev xs')] *)
+
   val iota : int -> int t
   val iota1 : int -> int t
   val range : ?include_endpoint:bool -> int -> int -> int List.t
