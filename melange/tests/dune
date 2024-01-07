@@ -3,5 +3,22 @@
  (modules kxclib_melange_test)
  (libraries kxclib_melange kxclib_melange_js)
  (modes melange)
+ (melange.runtime_deps
+  (glob_files *.js))
  (preprocess
   (pps melange.ppx)))
+
+(rule
+ (alias runtest)
+ (deps
+  (alias ../melange)
+  (:bun %{bin:bun})
+
+  ; currently melange.emit does not seem to correctly attach all files emitted
+  ; we therefore cannot properly sandbox the tests
+  (sandbox none))
+ (action
+   (progn
+    (with-accepted-exit-codes 0
+     (chdir ../_output
+      (run %{bun} test))))))
