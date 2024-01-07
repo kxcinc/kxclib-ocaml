@@ -1,6 +1,6 @@
-const kxclib = require('../_output/node_modules/kxclib-melange.core/kxclib');
-const kxclib_js = require('../_output/node_modules/kxclib-melange.js/kxclib_js');
-const kxclib_melange_test = require('../_output/melange/tests/kxclib_melange_test');
+const kxclib = require('kxclib-melange.core/kxclib');
+const kxclib_js = require('kxclib-melange.js/kxclib_js');
+const kxclib_melange_test = require('./kxclib_melange_test');
 
 const JsonExt = kxclib_js.Json_ext;
 
@@ -10,7 +10,7 @@ const Promise_io_test = kxclib_melange_test.Promise_io_test;
 test('it loads', () => {
   expect(kxclib).toBeDefined();
   expect(JsonExt).toBeDefined();
-  
+
   expect(kxclib_melange_test).toBeDefined();
   expect(Json_ext_test).toBeDefined();
   expect(Promise_io_test).toBeDefined();

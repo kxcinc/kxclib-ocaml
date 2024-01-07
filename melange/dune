@@ -78,27 +78,3 @@
  (modules)
  (promote (until-clean))
  (libraries kxclib_melange_core kxclib_melange_test))
-
-(rule
- (alias init)
- (targets (dir node_modules))
- (deps package.json yarn.lock)
- (action (run yarn install --frozen-lockfile)))
- 
-(rule
- (alias runtest)
- (deps
-  (sandbox none)
-  node_modules
-  (source_tree src)
-  (source_tree tests)
-  (:outputs
-    _output/node_modules/kxclib-melange/kxclib_melange.js
-    _output/node_modules/kxclib-melange.core/kxclib.js
-    _output/melange/tests/kxclib_melange_test.js))
- (action
-   (progn
-    (run yarn prepare-packages)
-    (with-accepted-exit-codes 0 (run yarn test)))))
-
-(dirs :standard \ node_modules)
