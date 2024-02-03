@@ -2420,7 +2420,6 @@ module Direct_io = struct
   type 'x t = ('x, exn * Backtrace_info.t) result [@@deriving show]
 
   let return : 'x -> 'x t = fun x -> Result.ok x
-  let bind : 'x t -> ('x -> 'y t) -> 'y t = fun x f -> Result.bind x f
 
   [%%if mel]
   let inject_error' : exn * backtrace_info option -> 'x t =
@@ -2453,6 +2452,10 @@ module Direct_io = struct
       Log0.log ~label:"trace" ~header_style:(Some `Thin) ~header_color:`Yellow
         "%s" s;
       Ok ()
+
+  let bind : 'x t -> ('x -> 'y t) -> 'y t = fun x f ->
+    try Result.bind x f
+    with e -> inject_error e
 end
 module CheckDirectIo : Io_style = Direct_io
 
