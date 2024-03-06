@@ -47,5 +47,5 @@
  (description "Melange version of kxclib - Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc.")
  (depends
   (kxclib (= :version))
-  (melange (>= 2.0.0))
+  (melange (and (>= 2.0.0) (< 3.0.0)))
   (ocaml (>= 5.1.0))))
