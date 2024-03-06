@@ -50,7 +50,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: _opam
-          key: v1-${{ runner.os }}-${{ matrix.ocaml-version }}-opam-switch
+          key: v1-${{ runner.os }}-${{ matrix.ocaml-version }}-${{ hashFiles('**.opam') }}-opam-switch
 
       - name: Install dependencies
         run: opam install . --deps-only --with-test --with-doc
