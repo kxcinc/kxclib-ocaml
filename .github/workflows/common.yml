@@ -54,3 +54,6 @@ jobs:
 
       - name: doc
         run: opam exec -- dune build @doc
+
+      - name: test
+        run: opam exec -- dune runtest
