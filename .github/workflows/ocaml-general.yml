@@ -31,6 +31,10 @@ jobs:
           submodules: true
           fetch-depth: 2
 
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
       - name: OCaml Checks
         uses: kxcdev/ocaml-general-gha@v3
         with:
@@ -38,7 +42,6 @@ jobs:
           node-version: 'latest'
           pr-report-test-result: ${{ matrix.ocaml-version == '5.1.0' }}
           setup-command: |
-            (curl -fsSL https://bun.sh/install | bash && export PATH=$PATH:$HOME/.bun/bin)
             opam install . --yes --deps-only --with-test --verbose
 
   quick-check-finished:
