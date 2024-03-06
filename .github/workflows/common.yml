@@ -42,7 +42,7 @@ jobs:
       - name: Install bun
         run: |
           curl -fsSL https://bun.sh/install | bash
-          echo '$HOME/.bun/bin' >> $GITHUB_PATH
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
       - name: Cache OPAM switch
         id: cache-switch
