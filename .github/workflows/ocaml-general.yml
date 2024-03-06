@@ -37,6 +37,7 @@ jobs:
           ocaml-version: ${{ matrix.ocaml-version }}
           node-version: 'latest'
           pr-report-test-result: ${{ matrix.ocaml-version == '5.1.0' }}
+          setup-command: curl -fsSL https://bun.sh/install | bash
 
   quick-check-finished:
     needs: quick-check
