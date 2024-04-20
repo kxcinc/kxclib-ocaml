@@ -348,6 +348,11 @@ module type MonadOpsS = sig
   (** monadic version of {!constant} *)
   val returning : 'a -> 'b -> 'a t
 
+  val mlift : ('a -> 'b) -> ('a -> 'b t)
+  val mwrap : ('a -> 'b) -> ('a t -> 'b t)
+  val do_cond : bool -> ('a -> 'b t) -> ('a -> 'b t) -> 'a -> 'b t
+  val do_if : bool -> ('a -> unit t) -> 'a -> unit t
+
   val sequence_list : 'a t list -> 'a list t
 
   (** monadic binding version of {!sequence_list} *)
@@ -431,6 +436,14 @@ module MonadOps(M : sig
     fun ma f -> ma >>= fun x -> return (f x)
 
   let returning x = fun _ -> return x
+
+  let mlift = fun f x -> f x |> return
+
+  let mwrap = fun f m -> m >>= mlift f
+
+  let do_cond = fun c f1 f2 -> (if c then f1 else f2)
+
+  let do_if = fun c f -> do_cond c f (returning ())
 
   let sequence_list ms =
     List.fold_left (fun acc m ->

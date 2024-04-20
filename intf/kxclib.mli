@@ -223,6 +223,21 @@ module type MonadOpsS = sig
   (** monadic version of {!constant} *)
   val returning : 'a -> 'b -> 'a t
 
+  val mlift : ('a -> 'b) -> ('a -> 'b t)
+
+  val mwrap : ('a -> 'b) -> ('a t -> 'b t)
+
+  (** [m >>= do_cond cond f_true f_false] performs [f_true] or [f_false]
+      on value enclosed in [m],
+      respectively when [cond] is [true] or [false];
+
+      functionally equiv. to [fun c f1 f2 -> if c then f1 else f2] but
+      return type of [f1] and [f2] is restricted to [_ t] *)
+  val do_cond : bool -> ('a -> 'b t) -> ('a -> 'b t) -> 'a -> 'b t
+
+  (** [m >>= do_if cond f] is equiv. to [m >>= do_cond cond f (returning ())] *)
+  val do_if : bool -> ('a -> unit t) -> 'a -> unit t
+
   val sequence_list : 'a t list -> 'a list t
 
   (** monadic binding version of {!sequence_list} *)
