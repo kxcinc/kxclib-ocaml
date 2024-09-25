@@ -2355,7 +2355,8 @@ module Log0 = struct
         fmt =
     if
       !log_filter |> function
-      | LogFilter_by_label filter -> filter label
+      | None -> false
+      | Some (LogFilter_by_label filter) -> filter ~label
     then
       let header = match modul with
         | None -> label
