@@ -2330,15 +2330,21 @@ module Log0 = struct
 
   open Format
 
+  type log_filter =
+    | LogFilter_by_label of (label:string -> bool)
+
   module Internals = struct
     let timestamp_func = ref (constant None)
     let logging_formatter = ref err_formatter
+    let log_filter = ref (None : log_filter option)
   end open Internals
 
   module LoggingConfig = struct
     let install_timestamp_function func = timestamp_func := func
     let set_logging_formatter ppf = logging_formatter := ppf
     let get_logging_formatter() = !logging_formatter
+    let get_entry_filter() = !log_filter
+    let set_entry_filter = refset log_filter % some
   end
 
   let logr fmt = fprintf !logging_formatter fmt
@@ -2347,17 +2353,21 @@ module Log0 = struct
         ?header_style:(style=None)
         ?header_color:(color=`Magenta)
         fmt =
-    let header = match modul with
-      | None -> label
-      | Some m -> label^":"^m in
-    let header = match !timestamp_func() with
-      | None -> sprintf "[%s]" header
-      | Some ts -> sprintf "[%s :%.3f]" header ts in
-    let pp_header ppf =
-      Fmt.colored ?style color ppf "%s" in
-    logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
-    kfprintf (fun ppf -> fprintf  ppf "@]@.")
-      !logging_formatter fmt
+    if
+      !log_filter |> function
+      | LogFilter_by_label filter -> filter label
+    then
+      let header = match modul with
+        | None -> label
+        | Some m -> label^":"^m in
+      let header = match !timestamp_func() with
+        | None -> sprintf "[%s]" header
+        | Some ts -> sprintf "[%s :%.3f]" header ts in
+      let pp_header ppf =
+        Fmt.colored ?style color ppf "%s" in
+      logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
+      kfprintf (fun ppf -> fprintf  ppf "@]@.")
+        !logging_formatter fmt
 
   let verbose ?modul fmt = log ?modul fmt ~label:"VERBOSE" ~header_style:(Some `Thin) ~header_color:`Bright_cyan
   let info ?modul fmt = log ?modul fmt ~label:"INFO" ~header_style:(Some `Bold) ~header_color:`Bright_cyan
