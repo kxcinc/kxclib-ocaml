@@ -21,6 +21,9 @@ jobs:
           # - 4.13.1
           # - 5.0.0
           - 5.1.0
+        oven-version:
+          - latest
+          - 1.0.25
     runs-on: ubuntu-latest
 
     steps:
@@ -31,12 +34,18 @@ jobs:
           submodules: true
           fetch-depth: 2
 
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ matrix.oven-version }}
+
       - name: OCaml Checks
         uses: kxcdev/ocaml-general-gha@v3
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
           node-version: 'latest'
           pr-report-test-result: ${{ matrix.ocaml-version == '5.1.0' }}
+          setup-command: |
+            opam install . --yes --deps-only --with-test --verbose
 
   quick-check-finished:
     needs: quick-check
