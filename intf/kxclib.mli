@@ -982,16 +982,25 @@ val string_of_symbolic_output_items :
   Format.symbolic_output_item list -> string
 module Log0 :
 sig
+  type log_filter =
+    | LogFilter_by_label_whitelist of string list
+    | LogFilter_by_label_blacklist of string list
+
+  val pp_log_filter : Format.formatter -> log_filter -> unit
+
   module Internals :
   sig
     val timestamp_func : (unit -> float option) ref
     val logging_formatter : Format.formatter ref
+    val log_filter : log_filter option ref
   end
   module LoggingConfig :
   sig
     val install_timestamp_function : (unit -> float option) -> unit
     val set_logging_formatter : Format.formatter -> unit
     val get_logging_formatter : unit -> Format.formatter
+    val get_entry_filter : unit -> log_filter option
+    val set_entry_filter : log_filter -> unit
   end
   val logr : ('a, Format.formatter, unit) format -> 'a
   val log :

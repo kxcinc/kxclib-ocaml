@@ -2331,7 +2331,8 @@ module Log0 = struct
   open Format
 
   type log_filter =
-    | LogFilter_by_label of (label:string -> bool)
+    | LogFilter_by_label_whitelist of string list
+    | LogFilter_by_label_blacklist of string list
 
   module Internals = struct
     let timestamp_func = ref (constant None)
@@ -2355,8 +2356,9 @@ module Log0 = struct
         fmt =
     if
       !log_filter |> function
-      | None -> false
-      | Some (LogFilter_by_label filter) -> filter ~label
+      | None -> true
+      | Some (LogFilter_by_label_whitelist l) -> List.mem label l
+      | Some (LogFilter_by_label_blacklist l) -> not & List.mem label l
     then
       let header = match modul with
         | None -> label
@@ -2369,6 +2371,8 @@ module Log0 = struct
       logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
       kfprintf (fun ppf -> fprintf  ppf "@]@.")
         !logging_formatter fmt
+    else
+      kfprintf ignore !logging_formatter fmt
 
   let verbose ?modul fmt = log ?modul fmt ~label:"VERBOSE" ~header_style:(Some `Thin) ~header_color:`Bright_cyan
   let info ?modul fmt = log ?modul fmt ~label:"INFO" ~header_style:(Some `Bold) ~header_color:`Bright_cyan
