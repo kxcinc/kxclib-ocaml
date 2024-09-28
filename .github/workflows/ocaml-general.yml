@@ -21,6 +21,8 @@ jobs:
           # - 4.13.1
           # - 5.0.0
           - 5.1.0
+        oven-version:
+          - v1.1.29
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +39,14 @@ jobs:
           ocaml-version: ${{ matrix.ocaml-version }}
           node-version: 'latest'
           pr-report-test-result: ${{ matrix.ocaml-version == '5.1.0' }}
+          # https://bun.sh/docs/installation
+          setup-command: |
+            curl -fsSL https://bun.sh/install | bash -s "bun-${{ matrix.oven-version }}"
+            opam install . --yes --deps-only --with-test --verbose
+          test-command: |
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH=$BUN_INSTALL/bin:$PATH
+            dune runtest
 
   quick-check-finished:
     needs: quick-check

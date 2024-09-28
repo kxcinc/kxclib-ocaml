@@ -14,7 +14,7 @@ bug-reports: "https://github.com/kxcinc/kxclib-ocaml/issues"
 depends: [
   "dune" {>= "3.9"}
   "kxclib" {= version}
-  "melange" {>= "2.0.0"}
+  "melange" {>= "2.0.0" & < "3.0.0"}
   "ocaml" {>= "5.1.0"}
   "odoc" {with-doc}
 ]

@@ -1,0 +1,70 @@
+name: Common CI workflow
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        ocaml-version:
+          - 5.1.x
+        node-version:
+          - lts/hydrogen # v18 Active LTS
+        oven-version:
+          - latest
+          - 1.1.29
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          fetch-depth: 2
+
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-version }}
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
+          cache-dependency-path: 'melange/yarn.lock'
+
+      - uses: oven-sh/setup-bun@v2
+        id: setup-bun
+        with:
+          bun-version: ${{ matrix.oven-version }}
+
+      - name: add path
+        run: dirname "${{ steps.setup-bun.outputs.bun-path }}" >> $GITHUB_PATH
+
+      - name: Cache OPAM switch
+        id: cache-switch
+        uses: actions/cache@v3
+        with:
+          path: _opam
+          key: v1-${{ runner.os }}-${{ matrix.ocaml-version }}-${{ hashFiles('**.opam') }}-opam-switch
+
+      - name: Install dependencies
+        run: opam install . --deps-only --with-test --with-doc
+
+      - name: build
+        run: opam exec -- dune build
+
+      - name: doc
+        run: opam exec -- dune build @doc
+
+      - name: test
+        run: opam exec -- dune runtest
