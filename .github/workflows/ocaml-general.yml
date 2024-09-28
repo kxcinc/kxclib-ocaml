@@ -35,8 +35,12 @@ jobs:
           fetch-depth: 2
 
       - uses: oven-sh/setup-bun@v2
+        id: setup-bun
         with:
           bun-version: ${{ matrix.oven-version }}
+
+      - name: add path
+        run: echo "${{ steps.setup-bun.outputs.bun-path }}/.." >> $GITHUB_PATH
 
       - name: OCaml Checks
         uses: kxcdev/ocaml-general-gha@v3
