@@ -48,7 +48,7 @@ jobs:
           bun-version: ${{ matrix.oven-version }}
 
       - name: add path
-        run: echo "${{ steps.setup-bun.outputs.bun-path }}/.." >> $GITHUB_PATH
+        run: dirname "${{ steps.setup-bun.outputs.bun-path }}" >> $GITHUB_PATH
 
       - name: Cache OPAM switch
         id: cache-switch
