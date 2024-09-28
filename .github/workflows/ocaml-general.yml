@@ -22,8 +22,7 @@ jobs:
           # - 5.0.0
           - 5.1.0
         oven-version:
-          - latest
-          - 1.1.29
+          - v1.1.29
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +41,7 @@ jobs:
           pr-report-test-result: ${{ matrix.ocaml-version == '5.1.0' }}
           # https://bun.sh/docs/installation
           setup-command: |
-            curl -fsSL https://bun.sh/install | bash -s "bun-v${{ matrix.oven-version }}"
+            curl -fsSL https://bun.sh/install | bash -s "bun-${{ matrix.oven-version }}"
             opam install . --yes --deps-only --with-test --verbose
 
   quick-check-finished:
