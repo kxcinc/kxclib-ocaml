@@ -34,7 +34,7 @@ jobs:
           submodules: true
           fetch-depth: 2
 
-      - uses: oven-sh/setup-bun@v1
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ matrix.oven-version }}
 
