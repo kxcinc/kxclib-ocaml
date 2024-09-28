@@ -42,9 +42,11 @@ jobs:
           # https://bun.sh/docs/installation
           setup-command: |
             curl -fsSL https://bun.sh/install | bash -s "bun-${{ matrix.oven-version }}"
-            export BUN_INSTALL="$HOME/.bun" 
-            export PATH=$BUN_INSTALL/bin:$PATH
             opam install . --yes --deps-only --with-test --verbose
+          test-command: |
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH=$BUN_INSTALL/bin:$PATH
+            dune runtest
 
   quick-check-finished:
     needs: quick-check
