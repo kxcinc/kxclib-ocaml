@@ -2,7 +2,8 @@
  (names
    baselib_unit_tests
    baselib_json_prop_tests
-   baselib_jvpath_prop_tests)
+   baselib_jvpath_prop_tests
+   log0_unit_tests)
  (libraries
    kxclib kxclib_priv_test_lib
    alcotest qcheck)
