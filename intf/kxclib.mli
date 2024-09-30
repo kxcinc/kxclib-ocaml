@@ -987,6 +987,7 @@ sig
     | LogFilter_by_label_blacklist of string list
 
   val pp_log_filter : Format.formatter -> log_filter -> unit
+  val string_of_log_filter : log_filter -> string
 
   module Internals :
   sig

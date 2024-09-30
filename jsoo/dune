@@ -15,7 +15,7 @@
    js_of_ocaml prr)
  (implements kxclib)
  (modules kxclib)
- (preprocess (pps ppx_optcomp js_of_ocaml-ppx)))
+ (preprocess (pps ppx_optcomp js_of_ocaml-ppx ppx_deriving.show)))
 
 (rule (copy ../classic/kxclib.ml kxclib.ml))
 
