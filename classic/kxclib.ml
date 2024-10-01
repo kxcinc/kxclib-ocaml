@@ -2352,14 +2352,17 @@ module Log0 = struct
     let get_entry_filter() = !log_filter
 
     let set_entry_filter' =
+      let module StringSet = Set.Make(String) in
       fun x ->
         refset log_filter x;
         refset _log_filter (x |> function
           | None -> fun ~label:_ -> true
           | Some (LogFilter_by_label_whitelist l) ->
-            fun ~label -> List.mem label l
+            let s = StringSet.of_list l in
+            fun ~label -> StringSet.mem label s
           | Some (LogFilter_by_label_blacklist l) ->
-            fun ~label -> not & List.mem label l
+            let s = StringSet.of_list l in
+            fun ~label -> not & StringSet.mem label s
         )
 
     let set_entry_filter = set_entry_filter' % some
