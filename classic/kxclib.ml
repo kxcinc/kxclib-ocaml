@@ -2330,15 +2330,42 @@ module Log0 = struct
 
   open Format
 
+  type log_filter =
+    | LogFilter_by_label_whitelist of string list
+    | LogFilter_by_label_blacklist of string list
+  [@@deriving show]
+
+  let string_of_log_filter =
+    to_string_of_pp pp_log_filter
+
   module Internals = struct
     let timestamp_func = ref (constant None)
     let logging_formatter = ref err_formatter
+    let log_filter = ref (None : log_filter option)
+    let _log_filter = ref (fun ~label:_ -> true : (label:string -> bool))
   end open Internals
 
   module LoggingConfig = struct
     let install_timestamp_function func = timestamp_func := func
     let set_logging_formatter ppf = logging_formatter := ppf
     let get_logging_formatter() = !logging_formatter
+    let get_entry_filter() = !log_filter
+
+    let set_entry_filter' =
+      let module StringSet = Set.Make(String) in
+      fun x ->
+        refset log_filter x;
+        refset _log_filter (x |> function
+          | None -> fun ~label:_ -> true
+          | Some (LogFilter_by_label_whitelist l) ->
+            let s = StringSet.of_list l in
+            fun ~label -> StringSet.mem label s
+          | Some (LogFilter_by_label_blacklist l) ->
+            let s = StringSet.of_list l in
+            fun ~label -> not & StringSet.mem label s
+        )
+
+    let set_entry_filter = set_entry_filter' % some
   end
 
   let logr fmt = fprintf !logging_formatter fmt
@@ -2347,17 +2374,20 @@ module Log0 = struct
         ?header_style:(style=None)
         ?header_color:(color=`Magenta)
         fmt =
-    let header = match modul with
-      | None -> label
-      | Some m -> label^":"^m in
-    let header = match !timestamp_func() with
-      | None -> sprintf "[%s]" header
-      | Some ts -> sprintf "[%s :%.3f]" header ts in
-    let pp_header ppf =
-      Fmt.colored ?style color ppf "%s" in
-    logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
-    kfprintf (fun ppf -> fprintf  ppf "@]@.")
-      !logging_formatter fmt
+    if !_log_filter ~label then
+      let header = match modul with
+        | None -> label
+        | Some m -> label^":"^m in
+      let header = match !timestamp_func() with
+        | None -> sprintf "[%s]" header
+        | Some ts -> sprintf "[%s :%.3f]" header ts in
+      let pp_header ppf =
+        Fmt.colored ?style color ppf "%s" in
+      logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
+      kfprintf (fun ppf -> fprintf ppf "@]@.")
+        !logging_formatter fmt
+    else
+      ikfprintf ignore !logging_formatter fmt
 
   let verbose ?modul fmt = log ?modul fmt ~label:"VERBOSE" ~header_style:(Some `Thin) ~header_color:`Bright_cyan
   let info ?modul fmt = log ?modul fmt ~label:"INFO" ~header_style:(Some `Bold) ~header_color:`Bright_cyan
@@ -2430,7 +2460,7 @@ module type Io_style = sig
 end
 
 module Direct_io = struct
-  type 'x t = ('x, exn * Backtrace_info.t) result [@@deriving show]
+  type 'x t = ('x, exn * Backtrace_info.t) result
 
   let return : 'x -> 'x t = fun x -> Result.ok x
 
