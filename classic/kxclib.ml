@@ -1469,8 +1469,9 @@ end
 module Obj = struct
   include Obj
 
-  [%%if ocaml_version <= (5, 1, 1)]
+  [%%if ocaml_version < (5, 4, 0)]
   (* latest known version of OCaml using this implementation *)
+  (* https://github.com/ocaml/ocaml/blob/5.3/runtime/hash.c#L313-L325 *)
   let hash_variant s =
     let accu = ref 0 in
     for i = 0 to String.length s - 1 do
