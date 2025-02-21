@@ -657,7 +657,7 @@ end
 module Obj : sig
   include module type of Obj
 
-  [%%if ocaml_version <= (5, 1, 0)]
+  [%%if ocaml_version <= (5, 4, 0)]
   val hash_variant : string -> int
   [%%else]
   val hash_variant : string -> int
