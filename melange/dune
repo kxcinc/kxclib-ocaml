@@ -16,6 +16,7 @@
  (public_name kxclib-melange.core)
  (modes melange)
  (modules kxclib)
+ (libraries melange.belt)
  (implements kxclib)
  (preprocess
    (pps melange.ppx)))

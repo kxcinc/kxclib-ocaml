@@ -18,9 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         ocaml-version:
-          # - 4.13.1
-          # - 5.0.0
-          - 5.1.0
+          - 4.14.2
+          - 5.1.1
+          - 5.3.0
         oven-version:
           - v1.1.29
     runs-on: ubuntu-latest
@@ -38,7 +38,7 @@ jobs:
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
           node-version: 'latest'
-          pr-report-test-result: ${{ matrix.ocaml-version == '5.1.0' }}
+          pr-report-test-result: ${{ matrix.ocaml-version == '5.3.0' }}
           # https://bun.sh/docs/installation
           setup-command: |
             curl -fsSL https://bun.sh/install | bash -s "bun-${{ matrix.oven-version }}"
@@ -80,7 +80,7 @@ jobs:
         id: camlbuild
         uses: kxcdev/ocaml-general-gha@v3
         with:
-          ocaml-version: '5.1.0'
+          ocaml-version: '5.3.0'
 
           skip-testing: true
           report-test-result: false
