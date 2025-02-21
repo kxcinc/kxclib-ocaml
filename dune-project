@@ -48,4 +48,4 @@
  (depends
   (kxclib (= :version))
   (melange (>= 5.0.0))
-  (ocaml (>= 5.1.0))))
+  (ocaml (>= 4.14.0))))
