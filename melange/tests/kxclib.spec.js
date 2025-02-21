@@ -1,3 +1,5 @@
+import { expect, test } from "bun:test";
+
 const kxclib = require('kxclib-melange.core/kxclib');
 const kxclib_js = require('kxclib-melange.js/kxclib_js');
 const kxclib_melange_test = require('./kxclib_melange_test');
