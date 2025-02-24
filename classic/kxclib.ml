@@ -1,4 +1,4 @@
-[%%define re (os_type = "re")]
+[%%define mel (os_type = "mel")]
 
 let refset r x = r := x
 (** [refset r x] sets [x] to ref [r]. *)
@@ -86,12 +86,6 @@ let max_by f x y = if f y < f x then x else y
 
 let dup : 'x -> 'x*'x = fun x -> x, x
 let swap : 'x*'y -> 'y*'x = fun (x, y) -> y, x
-
-[%%if not(re)]
-type null = |
-[%%else]
-type null
-[%%endif]
 
 module Functionals = struct
   let negate pred x = not (pred x)
@@ -264,6 +258,7 @@ module Functionals = struct
 
   module CommonTypes = struct
     type 'x endo = 'x -> 'x
+    type null = |
   end
 
   module Infix = BasicInfix
@@ -271,6 +266,98 @@ end
 module Fn = Functionals
 include Functionals.BasicInfix
 include Functionals.CommonTypes
+
+module type Pipeable = sig
+  type _ t
+  val map : ('x -> 'y) -> 'x t -> 'y t
+  val concat_map : ('x -> 'y t) -> 'x t -> 'y t
+  val iter : ('x -> unit) -> 'x t -> unit
+  val fold_left : ('acc -> 'x -> 'acc) -> 'acc -> 'x t -> 'acc
+  val filter : ('x -> bool) -> 'x t -> 'x t
+  val filter_map : ('x -> 'y option) -> 'x t -> 'y t
+end
+
+module type Pipeable_flat_map = sig
+  type _ t
+  val map : ('x -> 'y) -> 'x t -> 'y t
+  val flat_map : ('x -> 'y t) -> 'x t -> 'y t
+  val iter : ('x -> unit) -> 'x t -> unit
+  val fold_left : ('acc -> 'x -> 'acc) -> 'acc -> 'x t -> 'acc
+  val filter : ('x -> bool) -> 'x t -> 'x t
+  val filter_map : ('x -> 'y option) -> 'x t -> 'y t
+end
+
+module type PipeOpsS = sig
+
+  type 'x pipeable
+
+  (** piping map *)
+  val ( |&> ) : 'x pipeable -> ('x -> 'y) -> 'y pipeable
+
+  (** piping flat-map *)
+  val ( |&>> ) : 'x pipeable -> ('x -> 'y pipeable) -> 'y pipeable
+
+  (** piping map to snd *)
+  val ( |+&> ) : 'x pipeable -> ('x -> 'y) -> ('x * 'y) pipeable
+
+  (** piping iter *)
+  val ( |!> ) : 'x pipeable -> ('x -> unit) -> unit
+
+  (** piping and iter-tapping *)
+  val ( |-!> ) : 'x pipeable -> ('x -> unit) -> 'x pipeable
+
+  (** piping fold_left *)
+  val ( |@> ) : 'x pipeable -> 'acc * ('acc * 'x -> 'acc) -> 'acc
+
+  (** piping filter *)
+  val ( |?> ) : 'x pipeable -> ('x -> bool) -> 'x pipeable
+
+  (** piping filter map *)
+  val ( |&?> ) : 'x pipeable -> ('x -> 'y option) -> 'y pipeable
+
+  (** piping filter map to snd *)
+  val ( |+&?> ) : 'x pipeable -> ('x -> 'y option) -> ('x * 'y) pipeable
+
+end
+
+(** {2} (Section name todo) *)
+
+module type Monadic = sig
+  type _ t
+  val return : 'x -> 'x t
+  val bind : 'x t -> ('x -> 'y t) -> 'y t
+end
+
+module type MonadOpsS = sig
+  include Monadic
+
+  (** monadic binding *)
+  val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
+
+  (** monadic sequencing
+
+      {b NB}
+      if [expr1] and [expr2] both incur side effects,
+      [expr1 >> expr2] will usually incur side effects of [expr2] first
+      and then [expr1], which is usually not what the programmer expects *)
+  val ( >> ) : 'x t -> 'y t -> 'y t
+
+  (** monadic mapping *)
+  val ( >|= ) : 'x t -> ('x -> 'y) -> 'y t
+
+  (** monadic version of {!constant} *)
+  val returning : 'a -> 'b -> 'a t
+
+  val mlift : ('a -> 'b) -> ('a -> 'b t)
+  val mwrap : ('a -> 'b) -> ('a t -> 'b t)
+  val do_cond : bool -> ('a -> 'b t) -> ('a -> 'b t) -> 'a -> 'b t
+  val do_if : bool -> ('a -> unit t) -> 'a -> unit t
+
+  val sequence_list : 'a t list -> 'a list t
+
+  (** monadic binding version of {!sequence_list} *)
+  val ( >>=* ) : 'x t list -> ('x list -> 'y t) -> 'y t
+end
 
 module PipeOps(S : sig
              type _ t
@@ -315,6 +402,7 @@ module PipeOps(S : sig
   let (|+&?>) : 'x t -> ('x -> 'y option) -> ('x*'y) t =
     fun xs f -> filter_map (fun x -> match f x with Some y -> Some (x, y) | None -> None) xs
 end
+
 module PipeOps_flat_map(S : sig
              type _ t
              val map : ('x -> 'y) -> 'x t -> 'y t
@@ -330,29 +418,17 @@ module PipeOps_flat_map(S : sig
   end)
 end
 
-module type Monadic = sig
-  type _ t
-  val return : 'x -> 'x t
-  val bind : 'x t -> ('x -> 'y t) -> 'y t
-end
+module Check_PipeOps : functor (S : Pipeable) -> PipeOpsS with type 'x pipeable := 'x S.t = PipeOps
+module Check_PipeOps_flat_map : functor (S : Pipeable_flat_map) -> PipeOpsS with type 'x pipeable := 'x S.t = PipeOps_flat_map
 
-module type MonadOpsS = sig
-  type _ t
-  val return : 'a -> 'a t
-  val returning : 'a -> _ -> 'a t
-  val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
-  val ( >> ) : 'x t -> 'y t -> 'y t
-  val ( >|= ) : 'x t -> ('x -> 'y) -> 'y t
-  val sequence_list : 'a t list -> 'a list t
-  val ( >>=* ) : 'x t list -> ('x list -> 'y t) -> 'y t
-end
 module MonadOps(M : sig
              type _ t
              val return : 'x -> 'x t
              val bind : 'x t -> ('x -> 'y t) -> 'y t
            end)
        : MonadOpsS with type 'x t := 'x M.t = struct
-  let return x = M.return x
+  let return = M.return
+  let bind = M.bind
   let (>>=) = M.bind
   let (>>) : 'x M.t -> 'y M.t -> 'y M.t =
     fun ma mb -> ma >>= fun _ -> mb
@@ -360,6 +436,14 @@ module MonadOps(M : sig
     fun ma f -> ma >>= fun x -> return (f x)
 
   let returning x = fun _ -> return x
+
+  let mlift = fun f x -> f x |> return
+
+  let mwrap = fun f m -> m >>= mlift f
+
+  let do_cond = fun c f1 f2 -> (if c then f1 else f2)
+
+  let do_if = fun c f -> do_cond c f (returning ())
 
   let sequence_list ms =
     List.fold_left (fun acc m ->
@@ -418,8 +502,8 @@ module type ResultOfS = sig
   exception Error_result of err
 
   type 'x t = ('x, err) result
-  val bind : 'x t -> ('x -> 'y t) -> 'y t
   val return : 'x -> 'x t
+  val bind : 'x t -> ('x -> 'y t) -> 'y t
   val error : err -> _ t
 end
 
@@ -589,7 +673,7 @@ let (&>>?) : ('x -> 'y option) -> ('y -> 'z option) -> ('x -> 'z option) =
 module Seq0 = struct
   include Seq
 
-  [%%if not(re) && ocaml_version >= (4, 13, 0)]
+  [%%if ocaml_version >= (4, 13, 0)]
   module Ops_piping = PipeOps(Seq)
   [%%else]
   module Ops_piping = PipeOps_flat_map(Seq)
@@ -804,11 +888,14 @@ module Array0 = struct
 
   let to_function : 'a array -> (int -> 'a) =
     fun arr idx -> arr.(idx)
+
+  let return x = make 1 x
+  let bind ma f = concat_map f ma
 end
 module Array = struct
   include Array0
   module Ops_piping = PipeOps(Array0)
-  module Ops_monad = PipeOps(Array0)
+  module Ops_monad = MonadOps(Array0)
   module Ops = struct include Ops_piping include Ops_monad end
 end
 
@@ -871,6 +958,10 @@ module List0 = struct
   include Ops_piping
 
   include List
+
+  let conj_rev x xs = x :: xs |> rev
+
+  let conj x xs' = conj_rev x (rev xs')
 
   let iota = function
     | 0 -> []
@@ -1301,11 +1392,9 @@ module String = struct
       adds (Format.sprintf "%04x" x) in
     let addb n k =
       iotaf' (fun i -> addc (getc (n + i))) k in
-    let flush = Format.pp_print_flush ppf in
     let raise' pos =
       invalid_arg' "json_escaped: invalid/incomplete utf-8 string at pos %d" pos in
     let rec loop n =
-      if (n-1) mod 64 = 0 then flush();
       let adv k = loop (n + k) in
       let check k =
         if not (n + k <= len)
@@ -1361,10 +1450,8 @@ module MapPlus (M : Map.S) = struct
              vpp value);
     pp_close_box ppf ()
 
-  [%%if not(re)]
   let of_list : (M.key * 'v) list -> 'v M.t =
     fun kvs -> kvs |> M.of_seq % List.to_seq
-  [%%endif]
 end
 
 module StringMap = struct
@@ -1382,8 +1469,9 @@ end
 module Obj = struct
   include Obj
 
-  [%%if ocaml_version <= (5, 1, 1)]
+  [%%if ocaml_version < (5, 4, 0)]
   (* latest known version of OCaml using this implementation *)
+  (* https://github.com/ocaml/ocaml/blob/5.3/runtime/hash.c#L313-L325 *)
   let hash_variant s =
     let accu = ref 0 in
     for i = 0 to String.length s - 1 do
@@ -1475,6 +1563,16 @@ module Int53p = struct
     | `custom_impl s -> fprintf ppf "custom_impl(%s)" s
   let show_int53p_impl_flavor : int53p_impl_flavor -> string = Format.asprintf "%a" pp_int53p_impl_flavor
 
+  module type Prims = sig
+    type int53p
+    val neg : int53p -> int53p
+    val add : int53p -> int53p -> int53p
+    val sub : int53p -> int53p -> int53p
+    val mul : int53p -> int53p -> int53p
+    val div : int53p -> int53p -> int53p
+    val rem : int53p -> int53p -> int53p
+  end
+
   module type Ops = sig
     type int53p
 
@@ -1492,21 +1590,17 @@ module Int53p = struct
     val impl_flavor : int53p_impl_flavor
 
     module Ops : Ops
+
     include Ops with type int53p = Ops.int53p
+    include Prims with type int53p = int53p
+
     val zero : int53p
     val one : int53p
     val minus_one : int53p
 
-    val neg : int53p -> int53p
-    val add : int53p -> int53p -> int53p
-
     val succ : int53p -> int53p
     val pred : int53p -> int53p
 
-    val sub : int53p -> int53p -> int53p
-    val mul : int53p -> int53p -> int53p
-    val div : int53p -> int53p -> int53p
-    val rem : int53p -> int53p -> int53p
     val abs : int53p -> int53p
     val equal : int53p -> int53p -> bool
     val compare : int53p -> int53p -> int
@@ -1515,32 +1609,18 @@ module Int53p = struct
 
     val to_float : int53p -> float
     val of_float : float -> int53p
-
     val to_int : int53p -> int
     val of_int : int -> int53p
-
     val to_int64 : int53p -> int64
     val of_int64 : int64 -> int53p
-
-    [%%if not(re)]
     val to_nativeint : int53p -> nativeint
     val of_nativeint : nativeint -> int53p
-    [%%endif]
-
     val to_string : int53p -> string
     val of_string : string -> int53p
   end
 
   module Internals = struct
-    module MakeOps(M : sig
-                 type int53p
-                 val neg : int53p -> int53p
-                 val add : int53p -> int53p -> int53p
-                 val sub : int53p -> int53p -> int53p
-                 val mul : int53p -> int53p -> int53p
-                 val div : int53p -> int53p -> int53p
-                 val rem : int53p -> int53p -> int53p
-               end) : Ops with type int53p = M.int53p = struct
+    module MakeOps(M : Prims) : Ops with type int53p = M.int53p = struct
       type int53p = M.int53p
       let ( ~-% ) : int53p -> int53p = M.neg
       let ( ~+% ) : int53p -> int53p = identity
@@ -1569,9 +1649,12 @@ module Int53p = struct
       let to_float = float_of_int
       let of_float = int_of_float
 
-      [%%if not(re)]
+      [%%if not(mel)]
       let to_nativeint = Nativeint.of_int
       let of_nativeint = Nativeint.to_int
+      [%%else]
+      let to_nativeint = Int64.(to_nativeint % of_int)
+      let of_nativeint = Int64.(to_int % of_nativeint)
       [%%endif]
 
       let of_string = int_of_string
@@ -1611,8 +1694,8 @@ module Int53p = struct
         let zero = Float.zero
         let one = Float.one
         let minus_one = Float.minus_one
-        let succ = Float.succ
-        let pred = Float.pred
+        let succ n = n +. 1.
+        let pred n = n -. 1.
         let neg = Float.neg
         let add = Float.add
         let sub = Float.sub
@@ -1629,7 +1712,7 @@ module Int53p = struct
         let to_int = to_int
         let of_int = of_int
 
-        let to_string = Float.to_string
+        let to_string f = Float.to_string f
       end
       include Float'
       module Ops = MakeOps(struct type int53p = float include Float' end)
@@ -1639,9 +1722,12 @@ module Int53p = struct
       let to_int64 = Int64.of_float
       let of_int64 = Int64.to_float
 
-      [%%if not(re)]
+      [%%if not(mel)]
       let to_nativeint = Nativeint.of_float
       let of_nativeint = Nativeint.to_float
+      [%%else]
+      let to_nativeint = Int64.(to_nativeint % of_float)
+      let of_nativeint = Int64.(to_float % of_nativeint)
       [%%endif]
 
       let of_string = float_of_string
@@ -1702,7 +1788,7 @@ module Datetime0 : sig
          ?subsec (yy, mm, dd) (hour, min, sec)]
         calculates the normalized timestamp *)
   end
-  module EpochNormalizedTimestamp (Conf : sig
+  module EpochNormalizedTimestamp (_ : sig
                (** see NormalizedTimestamp *)
 
                val epoch_year : int
@@ -2245,15 +2331,42 @@ module Log0 = struct
 
   open Format
 
+  type log_filter =
+    | LogFilter_by_label_whitelist of string list
+    | LogFilter_by_label_blacklist of string list
+  [@@deriving show]
+
+  let string_of_log_filter =
+    to_string_of_pp pp_log_filter
+
   module Internals = struct
     let timestamp_func = ref (constant None)
     let logging_formatter = ref err_formatter
+    let log_filter = ref (None : log_filter option)
+    let _log_filter = ref (fun ~label:_ -> true : (label:string -> bool))
   end open Internals
 
   module LoggingConfig = struct
     let install_timestamp_function func = timestamp_func := func
     let set_logging_formatter ppf = logging_formatter := ppf
     let get_logging_formatter() = !logging_formatter
+    let get_entry_filter() = !log_filter
+
+    let set_entry_filter' =
+      let module StringSet = Set.Make(String) in
+      fun x ->
+        refset log_filter x;
+        refset _log_filter (x |> function
+          | None -> fun ~label:_ -> true
+          | Some (LogFilter_by_label_whitelist l) ->
+            let s = StringSet.of_list l in
+            fun ~label -> StringSet.mem label s
+          | Some (LogFilter_by_label_blacklist l) ->
+            let s = StringSet.of_list l in
+            fun ~label -> not & StringSet.mem label s
+        )
+
+    let set_entry_filter = set_entry_filter' % some
   end
 
   let logr fmt = fprintf !logging_formatter fmt
@@ -2262,17 +2375,20 @@ module Log0 = struct
         ?header_style:(style=None)
         ?header_color:(color=`Magenta)
         fmt =
-    let header = match modul with
-      | None -> label
-      | Some m -> label^":"^m in
-    let header = match !timestamp_func() with
-      | None -> sprintf "[%s]" header
-      | Some ts -> sprintf "[%s :%.3f]" header ts in
-    let pp_header ppf =
-      Fmt.colored ?style color ppf "%s" in
-    logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
-    kfprintf (fun ppf -> fprintf  ppf "@]@.")
-      !logging_formatter fmt
+    if !_log_filter ~label then
+      let header = match modul with
+        | None -> label
+        | Some m -> label^":"^m in
+      let header = match !timestamp_func() with
+        | None -> sprintf "[%s]" header
+        | Some ts -> sprintf "[%s :%.3f]" header ts in
+      let pp_header ppf =
+        Fmt.colored ?style color ppf "%s" in
+      logr "@<1>%s @[<hov>" (asprintf "%a" pp_header header);
+      kfprintf (fun ppf -> fprintf ppf "@]@.")
+        !logging_formatter fmt
+    else
+      ikfprintf ignore !logging_formatter fmt
 
   let verbose ?modul fmt = log ?modul fmt ~label:"VERBOSE" ~header_style:(Some `Thin) ~header_color:`Bright_cyan
   let info ?modul fmt = log ?modul fmt ~label:"INFO" ~header_style:(Some `Bold) ~header_color:`Bright_cyan
@@ -2345,19 +2461,18 @@ module type Io_style = sig
 end
 
 module Direct_io = struct
-  type 'x t = ('x, exn * Backtrace_info.t) result [@@deriving show]
+  type 'x t = ('x, exn * Backtrace_info.t) result
 
   let return : 'x -> 'x t = fun x -> Result.ok x
-  let bind : 'x t -> ('x -> 'y t) -> 'y t = fun x f -> Result.bind x f
 
-  [%%if re]
+  [%%if mel]
   let inject_error' : exn * backtrace_info option -> 'x t =
     fun (exn, bt) ->
     let bt =
       match bt with
       | Some x -> some x
       | None -> (
-        let stack = Js_exn.asJsExn exn >>? Js_exn.stack in
+        let stack = Js.Exn.asJsExn exn >>? Js.Exn.stack in
         match stack with
         | Some stack -> `string_stacktrace stack |> some
         | None -> none) in
@@ -2381,6 +2496,10 @@ module Direct_io = struct
       Log0.log ~label:"trace" ~header_style:(Some `Thin) ~header_color:`Yellow
         "%s" s;
       Ok ()
+
+  let bind : 'x t -> ('x -> 'y t) -> 'y t = fun x f ->
+    try Result.bind x f
+    with e -> inject_error e
 end
 module CheckDirectIo : Io_style = Direct_io
 

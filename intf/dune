@@ -1,0 +1,7 @@
+(library
+ (name kxclib)
+ (public_name kxclib)
+ (preprocess (pps ppx_optcomp))
+ (modes byte native melange)
+ (virtual_modules kxclib)
+ (default_implementation kxclib_classic))

@@ -1,0 +1,81 @@
+(rule
+ (target kxclib.ml)
+ (deps
+  kxclib_melange_core.pp.ml
+  src/kxclib_comp_mel.ml)
+ (action
+  (with-stdout-to %{target}
+   (progn
+    (cat src/kxclib_comp_mel.ml)
+    (echo "\nopen Kxclib_comp\n")
+    (echo "\n[@@@warning \"-3-44\"]\n")
+    (cat kxclib_melange_core.pp.ml)))))
+
+(library
+ (name kxclib_melange_core)
+ (public_name kxclib-melange.core)
+ (modes melange)
+ (modules kxclib)
+ (libraries melange.belt)
+ (implements kxclib)
+ (preprocess
+   (pps melange.ppx)))
+
+(library
+ (name kxclib_melange)
+ (public_name kxclib-melange)
+ (modes melange)
+ (modules kxclib_melange)
+ (libraries kxclib_melange_core kxclib_melange_js)
+ (preprocess
+   (pps melange.ppx)))
+
+(library
+ (name kxclib_melange_js)
+ (public_name kxclib-melange.js)
+ (optional)
+ (modes melange)
+ (modules kxclib_js)
+ (libraries kxclib_melange_core kxclib_melange_promise)
+ (implements kxclib_js)
+ (preprocess
+   (pps melange.ppx)))
+
+(library
+ (name kxclib_melange_promise)
+ (public_name kxclib-melange.promise)
+ (optional)
+ (modes melange)
+ (modules promise)
+ (preprocess
+  (pps melange.ppx)))
+
+(rule
+ (target kxclib_src.ml)
+ (deps ../classic/kxclib.ml)
+ (action
+  (with-stdout-to %{target}
+   (progn
+    (echo "[%%define os_type \"mel\"]\n")
+    (cat %{deps})))))
+
+(rule
+ (target kxclib_melange_core.pp.ml)
+ (deps kxclib_src.pp.ml)
+ (action
+  (with-stderr-to %{target}
+    (run %{bin:ocamlc} -pp %{dep:ppx/kxc_melange_ppx.exe} -stop-after parsing -dsource %{deps}))))
+
+(library
+ (name kxclib_src_melange)
+ (optional)
+ (modules kxclib_src)
+ (preprocess (pps ppx_deriving.std ppx_optcomp))
+ (modes melange)
+ (flags (:standard)))
+
+(melange.emit
+ (target _output)
+ (modules)
+ (promote (until-clean))
+ (libraries kxclib_melange_core kxclib_melange_test))

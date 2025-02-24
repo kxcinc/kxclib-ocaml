@@ -2,7 +2,8 @@
 
 ## Documentation
 
-Currently, reading [kxclib.ml](kxclib.ml) is probably the best option.
+Currently, reading [intf/kxclib.mli](intf/kxclib.mli) or visiting
+https://kxcinc.github.io/kxclib-ocaml/ is probably the best option.
 
 ## Get started
 

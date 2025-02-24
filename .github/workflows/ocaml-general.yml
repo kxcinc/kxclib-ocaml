@@ -18,14 +18,17 @@ jobs:
       fail-fast: false
       matrix:
         ocaml-version:
-          - 4.13.1
-          - 5.0.0
+          - 4.14.2
+          - 5.1.1
+          - 5.3.0
+        oven-version:
+          - v1.1.29
     runs-on: ubuntu-latest
 
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 2
@@ -35,7 +38,15 @@ jobs:
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
           node-version: 'latest'
-          pr-report-test-result: ${{ matrix.ocaml-version == '5.0.0' }}
+          pr-report-test-result: ${{ matrix.ocaml-version == '5.3.0' }}
+          # https://bun.sh/docs/installation
+          setup-command: |
+            curl -fsSL https://bun.sh/install | bash -s "bun-${{ matrix.oven-version }}"
+            opam install . --yes --deps-only --with-test --verbose
+          test-command: |
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH=$BUN_INSTALL/bin:$PATH
+            dune runtest
 
   quick-check-finished:
     needs: quick-check
@@ -60,7 +71,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 2
@@ -69,6 +80,8 @@ jobs:
         id: camlbuild
         uses: kxcdev/ocaml-general-gha@v3
         with:
+          ocaml-version: '5.3.0'
+
           skip-testing: true
           report-test-result: false
 
@@ -81,8 +94,8 @@ jobs:
 
       - name: Setup Pages
         if: ${{ inputs.odoc-deploy-github-pages }}
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v5
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4

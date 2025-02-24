@@ -1,6 +1,9 @@
-(lang dune 3.0)
+(lang dune 3.9)
 (name kxclib)
-(version ~dev)
+(version 0.9.1)
+
+(using directory-targets 0.1)
+(using melange 0.1)
 
 (license MIT)
 (maintainers "Haochen M. Kotoi-Xie <hx@kxc.inc>" "KXC Members <info@kxc.inc>")
@@ -11,6 +14,7 @@
 (bug_reports "https://github.com/kxcinc/kxclib-ocaml/issues")
 
 (generate_opam_files true)
+
 (package
  (name kxclib)
  (synopsis "KXC maintained common utilities")
@@ -21,8 +25,27 @@
 
   (alcotest :with-test)
   (qtest :with-test)
-  (js_of_ocaml :with-test)
-  (js_of_ocaml-ppx :with-test)
-  (prr :with-test)
 
-  (ocaml (>= 4.11.0))))
+  (ocaml (>= 4.13.0))))
+
+(package
+ (name kxclib-jsoo)
+ (synopsis "Js_of_ocaml version of kxclib")
+ (description "Js_of_ocaml version of kxclib - Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc.")
+ (depends
+  (kxclib (= :version))
+
+  prr
+  js_of_ocaml
+  js_of_ocaml-ppx
+
+  (ocaml (>= 4.13.0))))
+
+(package
+ (name kxclib-melange)
+ (synopsis "Melange version of kxclib")
+ (description "Melange version of kxclib - Common OCaml utilities maintained by Kotoi-Xie Consultancy, Inc.")
+ (depends
+  (kxclib (= :version))
+  (melange (>= 5.0.0))
+  (ocaml (>= 4.14.0))))

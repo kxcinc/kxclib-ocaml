@@ -1,23 +1,23 @@
 open Prr
-module Bjv = Jv
 open Kxclib
 
 open struct
   let cast = Obj.magic
-
   let jstr x = Jstr.v x |> cast
+
+  module F = struct
+    open Prr.Fut
+    let return0 = return
+    let ( >>=! ) = bind
+  end
+
+  type backtrace = backtrace_info [@@deriving show]
 end
 
-module F = struct
-  type 'x fut = 'x Fut.t
-
-  let return0 = Fut.return
-
-  let ( >>=! ) = Fut.bind
-end
 open F
+type 'x fut = 'x Prr.Fut.t
 
-type backtrace = backtrace_info [@@deriving show]
+let pp_fut pp_x ppf (fut : _ fut) = Fut.await fut (pp_x ppf)
 
 let current_backtrace () : backtrace =
   match Sys.backend_type with
@@ -62,28 +62,28 @@ let extract_error : 'x t -> ('x, exn * backtrace_info option) result t =
 
 let tick_ms ms = Fut.tick ~ms |> Fut.map Result.ok
 
-let to_promise : error:(exn * backtrace -> Bjv.t) -> Bjv.t t -> Bjv.Promise.t =
+let to_promise : error:(exn * backtrace -> Prr.Jv.t) -> Prr.Jv.t t -> Prr.Jv.Promise.t =
   fun ~error m -> Fut.to_promise' m ~ok:identity ~error
 
-let wrap_js_result : (Bjv.t, Bjv.Error.t) result t -> Bjv.t t =
+let wrap_js_result : (Prr.Jv.t, Prr.Jv.Error.t) result t -> Prr.Jv.t t =
   fun m ->
   let ( >>= ) m f = bind m f in
   m >>= function
   | Ok v -> return v
   | Error je ->
-    let module Err = Bjv.Error in
+    let module Err = Prr.Jv.Error in
     Error
       ( Failure (Err.message je |> Jstr.to_string),
         `string_stacktrace (Err.stack je |> Jstr.to_string) )
     |> return0
 
-let wrap_future_result : ('a, Bjv.Error.t) result Fut.t -> 'a t =
+let wrap_future_result : ('a, Prr.Jv.Error.t) result fut -> 'a t =
   fun m ->
   let ( >>= ) m f = Fut.bind m f in
   m >>= function
   | Ok v -> return v
   | Error je ->
-    let module Err = Bjv.Error in
+    let module Err = Prr.Jv.Error in
     Error
       ( Failure (Err.message je |> Jstr.to_string),
         `string_stacktrace (Err.stack je |> Jstr.to_string) )
@@ -92,9 +92,9 @@ let wrap_future_result : ('a, Bjv.Error.t) result Fut.t -> 'a t =
 let of_promise : 'a =
   fun ?err_message js_promise ->
   Fut.of_promise' js_promise ~ok:identity ~error:(fun err ->
-    let msg = Brr.Console.str err |> Jstr.to_string in
+    let msg = Prr.Console.str err |> Jstr.to_string in
     (match err_message with
     | None -> msg
     | Some m -> m ^ ": " ^ msg)
-    |> jstr |> Bjv.Error.v)
+    |> jstr |> Prr.Jv.Error.v)
   |> wrap_future_result
