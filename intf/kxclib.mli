@@ -724,6 +724,8 @@ module Int53p : sig
     include module type of Ops with type int53p := int53p
     include Prims with type int53p := int53p
 
+    type t = int53p
+
     val zero : int53p
     val one : int53p
     val minus_one : int53p
