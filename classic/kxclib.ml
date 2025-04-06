@@ -1594,6 +1594,8 @@ module Int53p = struct
     include Ops with type int53p = Ops.int53p
     include Prims with type int53p = int53p
 
+    type t = Ops.int53p
+
     val zero : int53p
     val one : int53p
     val minus_one : int53p
@@ -1691,6 +1693,8 @@ module Int53p = struct
         else floor x
 
       module Float' = struct
+        type t = float
+
         let zero = Float.zero
         let one = Float.one
         let minus_one = Float.minus_one
