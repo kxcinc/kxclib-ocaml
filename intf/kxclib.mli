@@ -762,8 +762,19 @@ module Int53p : sig
   end
 
   include module type of Internals.CurrentFlavorImpl
+
+  val pp_int53p : Format.formatter -> int53p -> unit
+  val show_int53p : int53p -> string
+
+  type t = int53p
+
+  val pp: Format.formatter -> t -> unit
+  val show: t -> string
 end
 include module type of Int53p.Ops
+
+val pp_int53p : Format.formatter -> int53p -> unit
+val show_int53p : int53p -> string
 
 module Datetime0 : sig
 
