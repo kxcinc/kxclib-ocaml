@@ -1756,9 +1756,9 @@ module Int53p = struct
 
   type int53p = Internals.CurrentFlavorImpl.int53p
 
+  let show_int53p = Int64.to_string % to_int64
   let pp_int53p ppf x =
-    Format.(pp_print_string ppf (to_string x))
-  let show_int53p = to_string
+    Format.(pp_print_string ppf (show_int53p x))
 
   type t = int53p
   [@@deriving show]
