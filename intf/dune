@@ -1,6 +1,7 @@
 (library
  (name kxclib)
  (public_name kxclib)
+ (libraries yojson_compat)
  (preprocess (pps ppx_optcomp))
  (modes byte native melange)
  (virtual_modules kxclib)

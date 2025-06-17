@@ -2624,18 +2624,7 @@ module Json : sig
   val to_legacy : jv -> legacy option
 
   (** Yojson.Safe.t *)
-  type yojson = ([
-    | `Null
-    | `Bool of bool
-    | `Int of int
-    | `Intlit of string
-    | `Float of float
-    | `String of string
-    | `Assoc of (string * 't) list
-    | `List of 't list
-    | `Tuple of 't list
-    | `Variant of string * 't option
-    ] as 't)
+  type yojson = Yojson_compat.yojson
   val of_yojson : yojson -> jv
   val to_yojson : jv -> yojson
 
@@ -3002,24 +2991,13 @@ end = struct
     | `arr of jv list
     | `obj of (string*jv) list
     ]
-  type yojson = ([
-    | `Null
-    | `Bool of bool
-    | `Int of int
-    | `Intlit of string
-    | `Float of float
-    | `String of string
-    | `Assoc of (string * 't) list
-    | `List of 't list
-    | `Tuple of 't list
-    | `Variant of string * 't option
-    ] as 't)
+  type yojson = Yojson_compat.yojson
   let of_legacy x = (x :> jv)
   let to_legacy : jv -> legacy option = function
     | #legacy as x -> Some x
     | _ -> None
-  let rec of_yojson : yojson -> jv =
-    function
+  let rec of_yojson : [< yojson] -> jv =
+    function[@warning "-11"]
     | `Null -> `null
     | `Bool x -> `bool x
     | `Int x -> `num (float_of_int x)
@@ -3054,8 +3032,9 @@ end = struct
       | `Assoc of (string * 't) list
       | `List of 't list
     ] as 't)
-  let rec yojson_basic_of_safe : yojson -> yojson' = fun yojson ->
-    match yojson with
+
+  let rec yojson_basic_of_safe : [< yojson] -> yojson' = fun yojson ->
+    match[@warning "-11"] yojson with
     | `Null -> `Null
     | `Bool x -> `Bool x
     | `Int x -> `Int x

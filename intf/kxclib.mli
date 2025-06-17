@@ -1202,18 +1202,7 @@ module Json : sig
   val to_legacy : jv -> legacy option
 
   (** Yojson.Safe.t *)
-  type yojson = ([
-    | `Null
-    | `Bool of bool
-    | `Int of int
-    | `Intlit of string
-    | `Float of float
-    | `String of string
-    | `Assoc of (string * 't) list
-    | `List of 't list
-    | `Tuple of 't list
-    | `Variant of string * 't option
-    ] as 't)
+  type yojson = Yojson_compat.yojson
   val of_yojson : yojson -> jv
   val to_yojson : jv -> yojson
 
