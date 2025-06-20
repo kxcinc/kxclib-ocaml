@@ -14,14 +14,15 @@ type yojson = ([
     | `Variant of string * 't option
     ] as 't)
 [%%else]
-type yojson = ([
+type yojson = ([ `Assoc of (string * 't) list
     | `Null
     | `Bool of bool
     | `Int of int
     | `Intlit of string
     | `Float of float
+    | `Floatlit of string
     | `String of string
-    | `Assoc of (string * 't) list
+    | `Stringlit of string
     | `List of 't list
     ] as 't)
 [%%endif]

@@ -10,5 +10,5 @@
  (action
   (with-stdout-to %{target}
    (pipe-stdout
-    (echo "[%%define YOJSON_VERSION (3, 0, 0)]")
+    (echo "[%%define YOJSON_VERSION (%{version:yojson})]")
     (bash "sed 's/\\./,/g'")))))

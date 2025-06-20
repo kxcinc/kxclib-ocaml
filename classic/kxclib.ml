@@ -3003,7 +3003,9 @@ end = struct
     | `Int x -> `num (float_of_int x)
     | `Intlit x -> `num (float_of_string x)
     | `Float x -> `num x
+    | `Floatlit x -> `num (float_of_string x)
     | `String x -> `str x
+    | `Stringlit x -> `str x
     | `Assoc x -> `obj (x |&> ?>of_yojson)
     | `List x -> `arr (x |&> of_yojson)
     | `Tuple x -> `arr (x |&> of_yojson)
@@ -3040,6 +3042,8 @@ end = struct
     | `Int x -> `Int x
     | `Intlit x -> `Int (int_of_string x)
     | `Float x -> `Float x
+    | `Floatlit x -> `Float (float_of_string x)
+    | `Stringlit x -> `String x
     | `String x -> `String x
     | `Assoc xs -> `Assoc (xs |&> fun (n, x) -> (n, yojson_basic_of_safe x))
     | `List xs -> `List (xs |&> yojson_basic_of_safe)
