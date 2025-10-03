@@ -3161,14 +3161,14 @@ end = struct
             xs (Seq.return `Oe))
 end
 
-module Json_JSCnafi : sig
+module Json_JCSnafi : sig
   open Json
 
   val unparse_jcsnafi : jv -> string
   val compare_field_name : string -> string -> int
 end = struct
   open Json
-  
+
   let unparse_jcsnafi : jv -> string = failwith "not implemented"
   let compare_field_name : string -> string -> int = failwith "not implemented"
 end
