@@ -3169,8 +3169,13 @@ module Json_JCSnafi : sig
 end = struct
   open Json
 
-  let unparse_jcsnafi : jv -> string = failwith "not implemented"
-  let compare_field_name : string -> string -> int = failwith "not implemented"
+  let unparse_jcsnafi : jv -> string = function
+    | `null -> "not implemented"
+    | _ -> "not implemented"
+
+  let compare_field_name : string -> string -> int =
+    fun str1 str2 -> -9999
+    (* not implemented *)
 end
 
 

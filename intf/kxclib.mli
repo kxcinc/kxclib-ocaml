@@ -1245,6 +1245,13 @@ module Json : sig
   val to_jsonm : jv -> jsonm
 end
 
+module Json_JCSnafi : sig
+  open Json
+
+  val unparse_jcsnafi : jv -> string
+  val compare_field_name : string -> string -> int
+end
+
 module Jv : sig
   open Json
 

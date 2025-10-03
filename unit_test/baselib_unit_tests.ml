@@ -654,6 +654,22 @@ let json_show =
     ];
   ]
 
+let json_unparse_jcsnafi =
+  let counter = ref 0 in
+  let case jv unparsed_jcsnafi =
+    let id = get_and_incr counter in
+    test_case (sprintf "json_unparse_jcsnafi_%d" id) `Quick (fun () ->
+        check string
+          (sprintf "json_unparsed_jcsnafi: %s"
+             unparsed_jcsnafi)
+          unparsed_jcsnafi ( Json_JCSnafi.unparse_jcsnafi jv)
+      )
+  in [
+    "json_unparse_jcsnafi", [
+      case (`null) {|null|};
+    ]
+  ]
+
 let jvpath_unparse =
   let counter = ref 0 in
   let case jvpath unparsed id =
@@ -779,6 +795,7 @@ let () =
     @ string_partition
     @ json_escaped_suite
     @ json_unparse @ json_show
+    @ json_unparse_jcsnafi
     @ jvpath_unparse
     @ jvpath_parse_success
     @ jv_pump_fields
