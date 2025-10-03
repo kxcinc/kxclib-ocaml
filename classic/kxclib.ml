@@ -3161,20 +3161,16 @@ end = struct
             xs (Seq.return `Oe))
 end
 
-module JSCnafi : sig
+module Json_JSCnafi : sig
   open Json
 
   val unparse_jcsnafi : jv -> string
-  val canonicalize_jcsnafi : string -> string
   val compare_field_name : string -> string -> int
-  (* val digest ~algo:([`simple: bytes -> bytes ]) : jv -> bytes *)
 end = struct
   open Json
   
   let unparse_jcsnafi : jv -> string = failwith "not implemented"
-  let canonicalize_jcsnafi : string -> string = failwith "not implemented"
   let compare_field_name : string -> string -> int = failwith "not implemented"
-  (* let digest ~algo:([`simple: bytes -> bytes ]) : jv -> bytes = failwith "not implemented" *)
 end
 
 
