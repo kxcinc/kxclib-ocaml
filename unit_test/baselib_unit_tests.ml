@@ -658,15 +658,17 @@ let json_unparse_jcsnafi =
   let counter = ref 0 in
   let case jv unparsed_jcsnafi =
     let id = get_and_incr counter in
-    test_case (sprintf "json_unparse_jcsnafi_%d" id) `Quick (fun () ->
+    test_case (sprintf "json_unparse_jcsnafi_%d: %s" id unparsed_jcsnafi) `Quick (fun () ->
         check string
           (sprintf "json_unparsed_jcsnafi: %s"
              unparsed_jcsnafi)
-          unparsed_jcsnafi ( Json_JCSnafi.unparse_jcsnafi jv)
+          unparsed_jcsnafi (Json_JCSnafi.unparse_jcsnafi jv)
       )
   in [
     "json_unparse_jcsnafi", [
       case (`null) {|null|};
+      case (`bool true) {|true|};
+      case (`bool false) {|false|};
     ]
   ]
 

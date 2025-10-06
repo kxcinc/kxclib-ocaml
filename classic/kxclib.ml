@@ -3170,8 +3170,13 @@ end = struct
   open Json
 
   let unparse_jcsnafi : jv -> string = function
-    | `null -> "not implemented"
-    | _ -> "not implemented"
+    | `null -> "null"
+    | `bool true -> "true"
+    | `bool false -> "false"
+    | `str s -> "not implemented"
+    | `num n -> "not implemented"
+    | `obj es -> "not implemented"
+    | `arr xs -> "not implemented"
 
   let compare_field_name : string -> string -> int =
     fun str1 str2 -> -9999
