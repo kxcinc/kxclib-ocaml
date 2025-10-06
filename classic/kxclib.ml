@@ -3166,10 +3166,11 @@ module Json_JCSnafi : sig
 
   val unparse_jcsnafi : jv -> string
   val compare_field_name : string -> string -> int
+  val int_of_float_in_nafi_range : float -> int option
 end = struct
   open Json
 
-  let int_of_float_in_fi_range (f : float) : int option =
+  let int_of_float_in_nafi_range (f : float) : int option =
     let min_fi_float = Float.of_int (- (1 lsl 52)) in
     let max_fi_float = Float.of_int ((1 lsl 52) - 1) in
 
@@ -3182,7 +3183,7 @@ end = struct
     | `bool true -> "true"
     | `bool false -> "false"
     | `str s -> "not implemented"
-    | `num n -> (match int_of_float_in_fi_range(n) with
+    | `num n -> (match int_of_float_in_nafi_range(n) with
                  | Some i -> string_of_int i
                  | None -> raise (Invalid_argument "float or out-of-range integer"))
     | `obj es -> "not implemented"

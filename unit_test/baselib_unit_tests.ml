@@ -689,6 +689,31 @@ let json_unparse_jcsnafi =
       case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
     ]
   ]
+let jcsnafi_range = 
+  let counter = ref 0 in
+  let case f expected_value =
+    let id = get_and_incr counter in
+    (* test_case (sprintf "jcsnafi_range_%d: %s" id expected_value) `Quick (fun () -> *)
+    test_case (sprintf "csnafi_range_%d:" id) `Quick (fun () ->
+        check (option int)
+          (sprintf "jcsnafi_range:")
+          expected_value (Json_JCSnafi.int_of_float_in_nafi_range f)
+      ) in
+  let min_fi_float = Float.of_int (- (1 lsl 52)) in
+  let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
+   [
+    "jcsnafi_range", [
+      case min_fi_float (Some (-4503599627370496));
+      case max_fi_float (Some 4503599627370495);
+      case (-0.) (Some 0);
+      case (0.) (Some 0);
+      case (+0.) (Some 0);
+      case (min_fi_float -. 1.0) None;
+      case (max_fi_float +. 1.0) None;
+      case (-1.5) None;
+      case 4.8 None;
+    ]
+  ]
 
 let jvpath_unparse =
   let counter = ref 0 in
@@ -816,6 +841,7 @@ let () =
     @ json_escaped_suite
     @ json_unparse @ json_show
     @ json_unparse_jcsnafi
+    @ jcsnafi_range
     @ jvpath_unparse
     @ jvpath_parse_success
     @ jv_pump_fields
