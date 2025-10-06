@@ -664,6 +664,13 @@ let json_unparse_jcsnafi =
              unparsed_jcsnafi)
           unparsed_jcsnafi (Json_JCSnafi.unparse_jcsnafi jv)
       ) in
+  let case_exn jv expected_exn =
+    let id = get_and_incr counter in
+    test_case (sprintf "json_unparse_jcsnafi_%d" id) `Quick (fun () ->
+        check_raises "json_unparsed_jcsnafi should raise exn"
+          expected_exn
+          (fun () -> ignore (Json_JCSnafi.unparse_jcsnafi jv))
+      ) in
   let min_fi_float = Float.of_int (- (1 lsl 52)) in
   let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
    [
@@ -676,6 +683,10 @@ let json_unparse_jcsnafi =
       case (`num (-0.)) {|0|};
       case (`num 0.) {|0|};
       case (`num (+0.)) {|0|};
+      case_exn (`num (min_fi_float -. 1.0)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (max_fi_float +. 1.0)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
     ]
   ]
 
