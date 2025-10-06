@@ -663,12 +663,19 @@ let json_unparse_jcsnafi =
           (sprintf "json_unparsed_jcsnafi: %s"
              unparsed_jcsnafi)
           unparsed_jcsnafi (Json_JCSnafi.unparse_jcsnafi jv)
-      )
-  in [
+      ) in
+  let min_fi_float = Float.of_int (- (1 lsl 52)) in
+  let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
+   [
     "json_unparse_jcsnafi", [
       case (`null) {|null|};
       case (`bool true) {|true|};
       case (`bool false) {|false|};
+      case (`num min_fi_float) {|-4503599627370496|};
+      case (`num max_fi_float) {|4503599627370495|};
+      case (`num (-0.)) {|0|};
+      case (`num 0.) {|0|};
+      case (`num (+0.)) {|0|};
     ]
   ]
 

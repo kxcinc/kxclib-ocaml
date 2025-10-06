@@ -3169,12 +3169,22 @@ module Json_JCSnafi : sig
 end = struct
   open Json
 
+  let int_of_float_in_fi_range (f : float) : int option =
+    let min_fi_float = Float.of_int (- (1 lsl 52)) in
+    let max_fi_float = Float.of_int ((1 lsl 52) - 1) in
+
+    if f >= min_fi_float && f <= max_fi_float && mod_float f 1.0 = 0.0
+    then Some (int_of_float f)
+    else None
+
   let unparse_jcsnafi : jv -> string = function
     | `null -> "null"
     | `bool true -> "true"
     | `bool false -> "false"
     | `str s -> "not implemented"
-    | `num n -> "not implemented"
+    | `num n -> (match int_of_float_in_fi_range(n) with
+                 | Some i -> string_of_int i
+                 | None -> raise (Invalid_argument "float or out-of-range integer"))
     | `obj es -> "not implemented"
     | `arr xs -> "not implemented"
 
