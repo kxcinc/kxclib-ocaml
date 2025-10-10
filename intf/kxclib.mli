@@ -1248,9 +1248,9 @@ end
 module Json_JCSnafi : sig
   open Json
 
+  val is_encodable_num : float -> bool
   val unparse_jcsnafi : jv -> string
   val compare_field_name : string -> string -> int
-  val int_of_float_in_nafi_range : float -> int option
 end
 
 module Jv : sig
