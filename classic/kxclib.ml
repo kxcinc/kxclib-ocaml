@@ -3179,16 +3179,16 @@ end = struct
     | `null -> "null"
     | `bool true -> "true"
     | `bool false -> "false"
-    | `str s -> "not implemented for `str"
+    | `str _s -> failwith "not implemented for `str"
     | `num n -> if is_encodable_num n
                 then string_of_int (int_of_float n)
                 else raise (Invalid_argument "float or out-of-range integer")
-    | `obj es -> "not implemented for `obj"
+    | `obj _es -> failwith "not implemented for `obj"
     | `arr xs -> "["  ^ String.concat "," (List.map unparse_jcsnafi xs) ^ "]" 
 
-  let compare_field_name : string -> string -> int =
-    fun str1 str2 -> -9999
-    (* not implemented *)
+  let compare_field_name (str1 : string) (str2 : string) : int =
+    let string_to_utf16_bytes : string -> bytes = failwith "not implemented" in
+    Bytes.compare (string_to_utf16_bytes str1) (string_to_utf16_bytes str2)
 end
 
 

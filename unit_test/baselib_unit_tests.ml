@@ -721,6 +721,27 @@ let jcsnafi_is_encodable_num =
     ]
   ]
 
+let jcsnafi_compare_field_name = 
+  let counter = ref 0 in
+  let case str1 str2 expected_value =
+    let id = get_and_incr counter in
+    test_case (sprintf "jcsnafi_compare_field_name_%d:" id) `Quick (fun () ->
+        check int
+          (sprintf "jcsnafi_compare_field_name:")
+          expected_value (Json_JCSnafi.compare_field_name str1 str2)
+      ) in
+  [
+    "jcsnafi_compare_field_name", [
+      case "a" "a" 0;
+      case "a" "b" (-1);
+      case "b" "a" 1;
+      case "aa" "aa" 0;
+      case "a" "aa" (-1);
+      case "aa" "a" 1;
+      (* TODO: add testcase *)
+    ]
+  ]
+
 let jvpath_unparse =
   let counter = ref 0 in
   let case jvpath unparsed id =
@@ -848,6 +869,7 @@ let () =
     @ json_unparse @ json_show
     @ json_unparse_jcsnafi
     @ jcsnafi_is_encodable_num
+    @ jcsnafi_compare_field_name
     @ jvpath_unparse
     @ jvpath_parse_success
     @ jv_pump_fields
