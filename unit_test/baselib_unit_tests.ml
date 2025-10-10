@@ -687,6 +687,13 @@ let json_unparse_jcsnafi =
       case_exn (`num (max_fi_float +. 1.0)) (Invalid_argument "float or out-of-range integer");
       case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
       case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
+      case (`arr []) {|[]|};
+      case (`arr [`null]) {|[null]|};
+      case (`arr [`bool true; `bool false]) {|[true,false]|};
+      case_exn (`arr [`num 2.3; `num (-5.0)]) (Invalid_argument "float or out-of-range integer");
+      case (`arr [`arr []]) "[[]]";
+      case (`arr [`arr [`bool true; `bool false]]) {|[[true,false]]|};
+      case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]]) {|[[true,false],[2,-5]]|};
     ]
   ]
 let jcsnafi_is_encodable_num = 

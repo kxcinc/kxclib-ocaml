@@ -3175,16 +3175,16 @@ end = struct
     let max_fi_float = Float.of_int ((1 lsl 52) - 1) in
       f >= min_fi_float && f <= max_fi_float && mod_float f 1.0 = 0.0
 
-  let unparse_jcsnafi : jv -> string = function
+  let rec unparse_jcsnafi : jv -> string = function
     | `null -> "null"
     | `bool true -> "true"
     | `bool false -> "false"
-    | `str s -> "not implemented"
+    | `str s -> "not implemented for `str"
     | `num n -> if is_encodable_num n
                 then string_of_int (int_of_float n)
                 else raise (Invalid_argument "float or out-of-range integer")
-    | `obj es -> "not implemented"
-    | `arr xs -> "not implemented"
+    | `obj es -> "not implemented for `obj"
+    | `arr xs -> "["  ^ String.concat "," (List.map unparse_jcsnafi xs) ^ "]" 
 
   let compare_field_name : string -> string -> int =
     fun str1 str2 -> -9999
