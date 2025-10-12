@@ -706,12 +706,12 @@ let json_unparse_jcsnafi =
       case (`arr [`arr []]) "[[]]";
       case (`arr [`arr [`bool true; `bool false]]) {|[[true,false]]|};
       case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]]) {|[[true,false],[2,-5]]|};
-      (* RFC 8785, sec3.2.3 for jcsnafi*)
+      (* RFC 8785, sec3.2.2 for jcsnafi*)
       case (`obj [ ("numbers", `arr [`num 333333333.0; `num 4.0; `num 2e+3; `num 0.0]);
                    ("string", `str "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"\/");
                    ("literals", `arr [`null; `bool true; `bool false])])
            {|{"literals":[null,true,false],"numbers":[333333333,4,2000,0],"string":"€$\u000f\nA'B\"\\\\\"/"}|};
-      (* RFC 8785, sec3.2.3 original *)
+      (* RFC 8785, sec3.2.2 original *)
       case_exn (`obj [ ("numbers", `arr [`num 333333333.33333329; `num 1E30; `num 4.50; `num 2e-3; `num 0.000000000000000000000000001]);
                    ("string", `str "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"\/");
                    ("literals", `arr [`null; `bool true; `bool false])])
