@@ -656,21 +656,19 @@ let json_show =
 
 let json_unparse_jcsnafi =
   let counter = ref 0 in
-  let case jv unparsed_jcsnafi =
-    let id = get_and_incr counter in
+  let case jv unparsed_jcsnafi id =
     test_case (sprintf "json_unparse_jcsnafi_%d: %s" id unparsed_jcsnafi) `Quick (fun () ->
         check string
           (sprintf "json_unparsed_jcsnafi: %s"
              unparsed_jcsnafi)
           unparsed_jcsnafi (Json_JCSnafi.unparse_jcsnafi jv)
-      ) in
-  let case_exn jv expected_exn =
-    let id = get_and_incr counter in
+    ) in
+  let case_exn jv expected_exn id =
     test_case (sprintf "json_unparse_jcsnafi_%d" id) `Quick (fun () ->
         check_raises "json_unparsed_jcsnafi should raise exn"
           expected_exn
           (fun () -> ignore (Json_JCSnafi.unparse_jcsnafi jv))
-      ) in
+    ) in
   let min_fi_float = Float.of_int (- (1 lsl 52)) in
   let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
    [
@@ -694,17 +692,16 @@ let json_unparse_jcsnafi =
       case (`arr [`arr []]) "[[]]";
       case (`arr [`arr [`bool true; `bool false]]) {|[[true,false]]|};
       case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]]) {|[[true,false],[2,-5]]|};
-    ]
+    ] |&> (fun case -> get_and_incr counter |> case)
   ]
 let jcsnafi_is_encodable_num = 
   let counter = ref 0 in
-  let case f expected_value =
-    let id = get_and_incr counter in
+  let case f expected_value id =
     test_case (sprintf "jcsnafi_is_encodable_num_%d:" id) `Quick (fun () ->
         check bool
           (sprintf "jcsnafi_is_encodable_num:")
           expected_value (Json_JCSnafi.is_encodable_num f)
-      ) in
+    ) in
   let min_fi_float = Float.of_int (- (1 lsl 52)) in
   let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
    [
@@ -718,7 +715,7 @@ let jcsnafi_is_encodable_num =
       case (max_fi_float +. 1.0) false;
       case (-1.5) false;
       case 4.8 false;
-    ]
+    ] |&> (fun case -> get_and_incr counter |> case)
   ]
 
 let jcsnafi_compare_field_name = 
