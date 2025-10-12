@@ -3165,8 +3165,8 @@ module Json_JCSnafi : sig
   open Json
 
   val is_encodable_num : float -> bool
-  val unparse_jcsnafi : jv -> string
   val compare_field_name : string -> string -> int
+  val unparse_jcsnafi : jv -> string
 end = struct
   open Json
 
@@ -3174,17 +3174,6 @@ end = struct
     let min_fi_float = Float.of_int (- (1 lsl 52)) in
     let max_fi_float = Float.of_int ((1 lsl 52) - 1) in
       f >= min_fi_float && f <= max_fi_float && mod_float f 1.0 = 0.0
-
-  let rec unparse_jcsnafi : jv -> string = function
-    | `null -> "null"
-    | `bool true -> "true"
-    | `bool false -> "false"
-    | `str _s -> failwith "not implemented for `str"
-    | `num n -> if is_encodable_num n
-                then string_of_int (int_of_float n)
-                else raise (Invalid_argument "float or out-of-range integer")
-    | `obj _es -> failwith "not implemented for `obj"
-    | `arr xs -> "["  ^ String.concat "," (List.map unparse_jcsnafi xs) ^ "]" 
 
   let compare_field_name (str1 : string) (str2 : string) : int =
     let string_to_utf16_bytes (str: string) : bytes =
@@ -3205,6 +3194,27 @@ end = struct
       Buffer.to_bytes buf
     in
     Bytes.compare (string_to_utf16_bytes str1) (string_to_utf16_bytes str2)
+
+  let rec unparse_jcsnafi : jv -> string = fun jv ->
+    let serialize_string _str = failwith "not implemented" in
+    let concat_with_blackets lb rb ss = lb ^ String.concat "," ss ^ rb in
+
+    match jv with
+    | `null -> "null"
+    | `bool true -> "true"
+    | `bool false -> "false"
+    | `str _s -> failwith "not implemented for `str"
+    | `num n ->
+      if is_encodable_num n
+      then string_of_int (int_of_float n)
+      else raise (Invalid_argument "float or out-of-range integer")
+    | `obj es ->
+      let serialize_elem : string * jv -> string =
+        fun (key, value) -> serialize_string key ^ ":" ^ unparse_jcsnafi value in
+      let sorted_obj = List.sort (fun (key1, _) (key2, _) -> compare_field_name key1 key2) es in
+      concat_with_blackets "{" "}" (List.map serialize_elem sorted_obj)
+    | `arr xs ->
+      concat_with_blackets "[" "]" (List.map unparse_jcsnafi xs)
 end
 
 module Jv : sig
