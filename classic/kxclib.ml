@@ -3187,10 +3187,25 @@ end = struct
     | `arr xs -> "["  ^ String.concat "," (List.map unparse_jcsnafi xs) ^ "]" 
 
   let compare_field_name (str1 : string) (str2 : string) : int =
-    let string_to_utf16_bytes : string -> bytes = failwith "not implemented" in
+    let string_to_utf16_bytes (str: string) : bytes =
+      let str_len = String.length str in
+      let buf = Buffer.create str_len in
+
+      let rec loop (i : int) : unit = 
+        if i >= str_len
+        then ()
+        else
+          let utf8dec = String.get_utf_8_uchar str i in
+          let uchar = Uchar.utf_decode_uchar utf8dec in
+          let utf8dec_len = Uchar.utf_decode_length utf8dec in
+          Buffer.add_utf_16be_uchar buf uchar ;
+          loop (i + utf8dec_len)
+      in
+      loop 0;
+      Buffer.to_bytes buf
+    in
     Bytes.compare (string_to_utf16_bytes str1) (string_to_utf16_bytes str2)
 end
-
 
 module Jv : sig
   open Json

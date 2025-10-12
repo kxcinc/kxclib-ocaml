@@ -738,7 +738,10 @@ let jcsnafi_compare_field_name =
       case "aa" "aa" 0;
       case "a" "aa" (-1);
       case "aa" "a" 1;
-      (* TODO: add testcase *)
+      case "あ" "あ" 0;
+      case "あ" "い" (-1);
+      case "い" "あ" 1
+      (* TODO: add testcase (ref. RFC 8785, sec3.2.3) *)
     ]
   ]
 
