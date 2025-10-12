@@ -723,15 +723,17 @@ let jcsnafi_is_encodable_num =
 
 let jcsnafi_compare_field_name = 
   let counter = ref 0 in
-  let case str1 str2 expected_value =
-    let id = get_and_incr counter in
+  let case str1 str2 expected_value id =
     test_case (sprintf "jcsnafi_compare_field_name_%d:" id) `Quick (fun () ->
         check int
           (sprintf "jcsnafi_compare_field_name:")
           expected_value (Json_JCSnafi.compare_field_name str1 str2)
-      ) in
+    ) in
   [
     "jcsnafi_compare_field_name", [
+      case "" "" 0;
+      case "" "a" (-1);
+      case "a" "" 1;
       case "a" "a" 0;
       case "a" "b" (-1);
       case "b" "a" 1;
@@ -740,9 +742,59 @@ let jcsnafi_compare_field_name =
       case "aa" "a" 1;
       case "あ" "あ" 0;
       case "あ" "い" (-1);
-      case "い" "あ" 1
-      (* TODO: add testcase (ref. RFC 8785, sec3.2.3) *)
-    ]
+      case "い" "あ" 1;
+
+      (* RFC 8785, Sec3.2.3 testcase *)
+      case "\r" "1" (-1);
+      case "\r" "\u0080" (-1);
+      case "\r" "\u00f6" (-1);
+      case "\r" "\u20ac" (-1);
+      case "\r" "\ud83d\ude00" (-1);
+      case "\r" "\ufb33" (-1);
+      case "\r" "\r" 0;      
+      case "1" "\u0080" (-1);
+      case "1" "\u00f6" (-1);
+      case "1" "\u20ac" (-1);
+      case "1" "\ud83d\ude00" (-1);
+      case "1" "\ufb33" (-1);
+      case "1" "1" 0;
+      case "1" "\r" 1;
+      case "\u0080" "\u00f6" (-1);
+      case "\u0080" "\u20ac" (-1);
+      case "\u0080" "\ud83d\ude00" (-1);
+      case "\u0080" "\ufb33" (-1);
+      case "\u0080" "\u0080" 0;
+      case "\u0080" "\r" 1;
+      case "\u0080" "1" 1;
+      case "\u00f6" "\u20ac" (-1);
+      case "\u00f6" "\ud83d\ude00" (-1);
+      case "\u00f6" "\ufb33" (-1);
+      case "\u00f6" "\u00f6" 0;
+      case "\u00f6" "\r" 1;
+      case "\u00f6" "1" 1;
+      case "\u00f6" "\u0080" 1;
+      case "\u20ac" "\ud83d\ude00" (-1);
+      case "\u20ac" "\ufb33" (-1);
+      case "\u20ac" "\u20ac" 0;
+      case "\u20ac" "\r" 1;
+      case "\u20ac" "1" 1;
+      case "\u20ac" "\u0080" 1;
+      case "\u20ac" "\u00f6" 1;
+      case "\ud83d\ude00" "\ufb33" (-1);
+      case "\ud83d\ude00" "\ud83d\ude00" 0;
+      case "\ud83d\ude00" "\r" 1;
+      case "\ud83d\ude00" "1" 1;
+      case "\ud83d\ude00" "\u0080" 1;
+      case "\ud83d\ude00" "\u00f6" 1;
+      case "\ud83d\ude00" "\u20ac" 1;
+      case "\ufb33" "\ufb33" 0;
+      case "\ufb33" "\r" 1;
+      case "\ufb33" "1" 1;
+      case "\ufb33" "\u0080" 1;
+      case "\ufb33" "\u00f6" 1;
+      case "\ufb33" "\u20ac" 1;
+      case "\ufb33" "\ud83d\ude00" 1;
+    ] |&> (fun case -> get_and_incr counter |> case)
   ]
 
 let jvpath_unparse =
