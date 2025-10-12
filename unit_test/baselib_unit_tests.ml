@@ -794,6 +794,36 @@ let jcsnafi_compare_field_name =
     ] |&> (fun case -> get_and_incr counter |> case)
   ]
 
+let jcsnafi_compare_field_name_rfc8785 =
+  let input = [
+                ("\u20ac", "Euro Sign");
+                ("\r", "Carriage Return");
+                ("\ufb33", "Hebrew Letter Dalet With Dagesh");
+                ("1", "One");
+                ("\ud83d\ude00", "Emoji: Grinning Face");
+                ("\u0080", "Control");
+                ("\u00f6", "Latin Small Letter O With Diaeresis");
+              ] in
+  let expected = [
+                   "Carriage Return";
+                   "One";
+                   "Control";
+                   "Latin Small Letter O With Diaeresis";
+                   "Euro Sign";
+                   "Emoji: Grinning Face";
+                   "Hebrew Letter Dalet With Dagesh"
+                 ] in
+  [
+    "jcsnafi_compare_field_name_rfc8785", [
+      test_case (sprintf "jcsnafi_compare_field_name_rfc8785:") `Quick (fun () ->
+        check (list string)
+          (sprintf "jcsnafi_compare_field_name_rfc8785:")
+          expected
+          (List.map (fun (_, v) -> v) @@ List.sort (fun (k1, _) (k2, _) -> Json_JCSnafi.compare_field_name k1 k2) input)
+      )
+    ]
+  ]
+
 let jvpath_unparse =
   let counter = ref 0 in
   let case jvpath unparsed id =
@@ -922,6 +952,7 @@ let () =
     @ json_unparse_jcsnafi
     @ jcsnafi_is_encodable_num
     @ jcsnafi_compare_field_name
+    @ jcsnafi_compare_field_name_rfc8785
     @ jvpath_unparse
     @ jvpath_parse_success
     @ jv_pump_fields
