@@ -3209,9 +3209,13 @@ end = struct
       then string_of_int (int_of_float n)
       else raise (Invalid_argument "float or out-of-range integer")
     | `obj es ->
+      let is_ascii_str = String.for_all (fun c -> Char.code c <= 127) in
+      let is_all_ascii_property = List.for_all (fun e -> fst e |> is_ascii_str) es in
+      let cmp = if is_all_ascii_property then String.compare
+                else compare_field_name in
       let serialize_elem : string * jv -> string =
         fun (key, value) -> serialize_string key ^ ":" ^ unparse_jcsnafi value in
-      let sorted_obj = List.sort (fun (key1, _) (key2, _) -> compare_field_name key1 key2) es in
+      let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp key1 key2) es in
       concat_with_blackets "{" "}" (List.map serialize_elem sorted_obj)
     | `arr xs ->
       concat_with_blackets "[" "]" (List.map unparse_jcsnafi xs)
