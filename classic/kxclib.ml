@@ -3195,30 +3195,63 @@ end = struct
     in
     Bytes.compare (string_to_utf16_bytes str1) (string_to_utf16_bytes str2)
 
-  let rec unparse_jcsnafi : jv -> string = fun jv ->
-    let serialize_string _str = failwith "not implemented" in
+  let rec unparse_jcsnafi (jv : jv) : string =
     let concat_with_blackets lb rb ss = lb ^ String.concat "," ss ^ rb in
+
+    let serialize_string (str : string) : string =
+      let str_len = String.length str in
+      let buf = Buffer.create str_len in
+      let rec loop (i : int) : unit = 
+        if i >= str_len then ()
+        else
+          let utf8dec = String.get_utf_8_uchar str i in
+          let uchar = Uchar.utf_decode_uchar utf8dec in
+          let uchar_int = Uchar.to_int uchar in
+            if not (Uchar.utf_decode_is_valid utf8dec) then
+              let msg = Printf.sprintf "Invalid Unicode: %x" uchar_int in
+              raise (Invalid_argument msg)
+
+            else
+              let utf8dec_len = Uchar.utf_decode_length utf8dec in
+
+              (match uchar_int with
+               | 0x0008 -> Buffer.add_string buf {|\b|}
+               | 0x0009 -> Buffer.add_string buf {|\t|}
+               | 0x000A -> Buffer.add_string buf {|\n|}
+               | 0x000C -> Buffer.add_string buf {|\f|}
+               | 0x000D -> Buffer.add_string buf {|\r|}
+               | ui when ui >= 0x0000 && ui <= 0x001F
+                   -> Buffer.add_string buf (Printf.sprintf "\\u%04x" ui)
+               | 0x005C -> Buffer.add_string buf {|\\|}
+               | 0x0022 -> Buffer.add_string buf {|\"|}
+               | _ -> Buffer.add_utf_8_uchar buf uchar 
+              );
+              loop (i + utf8dec_len)
+      in
+      loop 0;
+      "\"" ^ Buffer.contents buf ^ "\""
+    in
 
     match jv with
     | `null -> "null"
     | `bool true -> "true"
     | `bool false -> "false"
-    | `str _s -> failwith "not implemented for `str"
+    | `str s -> serialize_string s
     | `num n ->
-      if is_encodable_num n
-      then string_of_int (int_of_float n)
-      else raise (Invalid_argument "float or out-of-range integer")
+        if is_encodable_num n
+        then string_of_int (int_of_float n)
+        else raise (Invalid_argument "float or out-of-range integer")
     | `obj es ->
-      let is_ascii_str = String.for_all (fun c -> Char.code c <= 127) in
-      let is_all_ascii_property = List.for_all (fun e -> fst e |> is_ascii_str) es in
-      let cmp = if is_all_ascii_property then String.compare
-                else compare_field_name in
-      let serialize_elem : string * jv -> string =
-        fun (key, value) -> serialize_string key ^ ":" ^ unparse_jcsnafi value in
-      let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp key1 key2) es in
-      concat_with_blackets "{" "}" (List.map serialize_elem sorted_obj)
+        let is_ascii_str = String.for_all (fun c -> Char.code c <= 127) in
+        let is_all_ascii_property = List.for_all (fun e -> fst e |> is_ascii_str) es in
+        let cmp = if is_all_ascii_property then String.compare
+                  else compare_field_name in
+        let serialize_elem : string * jv -> string =
+          fun (key, value) -> serialize_string key ^ ":" ^ unparse_jcsnafi value in
+        let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp key1 key2) es in
+        concat_with_blackets "{" "}" (List.map serialize_elem sorted_obj)
     | `arr xs ->
-      concat_with_blackets "[" "]" (List.map unparse_jcsnafi xs)
+        concat_with_blackets "[" "]" (List.map unparse_jcsnafi xs)
 end
 
 module Jv : sig
