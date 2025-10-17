@@ -3212,6 +3212,7 @@ end = struct
               raise (Invalid_argument msg)
 
             else
+              (* ref. https://www.rfc-editor.org/rfc/rfc8785#section-3.2.2.2 *)
               let utf8dec_len = Uchar.utf_decode_length utf8dec in
 
               (match uchar_int with
@@ -3228,8 +3229,10 @@ end = struct
               );
               loop (i + utf8dec_len)
       in
+      Buffer.add_string buf "\"";
       loop 0;
-      "\"" ^ Buffer.contents buf ^ "\""
+      Buffer.add_string buf "\"";
+      Buffer.contents buf
     in
 
     match jv with
@@ -3245,10 +3248,13 @@ end = struct
         let is_ascii_str = String.for_all (fun c -> Char.code c <= 127) in
         let is_all_ascii_property = List.for_all (fun e -> fst e |> is_ascii_str) es in
         let cmp = if is_all_ascii_property then String.compare
-                  else compare_field_name in
+                      else compare_field_name in
+        let cmp_with_unique_prop x y = let ret = cmp x y
+                                       in if ret = 0 then raise (Invalid_argument ("Duplicate property names: " ^ x))
+                                          else ret in
         let serialize_elem : string * jv -> string =
           fun (key, value) -> serialize_string key ^ ":" ^ unparse_jcsnafi value in
-        let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp key1 key2) es in
+        let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp_with_unique_prop key1 key2) es in
         concat_with_blackets "{" "}" (List.map serialize_elem sorted_obj)
     | `arr xs ->
         concat_with_blackets "[" "]" (List.map unparse_jcsnafi xs)

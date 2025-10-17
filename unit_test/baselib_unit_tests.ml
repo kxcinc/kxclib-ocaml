@@ -715,6 +715,10 @@ let json_unparse_jcsnafi =
       case (`obj [("array", `arr [`bool true; `bool false])]) {|{"array":[true,false]}|};
       case (`obj [("array", `arr [`null; `bool true; `bool false; `str "foo"; `num 1.0])])
            {|{"array":[null,true,false,"foo",1]}|};
+      case_exn (`obj [("foo", `bool true); ("foo", `bool false)]) (Invalid_argument "Duplicate property names: foo");
+      case_exn (`obj [("あ", `bool true); ("あ", `bool false)])  (Invalid_argument "Duplicate property names: あ");
+      case_exn (`obj [("あいう", `bool true); ("あいう", `bool false)])  (Invalid_argument "Duplicate property names: あいう");
+      case_exn (`obj [("\u{20ac}", `bool true); ({|€|}, `bool false)]) (Invalid_argument "Duplicate property names: €");
       case (`arr []) {|[]|};
       case (`arr [`null]) {|[null]|};
       case (`arr [`bool true; `bool false]) {|[true,false]|};
