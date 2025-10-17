@@ -3208,8 +3208,7 @@ end = struct
           let uchar = Uchar.utf_decode_uchar utf8dec in
           let uchar_int = Uchar.to_int uchar in
             if not (Uchar.utf_decode_is_valid utf8dec) then
-              let msg = Printf.sprintf "Invalid Unicode: %x" uchar_int in
-              raise (Invalid_argument msg)
+              raise (Invalid_argument ("Invalid Unicode: " ^ str))
 
             else
               (* ref. https://www.rfc-editor.org/rfc/rfc8785#section-3.2.2.2 *)

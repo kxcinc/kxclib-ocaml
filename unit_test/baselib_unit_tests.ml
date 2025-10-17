@@ -692,6 +692,19 @@ let json_unparse_jcsnafi =
       case (`str "\\") {|"\\"|};
       case (`str "\"") {|"\""|};
       case (`str "/") {|"/"|};
+
+      (* Boundary of 2-byte characters　*)
+      case_exn (`str "\xc1\x80") (Invalid_argument "Invalid Unicode: \xc1\x80");
+      case_exn (`str "\xc2\x7f") (Invalid_argument "Invalid Unicode: \xc2\x7f");
+      case (`str "\xc2\x80") "\"\xc2\x80\"";
+      case (`str "\xc2\xbf") "\"\xc2\xbf\"";
+      case_exn (`str "\xc2\xc0") (Invalid_argument "Invalid Unicode: \xc2\xc0");
+      case_exn (`str "\xdf\x7f") (Invalid_argument "Invalid Unicode: \xdf\x7f");
+      case (`str "\xdf\x80") "\"\xdf\x80\"";
+      case (`str "\xdf\xbf") "\"\xdf\xbf\"";
+      case_exn (`str "\xdf\xc0") (Invalid_argument "Invalid Unicode: \xdf\xc0");
+      case_exn (`str "\xe0\x80") (Invalid_argument "Invalid Unicode: \xe0\x80");
+
       case (`num min_fi_float) {|-4503599627370496|};
       case (`num max_fi_float) {|4503599627370495|};
       case (`num (-0.)) {|0|};
