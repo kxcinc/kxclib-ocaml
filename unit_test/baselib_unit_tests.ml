@@ -677,6 +677,7 @@ let json_unparse_jcsnafi =
   let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
    [
     "json_unparse_jcsnafi", [
+      (* literal case *)
       case (`null) {|null|};
       case (`bool true) {|true|};
       case (`bool false) {|false|};
@@ -692,6 +693,15 @@ let json_unparse_jcsnafi =
       case (`str "\\") {|"\\"|};
       case (`str "\"") {|"\""|};
       case (`str "/") {|"/"|};
+      case (`num min_fi_float) {|-4503599627370496|};
+      case (`num max_fi_float) {|4503599627370495|};
+      case (`num (-0.)) {|0|};
+      case (`num 0.) {|0|};
+      case (`num (+0.)) {|0|};
+      case_exn (`num (min_fi_float -. 1.0)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (max_fi_float +. 1.0)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
 
       (* Boundary of 2-byte characters　*)
       case_exn (`str "\xc1\x80") (Invalid_argument "Invalid Unicode: \xc1\x80");
@@ -705,15 +715,7 @@ let json_unparse_jcsnafi =
       case_exn (`str "\xdf\xc0") (Invalid_argument "Invalid Unicode: \xdf\xc0");
       case_exn (`str "\xe0\x80") (Invalid_argument "Invalid Unicode: \xe0\x80");
 
-      case (`num min_fi_float) {|-4503599627370496|};
-      case (`num max_fi_float) {|4503599627370495|};
-      case (`num (-0.)) {|0|};
-      case (`num 0.) {|0|};
-      case (`num (+0.)) {|0|};
-      case_exn (`num (min_fi_float -. 1.0)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num (max_fi_float +. 1.0)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
+      (* object case *)
       case (`obj []) {|{}|};
       case (`obj [("null", `null)]) {|{"null":null}|};
       case (`obj [("boolean", `bool true)]) {|{"boolean":true}|};
@@ -758,6 +760,8 @@ let json_unparse_jcsnafi =
       case_exn (`obj [("あ", `bool true); ("あ", `bool false)])  (Invalid_argument "Duplicate property names: あ");
       case_exn (`obj [("あいう", `bool true); ("あいう", `bool false)])  (Invalid_argument "Duplicate property names: あいう");
       case_exn (`obj [("\u{20ac}", `bool true); ({|€|}, `bool false)]) (Invalid_argument "Duplicate property names: €");
+
+      (* array case *)
       case (`arr []) {|[]|};
       case (`arr [`null]) {|[null]|};
       case (`arr [`bool true]) {|[true]|};
@@ -773,10 +777,48 @@ let json_unparse_jcsnafi =
       case_exn (`arr [`num 2.3]) (Invalid_argument "float or out-of-range integer");
       case_exn (`arr [`num (-5.0); `num 2.3]) (Invalid_argument "float or out-of-range integer");
       case_exn (`arr [`num 2.3; `num (-5.0)]) (Invalid_argument "float or out-of-range integer");
-      case (`arr [`null; `bool true; `bool false; `num 1.0; `num (-1.0); `str "foo"; `str "あ"]) {|[null,true,false,1,-1,"foo","あ"]|};
+      case (`arr [`obj []]) {|[{}]|};
+      case (`arr [`obj [("null", `null)]]) {|[{"null":null}]|};
+      case (`arr [`obj [("boolean", `bool true)]]) {|[{"boolean":true}]|};
+      case (`arr [`obj [("boolean", `bool false)]]) {|[{"boolean":false}]|};
+      case (`arr [`obj [("string", `str "foo")]]) {|[{"string":"foo"}]|};
+      case (`arr [`obj [("string", `str "あ")]]) {|[{"string":"あ"}]|};
+      case (`arr [`obj [("string", `str "\u{20ac}")]]) {|[{"string":"€"}]|};
+      case (`arr [`obj [("string", `str "$")]])	{|[{"string":"$"}]|};	
+      case (`arr [`obj [("string", `str "\u{000F}")]]) {|[{"string":"\u000f"}]|};
+      case (`arr [`obj [("string", `str "\u{000a}")]]) {|[{"string":"\n"}]|};
+      case (`arr [`obj [("string", `str "A")]]) {|[{"string":"A"}]|};	
+      case (`arr [`obj [("string", `str "'")]]) {|[{"string":"'"}]|};
+      case (`arr [`obj [("string", `str "\u{0042}")]]) {|[{"string":"B"}]|};
+      case (`arr [`obj [("string", `str "\u{0022}")]]) {|[{"string":"\""}]|};
+      case (`arr [`obj [("string", `str "\u{005c}")]]) {|[{"string":"\\"}]|};
+      case (`arr [`obj [("string", `str "\\")]]) {|[{"string":"\\"}]|};
+      case (`arr [`obj [("string", `str "\"")]]) {|[{"string":"\""}]|};
+      case (`arr [`obj [("string", `str "/")]]) {|[{"string":"/"}]|};
+      case (`arr [`obj [("あ", `null)]]) {|[{"あ":null}]|};
+      case (`arr [`obj [("\u{20ac}", `null)]]) {|[{"€":null}]|};
+      case (`arr [`obj [("$", `null)]])	{|[{"$":null}]|};	
+      case (`arr [`obj [("\u{000F}", `null)]]) {|[{"\u000f":null}]|};
+      case (`arr [`obj [("\u{000a}", `null)]]) {|[{"\n":null}]|};
+      case (`arr [`obj [("A", `null)]]) {|[{"A":null}]|};	
+      case (`arr [`obj [("'", `null)]]) {|[{"'":null}]|};
+      case (`arr [`obj [("\u{0042}", `null)]]) {|[{"B":null}]|};
+      case (`arr [`obj [("\u{0022}", `null)]]) {|[{"\"":null}]|};
+      case (`arr [`obj [("\u{005c}", `null)]]) {|[{"\\":null}]|};
+      case (`arr [`obj [("\\", `null)]]) {|[{"\\":null}]|};
+      case (`arr [`obj [("\"", `null)]]) {|[{"\"":null}]|};
+      case (`arr [`obj [("/", `null)]]) {|[{"/":null}]|};
+      case (`arr [`obj [("number", `num 1.0)]]) {|[{"number":1}]|};
+      case (`arr [`obj [("null", `null); ("boolean", `bool true); ("string", `str "foo"); ("number", `num 1.0)]])
+           {|[{"boolean":true,"null":null,"number":1,"string":"foo"}]|};
+      case (`arr [`obj [("obj", `obj [("name", `str "foo"); ("age", `num 30.0)])]]) {|[{"obj":{"age":30,"name":"foo"}}]|};
+      case (`arr [`null; `bool true; `bool false; `num 1.0; `num (-1.0); `str "foo"; `str "あ"; `obj [("obj", `obj [("name", `str "foo"); ("age", `num 30.0)])]])
+           {|[null,true,false,1,-1,"foo","あ",{"obj":{"age":30,"name":"foo"}}]|};
       case (`arr [`arr []]) "[[]]";
       case (`arr [`arr [`bool true; `bool false]]) {|[[true,false]]|};
       case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]]) {|[[true,false],[2,-5]]|};
+      case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]; `arr [`obj [("name", `str "foo"); ("age", `num 30.0)]; `obj [("name", `str "bar"); ("age", `num 23.0)]]])
+      {|[[true,false],[2,-5],[{"age":30,"name":"foo"},{"age":23,"name":"bar"}]]|};
 
       (* RFC 8785, sec3.2.2 for jcsnafi*)
       case (`obj [ ("numbers", `arr [`num 333333333.0; `num 4.0; `num 2e+3; `num 0.0]);
