@@ -747,8 +747,20 @@ let json_unparse_jcsnafi =
       case_exn (`obj [("\u{20ac}", `bool true); ({|€|}, `bool false)]) (Invalid_argument "Duplicate property names: €");
       case (`arr []) {|[]|};
       case (`arr [`null]) {|[null]|};
-      case (`arr [`bool true; `bool false]) {|[true,false]|};
+      case (`arr [`bool true]) {|[true]|};
+      case (`arr [`bool false]) {|[false]|};
+      case (`arr [`str "foo"]) {|["foo"]|};
+      case (`arr [`str "あ"]) {|["あ"]|};
+      case (`arr [`str "foo"; `str "あ"; `str "\u{20ac}"; `str "$"; `str "\u{000F}"; `str "\u{000a}"; `str "A"; `str "'"; `str "\u{0042}"; `str "\u{0022}"; `str "\u{005c}"; `str "\\"; `str "\""; `str "/"])
+          {|["foo","あ","€","$","\u000f","\n","A","'","B","\"","\\","\\","\"","/"]|};
+      case (`arr [`str "fooあ\u{20ac}$\u{000F}\u{000a}A'\u{0042}\u{0022}\u{005c}\\\"/"])
+          {|["fooあ€$\u000f\nA'B\"\\\\\"/"]|};
+      case (`arr [`num 1.0]) {|[1]|};
+      case (`arr [`num (-1.0)]) {|[-1]|};
+      case_exn (`arr [`num 2.3]) (Invalid_argument "float or out-of-range integer");
+      case_exn (`arr [`num (-5.0); `num 2.3]) (Invalid_argument "float or out-of-range integer");
       case_exn (`arr [`num 2.3; `num (-5.0)]) (Invalid_argument "float or out-of-range integer");
+      case (`arr [`null; `bool true; `bool false; `num 1.0; `num (-1.0); `str "foo"; `str "あ"]) {|[null,true,false,1,-1,"foo","あ"]|};
       case (`arr [`arr []]) "[[]]";
       case (`arr [`arr [`bool true; `bool false]]) {|[[true,false]]|};
       case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]]) {|[[true,false],[2,-5]]|};
