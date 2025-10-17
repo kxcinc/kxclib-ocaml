@@ -3248,7 +3248,7 @@ end = struct
         let is_ascii_str = String.for_all (fun c -> Char.code c <= 127) in
         let is_all_ascii_property = List.for_all (fun e -> fst e |> is_ascii_str) es in
         let cmp = if is_all_ascii_property then String.compare
-                      else compare_field_name in
+                  else compare_field_name in
         let cmp_with_unique_prop x y = let ret = cmp x y
                                        in if ret = 0 then raise (Invalid_argument ("Duplicate property names: " ^ x))
                                           else ret in
