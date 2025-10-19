@@ -722,12 +722,12 @@ let json_unparse_jcsnafi =
       (* Boundary of 3-byte characters |E0..EF|80..BF^|80..BF| *)
       (*   1st byte check |E0..EF|<valid>|<valid>| *)
       case_exn (`str "\xDF\x80\x80") (Invalid_argument "Invalid Unicode: \xDF\x80\x80");
-      case (`str "\xE0\xA0\x80") "\"\xE0\xA0\x80\"";
+      case (`str "\xE0\xA0\x80") "\"\xE0\xA0\x80\""; (* ^if 1st byte is E0, 2nd byte must be outside the range E0..9F. *)
       case (`str "\xEF\xBF\xBF") "\"\xEF\xBF\xBF\"";
       case_exn (`str "\xF0\x80\x80") (Invalid_argument "Invalid Unicode: \xF0\x80\x80");
       (*   2nd byte check |<valid>|80..BF|<valid>|*)
       case_exn (`str "\xE1\x7F\x80") (Invalid_argument "Invalid Unicode: \xE1\x7F\x80");
-      case (`str "\xE1\x80\x80") "\"\xE1\x80\x80\"";
+      case (`str "\xE1\x80\x80") "\"\xE1\x80\x80\""; (* include checking 3rd byte *)
       case (`str "\xE1\xBF\x80") "\"\xE1\xBF\x80\"";
       case_exn (`str "\xE1\xC0\x80") (Invalid_argument "Invalid Unicode: \xE1\xC0\x80");
       (*   3rd byte check |<valid>|<valid>|80..BF|*)
@@ -740,6 +740,27 @@ let json_unparse_jcsnafi =
       case_exn (`str "\xED\xA0\x80") (Invalid_argument "Invalid Unicode: \xED\xA0\x80");
       case_exn (`str "\xED\xBF\xBF") (Invalid_argument "Invalid Unicode: \xED\xBF\xBF");
       case (`str "\xEE\x80\x80") "\"\xEE\x80\x80\"";
+
+      (* Boundary of 4-byte characters |F0..F4|80..BF^|80..BF|80..BF| *)
+      (*   1st byte check |F0..F4|<valid>|<valid>|<valid>| *)
+      case_exn (`str "\xEF\xBF\xBF\xBF") (Invalid_argument "Invalid Unicode: \xEF\xBF\xBF\xBF");
+      case (`str "\xF0\x90\x80\x80") "\"\xF0\x90\x80\x80\""; (* ^if 1st byte is F0, 2nd byte is invalid if if it falls within the range 80..8F. *)
+      case (`str "\xF4\x8F\xBF\xBF") "\"\xF4\x8F\xBF\xBF\""; (* ^if 1st byte is F4, 2nd byte is invalid if it is 90 or greater. *)
+      case_exn (`str "\xF5\x80\x80\x80") (Invalid_argument "Invalid Unicode: \xF5\x80\x80\x80");
+      (*   2nd byte check |<valid>|80..BF|<valid>|<valid>| *)
+      case_exn (`str "\xF1\x7F\x80\x80") (Invalid_argument "Invalid Unicode: \xF1\x7F\x80\x80");
+      case (`str "\xF1\x80\x80\x80") "\"\xF1\x80\x80\x80\""; (* include checking 3rd and 4th byte *)
+      case (`str "\xF1\xBF\xBF\xBF") "\"\xF1\xBF\xBF\xBF\""; (* include checking 3rd and 4th byte *)
+      case_exn (`str "\xF1\xC0\x80\x80") (Invalid_argument "Invalid Unicode: \xF1\xC0\x80\x80");
+      (*   3rd byte check |<valid>|<valid>|80..BF|<valid>| *)
+      case_exn (`str "\xF1\x80\x7F\x80") (Invalid_argument "Invalid Unicode: \xF1\x80\x7F\x80");
+      case_exn (`str "\xF1\x80\xC0\x80") (Invalid_argument "Invalid Unicode: \xF1\x80\xC0\x80");
+      (*   4th byte check |<valid>|<valid>|<valid>|80..BF| *)
+      case_exn (`str "\xF1\x80\x80\x7F") (Invalid_argument "Invalid Unicode: \xF1\x80\x80\x7F");
+      case_exn (`str "\xF1\x80\x80\xC0") (Invalid_argument "Invalid Unicode: \xF1\x80\x80\xC0");
+      (*   4-byte characters special check *)
+      case_exn (`str "\xF0\x8F\xBF\xBF") (Invalid_argument "Invalid Unicode: \xF0\x8F\xBF\xBF");
+      case_exn (`str "\xF4\x90\x80\x80") (Invalid_argument "Invalid Unicode: \xF4\x90\x80\x80");
 
       (* object case *)
       case (`obj []) {|{}|};
