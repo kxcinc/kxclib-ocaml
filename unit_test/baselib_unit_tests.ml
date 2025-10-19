@@ -703,7 +703,9 @@ let json_unparse_jcsnafi =
       case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
       case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
 
-      (* Boundary of 2-byte characters　*)
+      (* Boundary of 1-byte characters |00..7F| *)
+
+      (* Boundary of 2-byte characters |C2..DF|80..BF| *)
       case_exn (`str "\xc1\x80") (Invalid_argument "Invalid Unicode: \xc1\x80");
       case_exn (`str "\xc2\x7f") (Invalid_argument "Invalid Unicode: \xc2\x7f");
       case (`str "\xc2\x80") "\"\xc2\x80\"";
@@ -714,6 +716,28 @@ let json_unparse_jcsnafi =
       case (`str "\xdf\xbf") "\"\xdf\xbf\"";
       case_exn (`str "\xdf\xc0") (Invalid_argument "Invalid Unicode: \xdf\xc0");
       case_exn (`str "\xe0\x80") (Invalid_argument "Invalid Unicode: \xe0\x80");
+
+      (* Boundary of 3-byte characters |E0..EF|80..BF^|80..BF| *)
+      (*   1st byte check |E0..EF|<valid>|<valid>| *)
+      case_exn (`str "\xDF\x80\x80") (Invalid_argument "Invalid Unicode: \xDF\x80\x80");
+      case (`str "\xE0\xA0\x80") "\"\xE0\xA0\x80\"";
+      case (`str "\xEF\xBF\xBF") "\"\xEF\xBF\xBF\"";
+      case_exn (`str "\xF0\x80\x80") (Invalid_argument "Invalid Unicode: \xF0\x80\x80");
+      (*   2nd byte check |<valid>|80..BF|<valid>|*)
+      case_exn (`str "\xE1\x7F\x80") (Invalid_argument "Invalid Unicode: \xE1\x7F\x80");
+      case (`str "\xE1\x80\x80") "\"\xE1\x80\x80\"";
+      case (`str "\xE1\xBF\x80") "\"\xE1\xBF\x80\"";
+      case_exn (`str "\xE1\xC0\x80") (Invalid_argument "Invalid Unicode: \xE1\xC0\x80");
+      (*   3rd byte check |<valid>|<valid>|80..BF|*)
+      case_exn (`str "\xE1\x80\x7F") (Invalid_argument "Invalid Unicode: \xE1\x80\x7F");
+      case (`str "\xE1\x80\xBF") "\"\xE1\x80\xBF\"";
+      case_exn (`str "\xE1\x80\xC0") (Invalid_argument "Invalid Unicode: \xE1\x80\xC0");
+      (*   3-byte characters special check *)
+      case_exn (`str "\xE0\x9F\xBF") (Invalid_argument "Invalid Unicode: \xE0\x9F\xBF");
+      case (`str "\xED\x9F\xBF") "\"\xED\x9F\xBF\"";
+      case_exn (`str "\xED\xA0\x80") (Invalid_argument "Invalid Unicode: \xED\xA0\x80");
+      case_exn (`str "\xED\xBF\xBF") (Invalid_argument "Invalid Unicode: \xED\xBF\xBF");
+      case (`str "\xEE\x80\x80") "\"\xEE\x80\x80\"";
 
       (* object case *)
       case (`obj []) {|{}|};
