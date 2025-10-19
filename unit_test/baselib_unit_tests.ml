@@ -669,10 +669,6 @@ let json_unparse_jcsnafi =
           expected_exn
           (fun () -> ignore (Json_JCSnafi.unparse_jcsnafi jv))
     ) in
-  let case_skip _ _ id =
-    test_case (sprintf "skip json_unparse_jcsnafi_%d:" id) `Quick (fun () ->
-        skip ()
-    ) in
   let min_fi_float = Float.of_int (- (1 lsl 52)) in
   let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
    [
