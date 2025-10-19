@@ -706,16 +706,18 @@ let json_unparse_jcsnafi =
       (* Boundary of 1-byte characters |00..7F| *)
 
       (* Boundary of 2-byte characters |C2..DF|80..BF| *)
-      case_exn (`str "\xc1\x80") (Invalid_argument "Invalid Unicode: \xc1\x80");
-      case_exn (`str "\xc2\x7f") (Invalid_argument "Invalid Unicode: \xc2\x7f");
-      case (`str "\xc2\x80") "\"\xc2\x80\"";
-      case (`str "\xc2\xbf") "\"\xc2\xbf\"";
-      case_exn (`str "\xc2\xc0") (Invalid_argument "Invalid Unicode: \xc2\xc0");
-      case_exn (`str "\xdf\x7f") (Invalid_argument "Invalid Unicode: \xdf\x7f");
-      case (`str "\xdf\x80") "\"\xdf\x80\"";
-      case (`str "\xdf\xbf") "\"\xdf\xbf\"";
-      case_exn (`str "\xdf\xc0") (Invalid_argument "Invalid Unicode: \xdf\xc0");
-      case_exn (`str "\xe0\x80") (Invalid_argument "Invalid Unicode: \xe0\x80");
+      (*   1st byte check |C2..DF|<valid>| *)
+      case_exn (`str "\xC1\x80") (Invalid_argument "Invalid Unicode: \xC1\x80");
+      case (`str "\xC2\x80") "\"\xC2\x80\"";
+      case (`str "\xDF\x80") "\"\xDF\x80\"";
+      case_exn (`str "\xE0\x80") (Invalid_argument "Invalid Unicode: \xE0\x80");
+      (*   2st byte check |C2 and DF|80..BF| *)
+      case_exn (`str "\xC2\x7F") (Invalid_argument "Invalid Unicode: \xC2\x7F");
+      case (`str "\xC2\xBF") "\"\xC2\xBF\"";
+      case_exn (`str "\xC2\xC0") (Invalid_argument "Invalid Unicode: \xC2\xC0");
+      case_exn (`str "\xDF\x7F") (Invalid_argument "Invalid Unicode: \xDF\x7F");
+      case (`str "\xDF\xBF") "\"\xDF\xbf\"";
+      case_exn (`str "\xDF\xC0") (Invalid_argument "Invalid Unicode: \xDF\xc0");
 
       (* Boundary of 3-byte characters |E0..EF|80..BF^|80..BF| *)
       (*   1st byte check |E0..EF|<valid>|<valid>| *)
