@@ -681,29 +681,29 @@ let json_unparse_jcsnafi =
       case (`null) {|null|};
       case (`bool true) {|true|};
       case (`bool false) {|false|};
+
+      (* string case *)
       case (`str "\u{20ac}") {|"€"|};
       case (`str "$")	{|"$"|};	
       case (`str "\u{000F}") {|"\u000f"|};
-      case (`str "\u{000a}") {|"\n"|};
+      case (`str "\u{000a}") {|"\n"|}; (* "\x0A" *)
       case (`str "A") {|"A"|};	
       case (`str "'") {|"'"|};
       case (`str "\u{0042}") {|"B"|};
-      case (`str "\u{0022}") {|"\""|};
-      case (`str "\u{005c}") {|"\\"|};
+      case (`str "\u{0022}") {|"\""|}; (* "\x22" *)
+      case (`str "\u{005c}") {|"\\"|}; (* "\x5C" *)
       case (`str "\\") {|"\\"|};
       case (`str "\"") {|"\""|};
       case (`str "/") {|"/"|};
-      case (`num min_fi_float) {|-4503599627370496|};
-      case (`num max_fi_float) {|4503599627370495|};
-      case (`num (-0.)) {|0|};
-      case (`num 0.) {|0|};
-      case (`num (+0.)) {|0|};
-      case_exn (`num (min_fi_float -. 1.0)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num (max_fi_float +. 1.0)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
+      case (`str "\x08") {|"\b"|};
+      case (`str "\x09") {|"\t"|};
+      case (`str "\x0C") {|"\f"|};
+      case (`str "\x0D") {|"\r"|};
 
       (* Boundary of 1-byte characters |00..7F| *)
+      case (`str "\x00") {|"\u0000"|};
+      case (`str "\x7F") "\"\x7F\"";
+      case_exn (`str "\x80") (Invalid_argument "Invalid Unicode: \x80");
 
       (* Boundary of 2-byte characters |C2..DF|80..BF| *)
       (*   1st byte check |C2..DF|<valid>| *)
@@ -761,6 +761,17 @@ let json_unparse_jcsnafi =
       (*   4-byte characters special check *)
       case_exn (`str "\xF0\x8F\xBF\xBF") (Invalid_argument "Invalid Unicode: \xF0\x8F\xBF\xBF");
       case_exn (`str "\xF4\x90\x80\x80") (Invalid_argument "Invalid Unicode: \xF4\x90\x80\x80");
+
+      (* number case *)
+      case (`num min_fi_float) {|-4503599627370496|};
+      case (`num max_fi_float) {|4503599627370495|};
+      case (`num (-0.)) {|0|};
+      case (`num 0.) {|0|};
+      case (`num (+0.)) {|0|};
+      case_exn (`num (min_fi_float -. 1.0)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (max_fi_float +. 1.0)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
 
       (* object case *)
       case (`obj []) {|{}|};
