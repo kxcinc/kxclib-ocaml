@@ -938,66 +938,67 @@ let jcsnafi_compare_field_name =
 
       (* RFC 8785, Sec3.2.3 testcase *)
       case "\r" "1" (-1);
-      case "\r" "\u0080" (-1);
-      case "\r" "\u00f6" (-1);
-      case "\r" "\u20ac" (-1);
-      case "\r" "\ud83d\ude00" (-1);
-      case "\r" "\ufb33" (-1);
+      case "\r" "\u{0080}" (-1);
+      case "\r" "\u{00f6}" (-1);
+      case "\r" "\u{20ac}" (-1);
+      case "\r" "\u{1f600}" (-1);       (* u{d83d}u{de00} *)
+      case "\r" "\u{fb33}" (-1);
       case "\r" "\r" 0;      
-      case "1" "\u0080" (-1);
-      case "1" "\u00f6" (-1);
-      case "1" "\u20ac" (-1);
-      case "1" "\ud83d\ude00" (-1);
-      case "1" "\ufb33" (-1);
+      case "1" "\u{0080}" (-1);
+      case "1" "\u{00f6}" (-1);
+      case "1" "\u{20ac}" (-1);
+      case "1" "\u{1f600}" (-1);        (* u{d83d}u{de00} *)
+      case "1" "\u{fb33}" (-1);
       case "1" "1" 0;
       case "1" "\r" 1;
-      case "\u0080" "\u00f6" (-1);
-      case "\u0080" "\u20ac" (-1);
-      case "\u0080" "\ud83d\ude00" (-1);
-      case "\u0080" "\ufb33" (-1);
-      case "\u0080" "\u0080" 0;
-      case "\u0080" "\r" 1;
-      case "\u0080" "1" 1;
-      case "\u00f6" "\u20ac" (-1);
-      case "\u00f6" "\ud83d\ude00" (-1);
-      case "\u00f6" "\ufb33" (-1);
-      case "\u00f6" "\u00f6" 0;
-      case "\u00f6" "\r" 1;
-      case "\u00f6" "1" 1;
-      case "\u00f6" "\u0080" 1;
-      case "\u20ac" "\ud83d\ude00" (-1);
-      case "\u20ac" "\ufb33" (-1);
-      case "\u20ac" "\u20ac" 0;
-      case "\u20ac" "\r" 1;
-      case "\u20ac" "1" 1;
-      case "\u20ac" "\u0080" 1;
-      case "\u20ac" "\u00f6" 1;
-      case "\ud83d\ude00" "\ufb33" (-1);
-      case "\ud83d\ude00" "\ud83d\ude00" 0;
-      case "\ud83d\ude00" "\r" 1;
-      case "\ud83d\ude00" "1" 1;
-      case "\ud83d\ude00" "\u0080" 1;
-      case "\ud83d\ude00" "\u00f6" 1;
-      case "\ud83d\ude00" "\u20ac" 1;
-      case "\ufb33" "\ufb33" 0;
-      case "\ufb33" "\r" 1;
-      case "\ufb33" "1" 1;
-      case "\ufb33" "\u0080" 1;
-      case "\ufb33" "\u00f6" 1;
-      case "\ufb33" "\u20ac" 1;
-      case "\ufb33" "\ud83d\ude00" 1;
+      case "\u{0080}" "\u{00f6}" (-1);
+      case "\u{0080}" "\u{20ac}" (-1);
+      case "\u{0080}" "\u{1f600}" (-1); (* u{d83d}u{de00} *)
+      case "\u{0080}" "\u{fb33}" (-1);
+      case "\u{0080}" "\u{0080}" 0;
+      case "\u{0080}" "\r" 1;
+      case "\u{0080}" "1" 1;
+      case "\u{00f6}" "\u{20ac}" (-1);
+      case "\u{00f6}" "\u{1f600}" (-1); (* u{d83d}u{de00} *)
+      case "\u{00f6}" "\u{fb33}" (-1);
+      case "\u{00f6}" "\u{00f6}" 0;
+      case "\u{00f6}" "\r" 1;
+      case "\u{00f6}" "1" 1;
+      case "\u{00f6}" "\u{0080}" 1;
+      case "\u{20ac}" "\u{1f600}" (-1); (* u{d83d}u{de00} *)
+      case "\u{20ac}" "\u{fb33}" (-1);
+      case "\u{20ac}" "\u{20ac}" 0;
+      case "\u{20ac}" "\r" 1;
+      case "\u{20ac}" "1" 1;
+      case "\u{20ac}" "\u{0080}" 1;
+      case "\u{20ac}" "\u{00f6}" 1;
+      case "\u{1f600}" "\u{fb33}" (-1); (* u{d83d}u{de00} *)
+      case "\u{1f600}" "\u{1f600}" 0;   (* u{d83d}u{de00} *)
+      case "\u{1f600}" "\r" 1;          (* u{d83d}u{de00} *)
+      case "\u{1f600}" "1" 1;           (* u{d83d}u{de00} *)
+      case "\u{1f600}" "\u{0080}" 1;    (* u{d83d}u{de00} *)
+      case "\u{1f600}" "\u{00f6}" 1;    (* u{d83d}u{de00} *)
+      case "\u{1f600}" "\u{20ac}" 1;    (* u{d83d}u{de00} *)
+      case "\u{fb33}" "\u{fb33}" 0;
+      case "\u{fb33}" "\r" 1;
+      case "\u{fb33}" "1" 1;
+      case "\u{fb33}" "\u{0080}" 1;
+      case "\u{fb33}" "\u{00f6}" 1;
+      case "\u{fb33}" "\u{20ac}" 1;
+      case "\u{fb33}" "\u{1f600}" 1;    (* u{d83d}u{de00} *)
+      
     ] |&> (fun case -> get_and_incr counter |> case)
   ]
 
 let jcsnafi_compare_field_name_rfc8785 =
   let input = [
-                ("\u20ac", "Euro Sign");
+                ("\u{20ac}", "Euro Sign");
                 ("\r", "Carriage Return");
-                ("\ufb33", "Hebrew Letter Dalet With Dagesh");
+                ("\u{fb33}", "Hebrew Letter Dalet With Dagesh");
                 ("1", "One");
-                ("\ud83d\ude00", "Emoji: Grinning Face");
-                ("\u0080", "Control");
-                ("\u00f6", "Latin Small Letter O With Diaeresis");
+                ("\u{1f600}", "Emoji: Grinning Face"); (* u{d83d}u{de00} *)
+                ("\u{0080}", "Control");
+                ("\u{00f6}", "Latin Small Letter O With Diaeresis");
               ] in
   let expected = [
                    "Carriage Return";
