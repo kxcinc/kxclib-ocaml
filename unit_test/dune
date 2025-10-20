@@ -2,6 +2,7 @@
  (names
    baselib_unit_tests
    baselib_json_prop_tests
+   baselib_json_jcsnafi_prop_tests
    baselib_jvpath_prop_tests
    log0_unit_tests)
  (libraries
