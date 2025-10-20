@@ -764,8 +764,8 @@ let json_unparse_jcsnafi =
       case (`num (-0.)) {|0|};
       case (`num 0.) {|0|};
       case (`num (+0.)) {|0|};
-      case_exn (`num (min_fi_float -. 1.0)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num (max_fi_float +. 1.0)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (Float.pred min_fi_float)) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (Float.succ max_fi_float)) (Invalid_argument "float or out-of-range integer"); (* XXX fix -> succ *)
       case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
       case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
 
@@ -906,8 +906,8 @@ let jcsnafi_is_encodable_num =
       case (-0.) true;
       case (0.) true;
       case (+0.) true;
-      case (min_fi_float -. 1.0) false;
-      case (max_fi_float +. 1.0) false;
+      case (Float.pred min_fi_float) false;
+      case (Float.succ max_fi_float) false;
       case (-1.5) false;
       case 4.8 false;
     ] |&> (fun case -> get_and_incr counter |> case)
