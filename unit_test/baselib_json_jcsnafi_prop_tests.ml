@@ -3,6 +3,9 @@ let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) ;;
 let min_fi_int = (- (1 lsl 52)) ;;
 let max_fi_int = (1 lsl 52) - 1 ;;
 
+let invalid_neg_int_range = (QCheck2.Gen.int_range min_int (pred min_fi_int))
+let invalid_pos_int_range = (QCheck2.Gen.int_range (succ max_fi_int) max_int)
+
 let is_exn exn (f : unit -> unit) : bool =
   try
     f ();
@@ -16,12 +19,25 @@ let () =
     QCheck2.Test.make
       ~name ~count in
 
-  let invalid_integer_unparse_jcsnafi_prop name min max = that name (QCheck2.Gen.int_range min max) ~print:string_of_int
-      (fun i -> is_exn (Invalid_argument "float or out-of-range integer")
-           (fun () -> ignore (Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i))))) in
-
   let run_tests tests = QCheck_base_runner.run_tests_main tests in
   [
-    invalid_integer_unparse_jcsnafi_prop "unparse_jcsnafi: Invalid negative integer range" min_int (pred min_fi_int);
-    invalid_integer_unparse_jcsnafi_prop "unparse_jcsnafi: Invalid positive integer range" (succ max_fi_int) max_int;
+    that "is_encodable_num: Invalid negative integer range" invalid_neg_int_range ~print:string_of_int
+      (fun i ->
+        float_of_int i |> Json_JCSnafi.is_encodable_num |> not
+      );
+    that "is_encodable_num: Invalid positive integer range" invalid_pos_int_range ~print:string_of_int
+      (fun i ->
+        float_of_int i |> Json_JCSnafi.is_encodable_num |> not
+      );
+
+    that "unparse_jcsnafi: Invalid negative integer range" invalid_neg_int_range ~print:string_of_int
+      (fun i ->
+        is_exn (Invalid_argument "float or out-of-range integer")
+          (fun () -> ignore (Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i))))
+      );
+    that "unparse_jcsnafi: Invalid positive integer range" invalid_pos_int_range ~print:string_of_int
+      (fun i ->
+        is_exn (Invalid_argument "float or out-of-range integer")
+          (fun () -> ignore (Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i))))
+      );    
   ] |> run_tests |> exit
