@@ -1,21 +1,34 @@
-module G = QCheck2.Gen
-
 let min_fi_int = (- (1 lsl 52))
 let max_fi_int = (1 lsl 52) - 1
 
 (* Generators *)
 
-let invalid_neg_fi_int_range = (QCheck2.Gen.int_range min_int (pred min_fi_int))
-let invalid_pos_fi_int_range = (QCheck2.Gen.int_range (succ max_fi_int) max_int)
+let gen_fi_int = QCheck2.Gen.int_range min_fi_int max_fi_int
+let gen_fi_float = QCheck2.Gen.map float_of_int gen_fi_int
+let invalid_neg_fi_int_range = QCheck2.Gen.int_range min_int (pred min_fi_int)
+let invalid_pos_fi_int_range = QCheck2.Gen.int_range (succ max_fi_int) max_int
 
 let gen_random_byte_string =
-  QCheck2.Gen.(map String.of_list (list_size (int_range 1 100) QCheck2.Gen.char))
+  QCheck2.Gen.(map String.of_list (list_size (int_range 1 100) char))
 
 let gen_unicode_char =
   QCheck2.Gen.(
     let gen_unicode_codepoint = oneof [int_range 0x0000 0xD7FF; int_range 0xE000 0x10FFFF] in
     map Uchar.of_int gen_unicode_codepoint
   )
+
+let gen_uchar_list len =
+  QCheck2.Gen.(
+    int_range 1 len >>= fun len' ->
+    list_size (pure len') gen_unicode_char
+  )
+
+let string_of_uchars uchars =
+  let buf = Buffer.create (List.length uchars) in
+  List.iter (Buffer.add_utf_8_uchar buf) uchars;
+  Buffer.contents buf
+
+let gen_unicode_string len = QCheck2.Gen.map string_of_uchars (gen_uchar_list len)
 
 let gen_lone_surrogate_string =
   let gen_surrogate_codepoint = QCheck2.Gen.int_range 0xD800 0xDFFF in
@@ -34,23 +47,22 @@ let gen_lone_surrogate_string =
   in
     QCheck2.Gen.map bytes_of_surrogate_codepoint gen_surrogate_codepoint
 
-let gen_unicode_string_with_surrogate =
-  QCheck2.Gen.(int_range 1 50 >>= fun len ->
-    let gen_pos = int_range 0 (len - 1) in
-    let gen_valid_uchars = list_size (return len) gen_unicode_char in
-    map3 (fun pos uchars surrogate_str ->
-            let buf = Buffer.create len in
-            List.iteri (fun i uchar ->
-                          if i = pos then Buffer.add_string buf surrogate_str
-                          else Buffer.add_utf_8_uchar buf uchar) uchars;
-            Buffer.contents buf
-         )
-         gen_pos
-         gen_valid_uchars
-         gen_lone_surrogate_string
+let string_of_uchars_with_inj pos inj uchars =
+  let buf = Buffer.create (List.length uchars  + String.length inj) in
+  List.iteri (fun i uchar ->
+    if i = pos then Buffer.add_string buf inj
+    else Buffer.add_utf_8_uchar buf uchar
+  ) uchars;
+  Buffer.contents buf
+
+let gen_unicode_string_with_surrogate len =
+  QCheck2.Gen.(gen_uchar_list len >>= fun uchars ->
+    let len' = List.length uchars in
+    let gen_pos = int_range 0 (len' - 1) in
+    map3 string_of_uchars_with_inj gen_pos gen_lone_surrogate_string (pure uchars)
   )
 
-  (* Helper functions *)
+(* Helper functions *)
 
 let is_exn exn (f : unit -> 'a) : bool =
   try
@@ -122,11 +134,11 @@ let () =
         QCheck2.assume (is_invalid_utf8 s);
         is_exn_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
-    that "unparse_jcsnafi: Unicode surrogate codepoint range" gen_unicode_string_with_surrogate ~print:identity
+    that "unparse_jcsnafi: Unicode surrogate codepoint range" (gen_unicode_string_with_surrogate 50) ~print:identity
       (fun s ->
         is_exn_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
-    that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" gen_unicode_string_with_surrogate ~print:identity
+    that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" (gen_unicode_string_with_surrogate 50) ~print:identity
       (fun s ->
         is_exn_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
