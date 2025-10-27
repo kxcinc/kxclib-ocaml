@@ -10,8 +10,9 @@ let gen_fi_float = QCheck2.Gen.map float_of_int gen_fi_int
 let invalid_neg_fi_int_range = QCheck2.Gen.int_range min_int (pred min_fi_int)
 let invalid_pos_fi_int_range = QCheck2.Gen.int_range (succ max_fi_int) max_int
 
-let gen_random_byte_string =
-  QCheck2.Gen.(map String.of_list (list_size (int_range 1 100) char))
+let gen_random_byte_string = QCheck2.Gen.(
+  let invalid_char = char_range (char_of_int 128) (char_of_int 255) in
+  map String.of_list (list_size (int_range 1 100) invalid_char))
 
 let gen_unicode_char =
   QCheck2.Gen.(
@@ -154,6 +155,54 @@ let gen_jv_with_duplicate_keys = QCheck2.Gen.(sized (fun size ->
     pure (`obj invalid_pairs)
   ))
 
+let rec contains_str = function
+  | `str _ -> true
+  | `arr xs -> List.exists contains_str xs
+  | `obj es -> List.exists (fun (_, v) -> contains_str v) es
+  | _ -> false
+
+let rec filter_gen p gen = QCheck2.Gen.(
+  gen >>= fun v -> if p v then pure v
+                   else filter_gen p gen
+)
+
+let gen_jv_with_string = filter_gen contains_str gen_jv_jcsnafi
+
+let rec gen_inject_one_bad_string bad_string_gen jv = QCheck2.Gen.(
+  match jv with
+  | `str _ ->
+    bad_string_gen >|= (fun s -> `str s)
+
+  | `arr xs ->
+      let candidates = List.mapi (fun i x -> (i, x)) xs in
+      let string_candidates = List.filter (fun (_, v) -> contains_str v) candidates in
+
+      if string_candidates = [] then pure (`arr xs)
+      else
+        oneofl string_candidates >>= fun (i', target) ->
+        gen_inject_one_bad_string bad_string_gen target >>= fun target' ->
+        let xs' = List.mapi (fun i x -> if i = i' then target' else x) xs in
+        pure (`arr xs')
+
+  | `obj es ->
+      let candidates = List.mapi (fun i e -> (i, e)) es in
+      let string_candidates = List.filter (fun (_, (_, v)) -> contains_str v) candidates in
+
+      if string_candidates = [] then pure (`obj es)
+      else
+        oneofl string_candidates >>= fun (i', (_, target)) ->
+        gen_inject_one_bad_string bad_string_gen target >>= fun target' ->
+        let es' = List.mapi (fun i (k, v) -> if i = i' then (k, target') else (k, v)) es in
+        pure (`obj es')
+
+  | _ -> pure jv)
+
+let gen_jv_with_invalid_unicode = QCheck2.Gen.(
+  gen_jv_with_string >>= gen_inject_one_bad_string gen_random_byte_string)
+
+let gen_jv_with_surrogates = QCheck2.Gen.(
+  gen_jv_with_string >>= gen_inject_one_bad_string gen_unicode_string_with_surrogate)
+
 (* Helper functions *)
 
 let does_throw exn (f : unit -> 'a) : bool =
@@ -231,19 +280,18 @@ let () =
         QCheck2.assume (is_invalid_utf8 s);
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
-    that "unparse_jcsnafi: Invalid UTF-8 object property name" gen_random_byte_string ~print:identity
-      (fun s ->
-        QCheck2.assume (is_invalid_utf8 s);
+    that "unparse_jcsnafi: Invalid UTF-8 object property name" gen_jv_with_invalid_unicode ~print:string_of_jv
+    (fun jv ->
         does_throw_p is_invalid_arg_prefix_invalid_unicode
-          (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
+          (fun () -> Json_JCSnafi.unparse_jcsnafi jv));
     that "unparse_jcsnafi: Unicode surrogate codepoint range" gen_unicode_string_with_surrogate ~print:identity
       (fun s ->
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
-    that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" gen_unicode_string_with_surrogate ~print:identity
-      (fun s ->
+    that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" gen_jv_with_surrogates ~print:string_of_jv
+      (fun jv ->
         does_throw_p is_invalid_arg_prefix_invalid_unicode
-          (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
+          (fun () -> Json_JCSnafi.unparse_jcsnafi jv));
 
     that "unparse_jcsnafi: Duplicated property names in object" gen_jv_with_duplicate_keys ~print:string_of_jv
       (fun jv ->
