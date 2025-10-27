@@ -1,3 +1,5 @@
+open Kxclib_priv_test_lib.Json
+open Kxclib.Json
 let min_fi_int = (- (1 lsl 52))
 let max_fi_int = (1 lsl 52) - 1
 
@@ -30,7 +32,7 @@ let string_of_uchars uchars =
 
 let gen_unicode_string_len len = QCheck2.Gen.map string_of_uchars (gen_uchar_list len)
 
-let gen_unicode_string = gen_unicode_string_len 50
+let gen_unicode_string = gen_unicode_string_len 10
 
 let gen_lone_surrogate_string =
   let gen_surrogate_codepoint = QCheck2.Gen.int_range 0xD800 0xDFFF in
@@ -87,17 +89,18 @@ let rec sized_jv size = QCheck2.Gen.(
     let gen_unique_fnames len =
       let module StringSet = Set.Make(String) in
       map (fun l -> StringSet.of_list l |> StringSet.elements)
-          (list_size (int_bound len) (gen_unicode_string_len 10)) in
+          (list_size (int_bound len) gen_unicode_string) in
 
     let gen_obj n =
       (if n > 1 then
          gen_len n >>= fun len ->
          gen_unique_fnames len >>= (fun keys ->
-           if keys = [] then pure []
+           let keys_len = List.length keys in
+           if keys_len = 0 then pure []
            else
               map2 (fun ks vs -> List.combine ks vs)
               (pure keys)
-              (list_repeat (List.length keys) (sized_jv (n / List.length keys))))
+              (list_repeat keys_len (sized_jv (n / keys_len))))
        else pure [])
        >|= (fun fs -> `obj fs) in
 
@@ -110,6 +113,23 @@ let rec sized_jv size = QCheck2.Gen.(
                      ])
 
 let gen_jv_jcsnafi = QCheck2.Gen.sized sized_jv
+
+let rec gen_shuffled_jv jv = QCheck2.Gen.(
+  match jv with
+  | `obj es ->
+      shuffle_l es >>= (fun shuffled_es ->
+        let shuffled_all = List.map (fun (k, v) ->
+          gen_shuffled_jv v >|= (fun v' -> (k, v'))) shuffled_es in
+          flatten_l shuffled_all >|= (fun obj' -> `obj obj'))
+  | `arr xs ->
+      let shuffled_xs = List.map gen_shuffled_jv xs in
+      flatten_l shuffled_xs >|= (fun xs' -> `arr xs')
+  | _ -> pure jv)
+
+let gen_jv_and_shuffled_pair = QCheck2.Gen.(
+  gen_jv_jcsnafi >>= fun jv ->
+  gen_shuffled_jv jv >>= fun shuffled_jv ->
+  pure (jv, shuffled_jv))
 
 (* Helper functions *)
 
@@ -163,6 +183,12 @@ let () =
         float_of_int i |> Json_JCSnafi.is_encodable_num |> not
       );
 
+    that "unparse_jcsnafi: shuffled object elements" gen_jv_and_shuffled_pair ~print:(QCheck2.Print.pair string_of_jv string_of_jv)
+      (fun (jv, shuffled_jv) -> 
+        QCheck2.assume (jv <> shuffled_jv);
+        let unparsed_jv = Json_JCSnafi.unparse_jcsnafi jv in
+        let unparsed_shuffled_jv = Json_JCSnafi.unparse_jcsnafi shuffled_jv in
+        unparsed_jv = unparsed_shuffled_jv);
     that "unparse_jcsnafi: Invalid negative integer range" invalid_neg_fi_int_range ~print:string_of_int
       (fun i ->
         does_throw (Invalid_argument "float or out-of-range integer")
