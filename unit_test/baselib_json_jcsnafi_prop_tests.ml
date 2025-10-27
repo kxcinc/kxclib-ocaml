@@ -28,7 +28,9 @@ let string_of_uchars uchars =
   List.iter (Buffer.add_utf_8_uchar buf) uchars;
   Buffer.contents buf
 
-let gen_unicode_string len = QCheck2.Gen.map string_of_uchars (gen_uchar_list len)
+let gen_unicode_string_len len = QCheck2.Gen.map string_of_uchars (gen_uchar_list len)
+
+let gen_unicode_string = gen_unicode_string_len 50
 
 let gen_lone_surrogate_string =
   let gen_surrogate_codepoint = QCheck2.Gen.int_range 0xD800 0xDFFF in
@@ -55,12 +57,64 @@ let string_of_uchars_with_inj pos inj uchars =
   ) uchars;
   Buffer.contents buf
 
-let gen_unicode_string_with_surrogate len =
+let gen_unicode_string_with_surrogate_len len =
   QCheck2.Gen.(gen_uchar_list len >>= fun uchars ->
     let len' = List.length uchars in
     let gen_pos = int_range 0 (len' - 1) in
     map3 string_of_uchars_with_inj gen_pos gen_lone_surrogate_string (pure uchars)
   )
+
+let gen_unicode_string_with_surrogate = gen_unicode_string_with_surrogate_len 50
+
+let rec sized_jv size = QCheck2.Gen.(
+    let gen_null = pure `null in
+    let gen_bool = bool >|= (fun x -> `bool x) in
+    let gen_int = gen_fi_int >|= (fun x -> `num (float_of_int x)) in (* TODO: int53p convert *)
+    let gen_float = gen_int in
+    let gen_num =
+      frequency [
+          5, gen_int;
+          2, gen_float;
+        ] in
+    let gen_str = gen_unicode_string >|= (fun s -> `str s) in
+    let gen_atom = oneof [ gen_null; gen_bool; gen_num; gen_str; ] in
+
+    let gen_len n = int_range 0 (n / 2) in
+
+    let gen_arr n =
+      (if n > 1 then
+         gen_len n >>= fun len ->
+         if len = 0 then pure []
+         else list_size (int_bound len) (sized_jv (n / len))
+       else pure [])
+      >|= (fun xs -> `arr xs) in
+
+    let gen_unique_fnames len =
+      let module StringSet = Set.Make(String) in
+      map (fun l -> StringSet.of_list l |> StringSet.elements)
+          (list_size (int_bound len) (gen_unicode_string_len 10)) in
+
+    let gen_obj n =
+      (if n > 1 then
+         gen_len n >>= fun len ->
+         gen_unique_fnames len >>= (fun keys ->
+           if keys = [] then pure []
+           else
+              map2 (fun ks vs -> List.combine ks vs)
+              (pure keys)
+              (list_repeat (List.length keys) (sized_jv (n / List.length keys))))
+       else pure [])
+       >|= (fun fs -> `obj fs) in
+
+    match size with
+    | 0 -> pure `null
+    | 1 -> gen_atom
+    | _ -> frequency [(1, gen_atom);
+                      (4, gen_arr size);
+                      (5, gen_obj size);
+                     ])
+
+let gen_jv_jcsnafi = QCheck2.Gen.sized sized_jv
 
 (* Helper functions *)
 
@@ -134,11 +188,11 @@ let () =
         QCheck2.assume (is_invalid_utf8 s);
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
-    that "unparse_jcsnafi: Unicode surrogate codepoint range" (gen_unicode_string_with_surrogate 50) ~print:identity
+    that "unparse_jcsnafi: Unicode surrogate codepoint range" gen_unicode_string_with_surrogate ~print:identity
       (fun s ->
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
-    that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" (gen_unicode_string_with_surrogate 50) ~print:identity
+    that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" gen_unicode_string_with_surrogate ~print:identity
       (fun s ->
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
