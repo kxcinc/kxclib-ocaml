@@ -68,6 +68,11 @@ let gen_unicode_string_with_surrogate_len len =
 
 let gen_unicode_string_with_surrogate = gen_unicode_string_with_surrogate_len 50
 
+let gen_unique_fnames len = QCheck2.Gen.(
+  let module StringSet = Set.Make(String) in
+  map (fun l -> StringSet.of_list l |> StringSet.elements)
+      (list_repeat len gen_unicode_string))
+
 let rec sized_jv size = QCheck2.Gen.(
     let gen_null = pure `null in
     let gen_bool = bool >|= (fun x -> `bool x) in
@@ -86,21 +91,16 @@ let rec sized_jv size = QCheck2.Gen.(
        else pure [])
       >|= (fun xs -> `arr xs) in
 
-    let gen_unique_fnames len =
-      let module StringSet = Set.Make(String) in
-      map (fun l -> StringSet.of_list l |> StringSet.elements)
-          (list_size (int_bound len) gen_unicode_string) in
-
     let gen_obj n =
       (if n > 1 then
          gen_len n >>= fun len ->
-         gen_unique_fnames len >>= (fun keys ->
-           let keys_len = List.length keys in
-           if keys_len = 0 then pure []
-           else
-              map2 (fun ks vs -> List.combine ks vs)
-              (pure keys)
-              (list_repeat keys_len (sized_jv (n / keys_len))))
+           gen_unique_fnames len >>= (fun keys ->
+             let keys_len = List.length keys in
+             if keys_len = 0 then pure []
+             else
+               map2 (fun ks vs -> List.combine ks vs)
+               (pure keys)
+               (list_repeat keys_len (sized_jv (n / keys_len))))
        else pure [])
        >|= (fun fs -> `obj fs) in
 
@@ -130,6 +130,29 @@ let gen_jv_and_shuffled_pair = QCheck2.Gen.(
   gen_jv_jcsnafi >>= fun jv ->
   gen_shuffled_jv jv >>= fun shuffled_jv ->
   pure (jv, shuffled_jv))
+
+let gen_jv_with_duplicate_keys = QCheck2.Gen.(sized (fun size ->
+    (* n is number of object keys *)
+    let n = max 2 size in
+    int_range 1 (max 1 (n / 2)) >>= fun len ->
+
+    (* create valid key-val pair *)
+    gen_unique_fnames len >>= fun keys ->
+    let keys_len = List.length keys in
+    let val_size = if keys_len = 0 then 0
+                   else (n - 1) / keys_len in
+    list_repeat keys_len (sized_jv val_size) >>= fun vals ->
+    let valid_pairs = List.combine keys vals in
+
+    (* create duplicated key *)
+    oneofl keys >>= fun dup_key ->
+
+    (* create new value for duplicated key *)
+    sized_jv (max 1 (n / 2)) >>= fun val' ->
+
+    let invalid_pairs = (dup_key, val') :: valid_pairs in
+    pure (`obj invalid_pairs)
+  ))
 
 (* Helper functions *)
 
@@ -163,6 +186,10 @@ let is_invalid_utf8 str =
 
 let is_invalid_arg_prefix_invalid_unicode = function
   | Invalid_argument msg -> String.starts_with "Invalid Unicode:" msg
+  | _ -> false
+
+let is_invalid_arg_prefix prefix = function
+  | Invalid_argument msg -> String.starts_with prefix msg
   | _ -> false
 
 (* Properties *)
@@ -217,4 +244,10 @@ let () =
       (fun s ->
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
+
+    that "unparse_jcsnafi: Duplicated property names in object" gen_jv_with_duplicate_keys ~print:string_of_jv
+      (fun jv ->
+        does_throw_p (is_invalid_arg_prefix "Duplicate property names:")
+          (fun () -> Json_JCSnafi.unparse_jcsnafi jv)
+        )
   ] |> run_tests |> exit
