@@ -70,12 +70,7 @@ let rec sized_jv size = QCheck2.Gen.(
     let gen_null = pure `null in
     let gen_bool = bool >|= (fun x -> `bool x) in
     let gen_int = gen_fi_int >|= (fun x -> `num (float_of_int x)) in (* TODO: int53p convert *)
-    let gen_float = gen_int in
-    let gen_num =
-      frequency [
-          5, gen_int;
-          2, gen_float;
-        ] in
+    let gen_num = gen_int in
     let gen_str = gen_unicode_string >|= (fun s -> `str s) in
     let gen_atom = oneof [ gen_null; gen_bool; gen_num; gen_str; ] in
 
