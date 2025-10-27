@@ -3170,10 +3170,11 @@ module Json_JCSnafi : sig
 end = struct
   open Json
 
+  let min_fi_float = Float.of_int (- (1 lsl 52))
+  let max_fi_float = Float.of_int ((1 lsl 52) - 1)
+
   let is_encodable_num (f : float) : bool =
-    let min_fi_float = Float.of_int (- (1 lsl 52)) in
-    let max_fi_float = Float.of_int ((1 lsl 52) - 1) in
-      f >= min_fi_float && f <= max_fi_float && mod_float f 1.0 = 0.0
+    f >= min_fi_float && f <= max_fi_float && Float.is_integer f
 
   let compare_field_name (str1 : string) (str2 : string) : int =
     let string_to_utf16_bytes (str: string) : bytes =
@@ -3181,9 +3182,7 @@ end = struct
       let buf = Buffer.create str_len in
 
       let rec loop (i : int) : unit = 
-        if i >= str_len
-        then ()
-        else
+        if i < str_len then
           let utf8dec = String.get_utf_8_uchar str i in
           let uchar = Uchar.utf_decode_uchar utf8dec in
           let utf8dec_len = Uchar.utf_decode_length utf8dec in
@@ -3248,12 +3247,15 @@ end = struct
         let is_all_ascii_property = List.for_all (fun e -> fst e |> is_ascii_str) es in
         let cmp = if is_all_ascii_property then String.compare
                   else compare_field_name in
-        let cmp_with_unique_prop x y = let ret = cmp x y
-                                       in if ret = 0 then raise (Invalid_argument ("Duplicate property names: " ^ x))
-                                          else ret in
+        let cmp_asserting_uniq x y =
+          let ret = cmp x y in
+          if ret = 0
+          then raise (Invalid_argument ("Duplicate property names: " ^ x))
+          else ret
+        in
         let serialize_elem : string * jv -> string =
           fun (key, value) -> serialize_string key ^ ":" ^ unparse_jcsnafi value in
-        let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp_with_unique_prop key1 key2) es in
+        let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp_asserting_uniq key1 key2) es in
         concat_with_blackets "{" "}" (List.map serialize_elem sorted_obj)
     | `arr xs ->
         concat_with_blackets "[" "]" (List.map unparse_jcsnafi xs)

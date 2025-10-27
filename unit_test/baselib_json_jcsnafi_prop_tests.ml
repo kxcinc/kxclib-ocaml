@@ -64,7 +64,7 @@ let gen_unicode_string_with_surrogate len =
 
 (* Helper functions *)
 
-let is_exn exn (f : unit -> 'a) : bool =
+let does_throw exn (f : unit -> 'a) : bool =
   try
     ignore (f ());
     false
@@ -72,7 +72,7 @@ let is_exn exn (f : unit -> 'a) : bool =
   | e when e = exn -> true
   | _ -> false
 
-let is_exn_p (p : exn -> bool) (f : unit -> 'a) : bool =
+let does_throw_p (p : exn -> bool) (f : unit -> 'a) : bool =
   try
     ignore (f ());
     false
@@ -116,30 +116,30 @@ let () =
 
     that "unparse_jcsnafi: Invalid negative integer range" invalid_neg_fi_int_range ~print:string_of_int
       (fun i ->
-        is_exn (Invalid_argument "float or out-of-range integer")
+        does_throw (Invalid_argument "float or out-of-range integer")
           (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i)))
       );
     that "unparse_jcsnafi: Invalid positive integer range" invalid_pos_fi_int_range ~print:string_of_int
       (fun i ->
-        is_exn (Invalid_argument "float or out-of-range integer")
+        does_throw (Invalid_argument "float or out-of-range integer")
           (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i)))
       );
     that "unparse_jcsnafi: Invalid UTF-8 string" gen_random_byte_string ~print:identity
       (fun s ->
         QCheck2.assume (is_invalid_utf8 s);
-        is_exn_p is_invalid_arg_prefix_invalid_unicode
+        does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
     that "unparse_jcsnafi: Invalid UTF-8 object property name" gen_random_byte_string ~print:identity
       (fun s ->
         QCheck2.assume (is_invalid_utf8 s);
-        is_exn_p is_invalid_arg_prefix_invalid_unicode
+        does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
     that "unparse_jcsnafi: Unicode surrogate codepoint range" (gen_unicode_string_with_surrogate 50) ~print:identity
       (fun s ->
-        is_exn_p is_invalid_arg_prefix_invalid_unicode
+        does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
     that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" (gen_unicode_string_with_surrogate 50) ~print:identity
       (fun s ->
-        is_exn_p is_invalid_arg_prefix_invalid_unicode
+        does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`obj [(s, `null)]))); (* TODO JSON.jv generator *)
   ] |> run_tests |> exit
