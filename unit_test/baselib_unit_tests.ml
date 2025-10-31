@@ -764,10 +764,10 @@ let json_unparse_jcsnafi =
       case (`num (-0.)) {|0|};
       case (`num 0.) {|0|};
       case (`num (+0.)) {|0|};
-      case_exn (`num (Float.pred min_fi_float)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num (Float.succ max_fi_float)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num (-1.5)) (Invalid_argument "float or out-of-range integer");
-      case_exn (`num 4.8) (Invalid_argument "float or out-of-range integer");
+      case_exn (`num (Float.pred min_fi_float)) (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: -4503599627370497.000000)");
+      case_exn (`num (Float.succ max_fi_float)) (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: 4503599627370495.500000)");
+      case_exn (`num (-1.5)) (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: -1.500000)");
+      case_exn (`num 4.8) (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: 4.800000)");
 
       (* object case *)
       case (`obj []) {|{}|};
@@ -828,9 +828,9 @@ let json_unparse_jcsnafi =
           {|["fooあ€$\u000f\nA'B\"\\\\\"/"]|};
       case (`arr [`num 1.0]) {|[1]|};
       case (`arr [`num (-1.0)]) {|[-1]|};
-      case_exn (`arr [`num 2.3]) (Invalid_argument "float or out-of-range integer");
-      case_exn (`arr [`num (-5.0); `num 2.3]) (Invalid_argument "float or out-of-range integer");
-      case_exn (`arr [`num 2.3; `num (-5.0)]) (Invalid_argument "float or out-of-range integer");
+      case_exn (`arr [`num 2.3]) (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: 2.300000)");
+      case_exn (`arr [`num (-5.0); `num 2.3]) (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: 2.300000)");
+      case_exn (`arr [`num 2.3; `num (-5.0)]) (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: 2.300000)");
       case (`arr [`obj []]) {|[{}]|};
       case (`arr [`obj [("null", `null)]]) {|[{"null":null}]|};
       case (`arr [`obj [("boolean", `bool true)]]) {|[{"boolean":true}]|};
@@ -884,7 +884,7 @@ let json_unparse_jcsnafi =
       case_exn (`obj [ ("numbers", `arr [`num 333333333.33333329; `num 1E30; `num 4.50; `num 2e-3; `num 0.000000000000000000000000001]);
                    ("string", `str "\u{20ac}$\u{000F}\u{000a}A'\u{0042}\u{0022}\u{005c}\\\"/");
                    ("literals", `arr [`null; `bool true; `bool false])])
-               (Invalid_argument "float or out-of-range integer");
+               (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: 333333333.333333)");
                (* {|{"literals":[null,true,false],"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA'B\"\\\\\"/"}|}; *)
 
     ] |&> (fun case -> get_and_incr counter |> case)

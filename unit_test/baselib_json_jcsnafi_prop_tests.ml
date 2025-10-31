@@ -308,12 +308,12 @@ let () =
         unparsed_jv = unparsed_shuffled_jv);
     that "unparse_jcsnafi: Invalid negative integer range" invalid_neg_fi_int_range ~print:string_of_int
       (fun i ->
-        does_throw (Invalid_argument "float or out-of-range integer")
+        does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JSCnafi (encountering:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i)))
       );
     that "unparse_jcsnafi: Invalid positive integer range" invalid_pos_fi_int_range ~print:string_of_int
       (fun i ->
-        does_throw (Invalid_argument "float or out-of-range integer")
+        does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JSCnafi (encountering:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i)))
       );
     that "unparse_jcsnafi: Invalid UTF-8 string" gen_random_byte_string ~print:identity
@@ -322,7 +322,7 @@ let () =
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
     that "unparse_jcsnafi: Invalid UTF-8 object property name" gen_jv_with_invalid_unicode ~print:string_of_jv
-    (fun jv ->
+      (fun jv ->
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi jv));
     that "unparse_jcsnafi: Unicode surrogate codepoint range" gen_unicode_string_with_surrogate ~print:identity

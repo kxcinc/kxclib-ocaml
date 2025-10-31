@@ -3246,7 +3246,7 @@ end = struct
     | `num n ->
         if is_encodable_num n
         then string_of_int (int_of_float n)
-        else raise (Invalid_argument "float or out-of-range integer")
+        else raise (Invalid_argument (sprintf "Number cannot be safely encoded with Json_JSCnafi (encountering: %f)" n))
     | `obj es ->
         let is_ascii_str = String.for_all (fun c -> Char.code c <= 127) in
         let is_all_ascii_property = List.for_all (fun e -> fst e |> is_ascii_str) es in
