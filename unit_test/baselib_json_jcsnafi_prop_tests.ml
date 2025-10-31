@@ -289,6 +289,13 @@ let () =
         float_of_int i |> Json_JCSnafi.is_encodable_num |> not
       );
 
+    that "compare_field_name: " (QCheck2.Gen.pair gen_unicode_string gen_unicode_string)
+     (fun (s1, s2) -> 
+        let ret = Json_JCSnafi.compare_field_name s1 s2 in
+        let flip_ret = Json_JCSnafi.compare_field_name s2 s1 in
+        ret = (- flip_ret)
+        );
+    
     that "unparse_jcsnafi: No extra space is included" gen_jv_jcsnafi ~print:string_of_jv
       (fun jv ->
          let unparsed = Json_JCSnafi.unparse_jcsnafi jv in
@@ -326,10 +333,9 @@ let () =
       (fun jv ->
         does_throw_p is_invalid_arg_prefix_invalid_unicode
           (fun () -> Json_JCSnafi.unparse_jcsnafi jv));
-
     that "unparse_jcsnafi: Duplicated property names in object" gen_jv_with_duplicate_keys ~print:string_of_jv
       (fun jv ->
         does_throw_p (is_invalid_arg_prefix "Duplicate property names:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi jv)
-        )
+        );
   ] |> run_tests |> exit
