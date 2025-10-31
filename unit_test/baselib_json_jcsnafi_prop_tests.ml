@@ -241,6 +241,36 @@ let is_invalid_arg_prefix prefix = function
   | Invalid_argument msg -> String.starts_with prefix msg
   | _ -> false
 
+let is_whitespace = function
+ | ' ' | '\t' | '\n' | '\r'  -> true
+ | _ -> false
+
+let count_preceding_backslashes s i =
+  let rec count j cnt = 
+    if j < 0 || s.[j] <> '\\' then cnt
+    else count (j - 1) (cnt + 1)
+in
+  count (i - 1) 0
+
+let has_extra_whitespace_outside_string s =
+  let len = String.length s in
+  let rec loop i in_string = 
+    if i >= len then false
+    else
+      let c = s.[i] in
+      if c = '"' then
+        let escape_count = count_preceding_backslashes s i in
+        let in_string' = if escape_count mod 2 = 0 then not in_string
+                         else in_string
+        in
+          loop (i + 1) in_string'
+      else if not in_string && is_whitespace c then
+        true
+      else
+        loop (i + 1) in_string
+  in
+    loop 0 false
+
 (* Properties *)
 
 let () =
@@ -259,6 +289,10 @@ let () =
         float_of_int i |> Json_JCSnafi.is_encodable_num |> not
       );
 
+    that "unparse_jcsnafi: No extra space is included" gen_jv_jcsnafi ~print:string_of_jv
+      (fun jv ->
+         let unparsed = Json_JCSnafi.unparse_jcsnafi jv in
+         not (has_extra_whitespace_outside_string unparsed));
     that "unparse_jcsnafi: shuffled object elements" gen_jv_and_shuffled_pair ~print:(QCheck2.Print.pair string_of_jv string_of_jv)
       (fun (jv, shuffled_jv) -> 
         QCheck2.assume (jv <> shuffled_jv);
