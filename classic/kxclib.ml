@@ -3164,7 +3164,10 @@ end
 module Json_JCSnafi : sig
   open Json
 
+  val is_encodable_str : string -> bool
   val is_encodable_num : float -> bool
+  (* val is_encodable : jv -> bool *)
+
   val compare_field_name : string -> string -> int
   val unparse_jcsnafi : jv -> string
 end = struct
@@ -3188,47 +3191,60 @@ end = struct
     loop 0;
     Buffer.to_bytes buf
 
-  let serialize_string_jsc (dest : Buffer.t) (str : string) : string =
+  let iter_valid_uchar (f : Uchar.t -> unit) (str : string) : unit =
     let str_len = String.length str in
-
     let rec loop (i : int) : unit = 
-      if i >= str_len then ()
+      if i >= str_len then
+        ()
       else
         let utf8dec = String.get_utf_8_uchar str i in
-        let uchar = Uchar.utf_decode_uchar utf8dec in
-        let uchar_int = Uchar.to_int uchar in
-          if not (Uchar.utf_decode_is_valid utf8dec) then
-            raise (Invalid_argument ("Invalid Unicode: " ^ str))
+        
+        if not (Uchar.utf_decode_is_valid utf8dec) then
+          raise (Invalid_argument ("Invalid Unicode: " ^ str))
+        else
+          let uchar = Uchar.utf_decode_uchar utf8dec in
+          f uchar;
 
-          else
-            (* ref. https://www.rfc-editor.org/rfc/rfc8785#section-3.2.2.2 *)
-            let utf8dec_len = Uchar.utf_decode_length utf8dec in
+          let utf8dec_len = Uchar.utf_decode_length utf8dec in
+          loop (i + utf8dec_len)
+    in
+    loop 0
 
-            (match uchar_int with
-             | 0x0008 -> Buffer.add_string dest {|\b|}
-             | 0x0009 -> Buffer.add_string dest {|\t|}
-             | 0x000A -> Buffer.add_string dest {|\n|}
-             | 0x000C -> Buffer.add_string dest {|\f|}
-             | 0x000D -> Buffer.add_string dest {|\r|}
-             | ui when ui >= 0x0000 && ui <= 0x001F
-                 -> Buffer.add_string dest (Printf.sprintf "\\u%04x" ui)
-             | 0x005C -> Buffer.add_string dest {|\\|}
-             | 0x0022 -> Buffer.add_string dest {|\"|}
-             | _ -> Buffer.add_utf_8_uchar dest uchar 
-            );
-            loop (i + utf8dec_len)
+  let serialize_string_jsc (dest : Buffer.t) (str : string) : string =
+
+    let f (uchar : Uchar.t) : unit =
+      let uchar_int = Uchar.to_int uchar in
+        (* ref. https://www.rfc-editor.org/rfc/rfc8785#section-3.2.2.2 *)
+        (match uchar_int with
+         | 0x0008 -> Buffer.add_string dest {|\b|}
+         | 0x0009 -> Buffer.add_string dest {|\t|}
+         | 0x000A -> Buffer.add_string dest {|\n|}
+         | 0x000C -> Buffer.add_string dest {|\f|}
+         | 0x000D -> Buffer.add_string dest {|\r|}
+         | ui when ui >= 0x0000 && ui <= 0x001F
+             -> Buffer.add_string dest (Printf.sprintf "\\u%04x" ui)
+         | 0x005C -> Buffer.add_string dest {|\\|}
+         | 0x0022 -> Buffer.add_string dest {|\"|}
+         | _ -> Buffer.add_utf_8_uchar dest uchar 
+        )
     in
     Buffer.add_string dest "\"";
-    loop 0;
+    iter_valid_uchar f str;
     Buffer.add_string dest "\"";
     Buffer.contents dest
+
+  let is_encodable_str (str : string) : bool =
+    try
+      iter_valid_uchar (fun _ -> ()) str;
+      true
+    with
+    | Invalid_argument _ -> false
 
   let is_encodable_num (f : float) : bool =
     f >= min_fi_float && f <= max_fi_float && Float.is_integer f
 
   let compare_field_name (str1 : string) (str2 : string) : int =
     Bytes.compare (utf16_bytes_of_string str1) (utf16_bytes_of_string str2)
-
 
   let rec unparse_jcsnafi (jv : jv) : string =
     let concat_with_blackets lb rb ss = lb ^ String.concat "," ss ^ rb in

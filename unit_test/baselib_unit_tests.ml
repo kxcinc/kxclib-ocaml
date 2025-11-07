@@ -889,7 +889,99 @@ let json_unparse_jcsnafi =
 
     ] |&> (fun case -> get_and_incr counter |> case)
   ]
-let jcsnafi_is_encodable_num = 
+
+let jcsnafi_is_encodable_str = 
+  let counter = ref 0 in
+  let case s expected_value id =
+    test_case (sprintf "jcsnafi_is_encodable_str_%d:" id) `Quick (fun () ->
+        check bool
+          (sprintf "jcsnafi_is_encodable_str:")
+          expected_value (Json_JCSnafi.is_encodable_str s)
+    ) in
+   [
+    "jcsnafi_is_encodable_str", [
+      case "\u{20ac}" true;
+      case "$" true;	
+      case "\u{000F}" true;
+      case "\u{000a}" true; (* "\x0A" *)
+      case "A" true;	
+      case "'" true;
+      case "\u{0042}" true;
+      case "\u{0022}" true; (* "\x22" *)
+      case "\u{005c}" true; (* "\x5C" *)
+      case "\\" true;
+      case "\"" true;
+      case "/" true;
+      case "\x08" true;
+      case "\x09" true;
+      case "\x0C" true;
+      case "\x0D" true;
+
+      (* Boundary of 1-byte characters |00..7F| *)
+      case "\x00" true;
+      case "\x7F" true;
+      case "\x80" false;
+
+      (* Boundary of 2-byte characters |C2..DF|80..BF| *)
+      (*   1st byte check |C2..DF|<valid>| *)
+      case "\xC1\x80" false;
+      case "\xC2\x80" true;
+      case "\xDF\x80" true;
+      case "\xE0\x80" false;
+      (*   2st byte check |C2 and DF|80..BF| *)
+      case "\xC2\x7F" false;
+      case "\xC2\xBF" true;
+      case "\xC2\xC0" false;
+      case "\xDF\x7F" false;
+      case "\xDF\xBF" true;
+      case "\xDF\xC0" false;
+
+      (* Boundary of 3-byte characters |E0..EF|80..BF^|80..BF| *)
+      (*   1st byte check |E0..EF|<valid>|<valid>| *)
+      case "\xDF\x80\x80" false;
+      case "\xE0\xA0\x80" true; (* ^if 1st byte is E0, 2nd byte must be outside the range E0..9F. *)
+      case "\xEF\xBF\xBF" true;
+      case "\xF0\x80\x80" false;
+      (*   2nd byte check |<valid>|80..BF|<valid>|*)
+      case "\xE1\x7F\x80" false;
+      case "\xE1\x80\x80" true; (* include checking 3rd byte *)
+      case "\xE1\xBF\x80" true;
+      case "\xE1\xC0\x80" false;
+      (*   3rd byte check |<valid>|<valid>|80..BF|*)
+      case "\xE1\x80\x7F" false;
+      case "\xE1\x80\xBF" true;
+      case "\xE1\x80\xC0" false;
+      (*   3-byte characters special check *)
+      case "\xE0\x9F\xBF" false;
+      case "\xED\x9F\xBF" true;
+      case "\xED\xA0\x80" false;
+      case "\xED\xBF\xBF" false;
+      case "\xEE\x80\x80" true;
+
+      (* Boundary of 4-byte characters |F0..F4|80..BF^|80..BF|80..BF| *)
+      (*   1st byte check |F0..F4|<valid>|<valid>|<valid>| *)
+      case "\xEF\xBF\xBF\xBF" false;
+      case "\xF0\x90\x80\x80" true; (* ^if 1st byte is F0, 2nd byte is invalid if if it falls within the range 80..8F. *)
+      case "\xF4\x8F\xBF\xBF" true; (* ^if 1st byte is F4, 2nd byte is invalid if it is 90 or greater. *)
+      case "\xF5\x80\x80\x80" false;
+      (*   2nd byte check |<valid>|80..BF|<valid>|<valid>| *)
+      case "\xF1\x7F\x80\x80" false;
+      case "\xF1\x80\x80\x80" true; (* include checking 3rd and 4th byte *)
+      case "\xF1\xBF\xBF\xBF" true; (* include checking 3rd and 4th byte *)
+      case "\xF1\xC0\x80\x80" false;
+      (*   3rd byte check |<valid>|<valid>|80..BF|<valid>| *)
+      case "\xF1\x80\x7F\x80" false;
+      case "\xF1\x80\xC0\x80" false;
+      (*   4th byte check |<valid>|<valid>|<valid>|80..BF| *)
+      case "\xF1\x80\x80\x7F" false;
+      case "\xF1\x80\x80\xC0" false;
+      (*   4-byte characters special check *)
+      case "\xF0\x8F\xBF\xBF" false;
+      case "\xF4\x90\x80\x80" false;
+    ] |&> (fun case -> get_and_incr counter |> case)
+  ]
+
+  let jcsnafi_is_encodable_num = 
   let counter = ref 0 in
   let case f expected_value id =
     test_case (sprintf "jcsnafi_is_encodable_num_%d:" id) `Quick (fun () ->
@@ -1146,6 +1238,7 @@ let () =
     @ json_escaped_suite
     @ json_unparse @ json_show
     @ json_unparse_jcsnafi
+    @ jcsnafi_is_encodable_str
     @ jcsnafi_is_encodable_num
     @ jcsnafi_compare_field_name
     @ jcsnafi_compare_field_name_rfc8785
