@@ -3203,8 +3203,7 @@ end = struct
     iter_valid_uchar f str;
     Buffer.to_bytes buf
 
-  let serialize_string_jcs (dest : Buffer.t) (str : string) : string =
-
+  let serialize_string_jcs (dest : Buffer.t) (str : string) : unit =
     let f (uchar : Uchar.t) : unit =
       let uchar_int = Uchar.to_int uchar in
         (* ref. https://www.rfc-editor.org/rfc/rfc8785#section-3.2.2.2 *)
@@ -3223,8 +3222,7 @@ end = struct
     in
     Buffer.add_string dest "\"";
     iter_valid_uchar f str;
-    Buffer.add_string dest "\"";
-    Buffer.contents dest
+    Buffer.add_string dest "\""
 
   let is_encodable_str (str : string) : bool =
     try
@@ -3271,38 +3269,56 @@ end = struct
         with
         | Invalid_argument _ -> false
 
-  let rec unparse_jcsnafi (jv : jv) : string =
-    let concat_with_blackets lb rb ss = lb ^ String.concat "," ss ^ rb in
+  let iter_sep (sep : char) (buf : Buffer.t) (f : Buffer.t -> 'a -> unit) (xs : 'a list) : unit =
+    match xs with
+    | [] -> ()
+    | hd :: tl ->
+        f buf hd;
+        List.iter (fun x ->
+          Buffer.add_char buf sep;
+          f buf x) tl
 
-    let serialize_string (str : string) : string =
-      let buf = Buffer.create (String.length str) in
-      serialize_string_jcs buf str
-    in
-
+  let rec unparse_jcsnafi0 (dest : Buffer.t) (jv : jv) : unit =
     match jv with
-    | `null -> "null"
-    | `bool true -> "true"
-    | `bool false -> "false"
-    | `str s -> serialize_string s
+    | `null -> Buffer.add_string dest "null"
+    | `bool true -> Buffer.add_string dest "true"
+    | `bool false -> Buffer.add_string dest "false"
+    | `str s -> serialize_string_jcs dest s
     | `num n ->
         if is_encodable_num n
-        then string_of_int (int_of_float n)
+        then Buffer.add_string dest (string_of_int (int_of_float n))
         else raise (Invalid_argument (sprintf "Number cannot be safely encoded with Json_JCSnafi (encountering: %f)" n))
     | `obj es ->
         let cmp = if is_all_ascii_property es then String.compare
                   else compare_field_name in
+
         let cmp_asserting_uniq x y =
           let ret = cmp x y in
           if ret = 0
           then raise (Invalid_argument ("Duplicate property names: " ^ x))
           else ret
         in
-        let serialize_elem : string * jv -> string =
-          fun (key, value) -> serialize_string key ^ ":" ^ unparse_jcsnafi value in
+
         let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp_asserting_uniq key1 key2) es in
-        concat_with_blackets "{" "}" (List.map serialize_elem sorted_obj)
+        
+        let serialize_elem (buf : Buffer.t) (key, value) : unit =
+          serialize_string_jcs buf key;
+          Buffer.add_char buf ':';
+          unparse_jcsnafi0 buf value
+        in
+
+        Buffer.add_char dest '{';
+        iter_sep ',' dest serialize_elem sorted_obj;
+        Buffer.add_char dest '}'
     | `arr xs ->
-        concat_with_blackets "[" "]" (List.map unparse_jcsnafi xs)
+        Buffer.add_char dest '[';
+        iter_sep ',' dest unparse_jcsnafi0 xs;
+        Buffer.add_char dest ']'
+
+  let unparse_jcsnafi (jv : jv) : string =
+    let buf = Buffer.create 1024 in
+    unparse_jcsnafi0 buf jv;
+    Buffer.contents buf
 end
 
 module Jv : sig
