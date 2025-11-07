@@ -3166,8 +3166,7 @@ module Json_JCSnafi : sig
 
   val is_encodable_str : string -> bool
   val is_encodable_num : float -> bool
-  (* val is_encodable : jv -> bool *)
-
+  val is_encodable : jv -> bool
   val compare_field_name : string -> string -> int
   val unparse_jcsnafi : jv -> string
 end = struct
@@ -3240,6 +3239,38 @@ end = struct
   let compare_field_name (str1 : string) (str2 : string) : int =
     Bytes.compare (utf16_bytes_of_string str1) (utf16_bytes_of_string str2)
 
+  let is_ascii_str = String.for_all (fun c -> Char.code c <= 127)
+
+  let is_all_ascii_property (es : (string * jv) list) : bool =
+    List.for_all (fun e -> fst e |> is_ascii_str) es
+
+  let rec is_encodable (jv : jv) : bool =
+    match jv with
+    | `null -> true
+    | `bool _ -> true
+    | `num n -> is_encodable_num n
+    | `str s -> is_encodable_str s
+    | `arr xs -> List.for_all is_encodable xs
+    | `obj es ->
+        let cmp = if is_all_ascii_property es then String.compare
+                    else compare_field_name in
+
+        let cmp_asserting_uniq x y =
+          let ret = cmp x y in
+          if ret = 0
+          then raise (Invalid_argument ("Duplicate property names: " ^ x))
+          else ret
+        in
+
+        try
+          let _ = List.sort (fun (key1, _) (key2, _) -> cmp_asserting_uniq key1 key2) es in
+
+          (* No need to check the key `_k`, 
+             because `compare_field_name` has also been checked for valid UTF-8 encoding. *)
+          List.for_all (fun (_k, v) -> is_encodable v) es
+        with
+        | Invalid_argument _ -> false
+
   let rec unparse_jcsnafi (jv : jv) : string =
     let concat_with_blackets lb rb ss = lb ^ String.concat "," ss ^ rb in
 
@@ -3258,9 +3289,7 @@ end = struct
         then string_of_int (int_of_float n)
         else raise (Invalid_argument (sprintf "Number cannot be safely encoded with Json_JSCnafi (encountering: %f)" n))
     | `obj es ->
-        let is_ascii_str = String.for_all (fun c -> Char.code c <= 127) in
-        let is_all_ascii_property = List.for_all (fun e -> fst e |> is_ascii_str) es in
-        let cmp = if is_all_ascii_property then String.compare
+        let cmp = if is_all_ascii_property es then String.compare
                   else compare_field_name in
         let cmp_asserting_uniq x y =
           let ret = cmp x y in

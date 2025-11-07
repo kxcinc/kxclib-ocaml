@@ -790,10 +790,10 @@ let json_unparse_jcsnafi =
       case (`obj [("string", `str "/")]) {|{"string":"/"}|};
       case (`obj [("あ", `null)]) {|{"あ":null}|};
       case (`obj [("\u{20ac}", `null)]) {|{"€":null}|};
-      case (`obj [("$", `null)])	{|{"$":null}|};	
+      case (`obj [("$", `null)]) {|{"$":null}|};
       case (`obj [("\u{000F}", `null)]) {|{"\u000f":null}|};
       case (`obj [("\u{000a}", `null)]) {|{"\n":null}|};
-      case (`obj [("A", `null)]) {|{"A":null}|};	
+      case (`obj [("A", `null)]) {|{"A":null}|};
       case (`obj [("'", `null)]) {|{"'":null}|};
       case (`obj [("\u{0042}", `null)]) {|{"B":null}|};
       case (`obj [("\u{0022}", `null)]) {|{"\"":null}|};
@@ -872,7 +872,7 @@ let json_unparse_jcsnafi =
       case (`arr [`arr [`bool true; `bool false]]) {|[[true,false]]|};
       case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]]) {|[[true,false],[2,-5]]|};
       case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]; `arr [`obj [("name", `str "foo"); ("age", `num 30.0)]; `obj [("name", `str "bar"); ("age", `num 23.0)]]])
-      {|[[true,false],[2,-5],[{"age":30,"name":"foo"},{"age":23,"name":"bar"}]]|};
+           {|[[true,false],[2,-5],[{"age":30,"name":"foo"},{"age":23,"name":"bar"}]]|};
 
       (* RFC 8785, sec3.2.2 for jcsnafi*)
       case (`obj [ ("numbers", `arr [`num 333333333.0; `num 4.0; `num 2e+3; `num 0.0]);
@@ -887,6 +887,233 @@ let json_unparse_jcsnafi =
                (Invalid_argument "Number cannot be safely encoded with Json_JSCnafi (encountering: 333333333.333333)");
                (* {|{"literals":[null,true,false],"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA'B\"\\\\\"/"}|}; *)
 
+    ] |&> (fun case -> get_and_incr counter |> case)
+  ]
+
+let jcsnafi_is_encodable =
+  let counter = ref 0 in
+  let case jv expected_value id =
+    test_case (sprintf "jcsnafi_is_encodable_%d" id ) `Quick (fun () ->
+        check bool
+          (sprintf "jcsnafi_is_encodable")
+          expected_value (Json_JCSnafi.is_encodable jv)
+    )  in
+  let min_fi_float = Float.of_int (- (1 lsl 52)) in
+  let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
+   [
+    "jcsnafi_is_encodable", [
+      (* literal case *)
+      case (`null) true;
+      case (`bool true) true;
+      case (`bool false) true;
+
+      (* string case *)
+      case (`str "\u{20ac}") true;
+      case (`str "$")	true;	
+      case (`str "\u{000F}") true;
+      case (`str "\u{000a}") true; (* "\x0A" *)
+      case (`str "A") true;	
+      case (`str "'") true;
+      case (`str "\u{0042}") true;
+      case (`str "\u{0022}") true; (* "\x22" *)
+      case (`str "\u{005c}") true; (* "\x5C" *)
+      case (`str "\\") true;
+      case (`str "\"") true;
+      case (`str "/") true;
+      case (`str "\x08") true;
+      case (`str "\x09") true;
+      case (`str "\x0C") true;
+      case (`str "\x0D") true;
+
+      (* Boundary of 1-byte characters |00..7F| *)
+      case (`str "\x00") true;
+      case (`str "\x7F") true;
+      case (`str "\x80") false;
+
+      (* Boundary of 2-byte characters |C2..DF|80..BF| *)
+      (*   1st byte check |C2..DF|<valid>| *)
+      case (`str "\xC1\x80") false;
+      case (`str "\xC2\x80") true;
+      case (`str "\xDF\x80") true;
+      case (`str "\xE0\x80") false;
+      (*   2st byte check |C2 and DF|80..BF| *)
+      case (`str "\xC2\x7F") false;
+      case (`str "\xC2\xBF") true;
+      case (`str "\xC2\xC0") false;
+      case (`str "\xDF\x7F") false;
+      case (`str "\xDF\xBF") true;
+      case (`str "\xDF\xC0") false;
+
+      (* Boundary of 3-byte characters |E0..EF|80..BF^|80..BF| *)
+      (*   1st byte check |E0..EF|<valid>|<valid>| *)
+      case (`str "\xDF\x80\x80") false;
+      case (`str "\xE0\xA0\x80") true; (* ^if 1st byte is E0, 2nd byte must be outside the range E0..9F. *)
+      case (`str "\xEF\xBF\xBF") true;
+      case (`str "\xF0\x80\x80") false;
+      (*   2nd byte check |<valid>|80..BF|<valid>|*)
+      case (`str "\xE1\x7F\x80") false;
+      case (`str "\xE1\x80\x80") true; (* include checking 3rd byte *)
+      case (`str "\xE1\xBF\x80") true;
+      case (`str "\xE1\xC0\x80") false;
+      (*   3rd byte check |<valid>|<valid>|80..BF|*)
+      case (`str "\xE1\x80\x7F") false;
+      case (`str "\xE1\x80\xBF") true;
+      case (`str "\xE1\x80\xC0") false;
+      (*   3-byte characters special check *)
+      case (`str "\xE0\x9F\xBF") false;
+      case (`str "\xED\x9F\xBF") true;
+      case (`str "\xED\xA0\x80") false;
+      case (`str "\xED\xBF\xBF") false;
+      case (`str "\xEE\x80\x80") true;
+
+      (* Boundary of 4-byte characters |F0..F4|80..BF^|80..BF|80..BF| *)
+      (*   1st byte check |F0..F4|<valid>|<valid>|<valid>| *)
+      case (`str "\xEF\xBF\xBF\xBF") false;
+      case (`str "\xF0\x90\x80\x80") true; (* ^if 1st byte is F0, 2nd byte is invalid if if it falls within the range 80..8F. *)
+      case (`str "\xF4\x8F\xBF\xBF") true; (* ^if 1st byte is F4, 2nd byte is invalid if it is 90 or greater. *)
+      case (`str "\xF5\x80\x80\x80") false;
+      (*   2nd byte check |<valid>|80..BF|<valid>|<valid>| *)
+      case (`str "\xF1\x7F\x80\x80") false;
+      case (`str "\xF1\x80\x80\x80") true; (* include checking 3rd and 4th byte *)
+      case (`str "\xF1\xBF\xBF\xBF") true; (* include checking 3rd and 4th byte *)
+      case (`str "\xF1\xC0\x80\x80") false;
+      (*   3rd byte check |<valid>|<valid>|80..BF|<valid>| *)
+      case (`str "\xF1\x80\x7F\x80") false;
+      case (`str "\xF1\x80\xC0\x80") false;
+      (*   4th byte check |<valid>|<valid>|<valid>|80..BF| *)
+      case (`str "\xF1\x80\x80\x7F") false;
+      case (`str "\xF1\x80\x80\xC0") false;
+      (*   4-byte characters special check *)
+      case (`str "\xF0\x8F\xBF\xBF") false;
+      case (`str "\xF4\x90\x80\x80") false;
+
+      (* number case *)
+      case (`num min_fi_float) true;
+      case (`num max_fi_float) true;
+      case (`num (-0.)) true;
+      case (`num 0.) true;
+      case (`num (+0.)) true;
+      case (`num (Float.pred min_fi_float)) false;
+      case (`num (Float.succ max_fi_float)) false;
+      case (`num (-1.5)) false;
+      case (`num 4.8) false;
+
+      (* object case *)
+      case (`obj []) true;
+      case (`obj [("null", `null)]) true;
+      case (`obj [("boolean", `bool true)]) true;
+      case (`obj [("boolean", `bool false)]) true;
+      case (`obj [("string", `str "foo")]) true;
+      case (`obj [("string", `str "あ")]) true;
+      case (`obj [("string", `str "\u{20ac}")]) true;
+      case (`obj [("string", `str "$")])	true;
+      case (`obj [("string", `str "\u{000F}")]) true;
+      case (`obj [("string", `str "\u{000a}")]) true;
+      case (`obj [("string", `str "A")]) true;
+      case (`obj [("string", `str "'")]) true;
+      case (`obj [("string", `str "\u{0042}")]) true;
+      case (`obj [("string", `str "\u{0022}")]) true;
+      case (`obj [("string", `str "\u{005c}")]) true;
+      case (`obj [("string", `str "\\")]) true;
+      case (`obj [("string", `str "\"")]) true;
+      case (`obj [("string", `str "/")]) true;
+      case (`obj [("あ", `null)]) true;
+      case (`obj [("\u{20ac}", `null)]) true;
+      case (`obj [("$", `null)]) true;
+      case (`obj [("\u{000F}", `null)]) true;
+      case (`obj [("\u{000a}", `null)]) true;
+      case (`obj [("A", `null)]) true;
+      case (`obj [("'", `null)]) true;
+      case (`obj [("\u{0042}", `null)]) true;
+      case (`obj [("\u{0022}", `null)]) true;
+      case (`obj [("\u{005c}", `null)]) true;
+      case (`obj [("\\", `null)]) true;
+      case (`obj [("\"", `null)]) true;
+      case (`obj [("/", `null)]) true;
+      case (`obj [("number", `num 1.0)]) true;
+      case (`obj [("null", `null); ("boolean", `bool true); ("string", `str "foo"); ("number", `num 1.0)])
+           true;
+      case (`obj [("obj", `obj [("name", `str "foo"); ("age", `num 30.0)])]) true;
+      case (`obj [("array", `arr [])]) true;
+      case (`obj [("array", `arr [`null])]) true;
+      case (`obj [("array", `arr [`bool true; `bool false])]) true;
+      case (`obj [("array", `arr [`null; `bool true; `bool false; `str "foo"; `num 1.0])])
+           true;
+      case (`obj [("foo", `bool true); ("foo", `bool false)]) false;
+      case (`obj [("あ", `bool true); ("あ", `bool false)]) false;
+      case (`obj [("あいう", `bool true); ("あいう", `bool false)]) false;
+      case (`obj [("\u{20ac}", `bool true); ({|€|}, `bool false)]) false;
+
+      (* array case *)
+      case (`arr []) true;
+      case (`arr [`null]) true;
+      case (`arr [`bool true]) true;
+      case (`arr [`bool false]) true;
+      case (`arr [`str "foo"]) true;
+      case (`arr [`str "あ"]) true;
+      case (`arr [`str "foo"; `str "あ"; `str "\u{20ac}"; `str "$"; `str "\u{000F}"; `str "\u{000a}"; `str "A"; `str "'"; `str "\u{0042}"; `str "\u{0022}"; `str "\u{005c}"; `str "\\"; `str "\""; `str "/"])
+           true;
+      case (`arr [`str "fooあ\u{20ac}$\u{000F}\u{000a}A'\u{0042}\u{0022}\u{005c}\\\"/"])
+           true;
+      case (`arr [`num 1.0]) true;
+      case (`arr [`num (-1.0)]) true;
+      case (`arr [`num 2.3]) false;
+      case (`arr [`num (-5.0); `num 2.3]) false;
+      case (`arr [`num 2.3; `num (-5.0)]) false;
+      case (`arr [`obj []]) true;
+      case (`arr [`obj [("null", `null)]]) true;
+      case (`arr [`obj [("boolean", `bool true)]]) true;
+      case (`arr [`obj [("boolean", `bool false)]]) true;
+      case (`arr [`obj [("string", `str "foo")]]) true;
+      case (`arr [`obj [("string", `str "あ")]]) true;
+      case (`arr [`obj [("string", `str "\u{20ac}")]]) true;
+      case (`arr [`obj [("string", `str "$")]])	true;
+      case (`arr [`obj [("string", `str "\u{000F}")]]) true;
+      case (`arr [`obj [("string", `str "\u{000a}")]]) true;
+      case (`arr [`obj [("string", `str "A")]]) true;
+      case (`arr [`obj [("string", `str "'")]]) true;
+      case (`arr [`obj [("string", `str "\u{0042}")]]) true;
+      case (`arr [`obj [("string", `str "\u{0022}")]]) true;
+      case (`arr [`obj [("string", `str "\u{005c}")]]) true;
+      case (`arr [`obj [("string", `str "\\")]]) true;
+      case (`arr [`obj [("string", `str "\"")]]) true;
+      case (`arr [`obj [("string", `str "/")]]) true;
+      case (`arr [`obj [("あ", `null)]]) true;
+      case (`arr [`obj [("\u{20ac}", `null)]]) true;
+      case (`arr [`obj [("$", `null)]])	true;
+      case (`arr [`obj [("\u{000F}", `null)]]) true;
+      case (`arr [`obj [("\u{000a}", `null)]]) true;
+      case (`arr [`obj [("A", `null)]]) true;
+      case (`arr [`obj [("'", `null)]]) true;
+      case (`arr [`obj [("\u{0042}", `null)]]) true;
+      case (`arr [`obj [("\u{0022}", `null)]]) true;
+      case (`arr [`obj [("\u{005c}", `null)]]) true;
+      case (`arr [`obj [("\\", `null)]]) true;
+      case (`arr [`obj [("\"", `null)]]) true;
+      case (`arr [`obj [("/", `null)]]) true;
+      case (`arr [`obj [("number", `num 1.0)]]) true;
+      case (`arr [`obj [("null", `null); ("boolean", `bool true); ("string", `str "foo"); ("number", `num 1.0)]])
+           true;
+      case (`arr [`obj [("obj", `obj [("name", `str "foo"); ("age", `num 30.0)])]]) true;
+      case (`arr [`null; `bool true; `bool false; `num 1.0; `num (-1.0); `str "foo"; `str "あ"; `obj [("obj", `obj [("name", `str "foo"); ("age", `num 30.0)])]])
+           true;
+      case (`arr [`arr []]) true;
+      case (`arr [`arr [`bool true; `bool false]]) true;
+      case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]]) true;
+      case (`arr [`arr [`bool true; `bool false]; `arr [`num 2.0; `num (-5.0)]; `arr [`obj [("name", `str "foo"); ("age", `num 30.0)]; `obj [("name", `str "bar"); ("age", `num 23.0)]]])
+           true;
+
+      (* RFC 8785, sec3.2.2 for jcsnafi*)
+      case (`obj [ ("numbers", `arr [`num 333333333.0; `num 4.0; `num 2e+3; `num 0.0]);
+                   ("string", `str "\u{20ac}$\u{000F}\u{000a}A'\u{0042}\u{0022}\u{005c}\\\"/");
+                   ("literals", `arr [`null; `bool true; `bool false])])
+           true;
+
+      (* RFC 8785, sec3.2.2 original *)
+      case (`obj [ ("numbers", `arr [`num 333333333.33333329; `num 1E30; `num 4.50; `num 2e-3; `num 0.000000000000000000000000001]);
+                   ("string", `str "\u{20ac}$\u{000F}\u{000a}A'\u{0042}\u{0022}\u{005c}\\\"/");
+                   ("literals", `arr [`null; `bool true; `bool false])])
+           false;
     ] |&> (fun case -> get_and_incr counter |> case)
   ]
 
@@ -981,7 +1208,7 @@ let jcsnafi_is_encodable_str =
     ] |&> (fun case -> get_and_incr counter |> case)
   ]
 
-  let jcsnafi_is_encodable_num = 
+let jcsnafi_is_encodable_num = 
   let counter = ref 0 in
   let case f expected_value id =
     test_case (sprintf "jcsnafi_is_encodable_num_%d:" id) `Quick (fun () ->
@@ -1240,6 +1467,7 @@ let () =
     @ json_unparse_jcsnafi
     @ jcsnafi_is_encodable_str
     @ jcsnafi_is_encodable_num
+    @ jcsnafi_is_encodable
     @ jcsnafi_compare_field_name
     @ jcsnafi_compare_field_name_rfc8785
     @ jvpath_unparse

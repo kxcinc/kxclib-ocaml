@@ -1250,6 +1250,7 @@ module Json_JCSnafi : sig
 
   val is_encodable_str : string -> bool
   val is_encodable_num : float -> bool
+  val is_encodable : jv -> bool
   val unparse_jcsnafi : jv -> string
   val compare_field_name : string -> string -> int
 end
