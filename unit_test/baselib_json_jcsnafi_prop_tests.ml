@@ -233,10 +233,6 @@ let is_invalid_utf8 str =
   in
     loop 0
 
-let is_invalid_arg_prefix_invalid_unicode = function
-  | Invalid_argument msg -> String.starts_with "Invalid Unicode:" msg
-  | _ -> false
-
 let is_invalid_arg_prefix prefix = function
   | Invalid_argument msg -> String.starts_with prefix msg
   | _ -> false
@@ -319,19 +315,19 @@ let () =
     that "unparse_jcsnafi: Invalid UTF-8 string" gen_random_byte_string ~print:identity
       (fun s ->
         QCheck2.assume (is_invalid_utf8 s);
-        does_throw_p is_invalid_arg_prefix_invalid_unicode
+        does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
     that "unparse_jcsnafi: Invalid UTF-8 object property name" gen_jv_with_invalid_unicode ~print:string_of_jv
       (fun jv ->
-        does_throw_p is_invalid_arg_prefix_invalid_unicode
+        does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi jv));
     that "unparse_jcsnafi: Unicode surrogate codepoint range" gen_unicode_string_with_surrogate ~print:identity
       (fun s ->
-        does_throw_p is_invalid_arg_prefix_invalid_unicode
+        does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
     that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" gen_jv_with_surrogates ~print:string_of_jv
       (fun jv ->
-        does_throw_p is_invalid_arg_prefix_invalid_unicode
+        does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi jv));
     that "unparse_jcsnafi: Duplicated property names in object" gen_jv_with_duplicate_keys ~print:string_of_jv
       (fun jv ->
