@@ -308,12 +308,12 @@ let () =
         unparsed_jv = unparsed_shuffled_jv);
     that "unparse_jcsnafi: Invalid negative integer range" invalid_neg_fi_int_range ~print:string_of_int
       (fun i ->
-        does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JSCnafi (encountering:")
+        does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JCSnafi (encountering:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i)))
       );
     that "unparse_jcsnafi: Invalid positive integer range" invalid_pos_fi_int_range ~print:string_of_int
       (fun i ->
-        does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JSCnafi (encountering:")
+        does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JCSnafi (encountering:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i)))
       );
     that "unparse_jcsnafi: Invalid UTF-8 string" gen_random_byte_string ~print:identity

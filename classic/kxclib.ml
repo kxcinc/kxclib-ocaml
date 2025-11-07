@@ -3203,7 +3203,7 @@ end = struct
     iter_valid_uchar f str;
     Buffer.to_bytes buf
 
-  let serialize_string_jsc (dest : Buffer.t) (str : string) : string =
+  let serialize_string_jcs (dest : Buffer.t) (str : string) : string =
 
     let f (uchar : Uchar.t) : unit =
       let uchar_int = Uchar.to_int uchar in
@@ -3276,7 +3276,7 @@ end = struct
 
     let serialize_string (str : string) : string =
       let buf = Buffer.create (String.length str) in
-      serialize_string_jsc buf str
+      serialize_string_jcs buf str
     in
 
     match jv with
@@ -3287,7 +3287,7 @@ end = struct
     | `num n ->
         if is_encodable_num n
         then string_of_int (int_of_float n)
-        else raise (Invalid_argument (sprintf "Number cannot be safely encoded with Json_JSCnafi (encountering: %f)" n))
+        else raise (Invalid_argument (sprintf "Number cannot be safely encoded with Json_JCSnafi (encountering: %f)" n))
     | `obj es ->
         let cmp = if is_all_ascii_property es then String.compare
                   else compare_field_name in
