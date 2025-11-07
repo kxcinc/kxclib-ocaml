@@ -3176,21 +3176,6 @@ end = struct
   let min_fi_float = Float.of_int (- (1 lsl 52))
   let max_fi_float = Float.of_int ((1 lsl 52) - 1)
 
-  let utf16_bytes_of_string (str: string) : bytes =
-    let str_len = String.length str in
-    let buf = Buffer.create str_len in
-
-    let rec loop (i : int) : unit = 
-      if i < str_len then
-        let utf8dec = String.get_utf_8_uchar str i in
-        let uchar = Uchar.utf_decode_uchar utf8dec in
-        let utf8dec_len = Uchar.utf_decode_length utf8dec in
-        Buffer.add_utf_16be_uchar buf uchar ;
-        loop (i + utf8dec_len)
-    in
-    loop 0;
-    Buffer.to_bytes buf
-
   let iter_valid_uchar (f : Uchar.t -> unit) (str : string) : unit =
     let str_len = String.length str in
     let rec loop (i : int) : unit = 
@@ -3209,6 +3194,15 @@ end = struct
           loop (i + utf8dec_len)
     in
     loop 0
+
+  let utf16_bytes_of_string (str: string) : bytes =
+    let buf = Buffer.create (String.length str) in
+    
+    let f (uchar : Uchar.t) : unit =
+      Buffer.add_utf_16be_uchar buf uchar
+    in
+    iter_valid_uchar f str;
+    Buffer.to_bytes buf
 
   let serialize_string_jsc (dest : Buffer.t) (str : string) : string =
 
