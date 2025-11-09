@@ -3171,9 +3171,8 @@ module Json_JCSnafi : sig
   val unparse_jcsnafi : jv -> string
 end = struct
   open Json
-
-  let min_fi_float = Float.of_int (- (1 lsl 52))
-  let max_fi_float = Float.of_int ((1 lsl 52) - 1)
+  let min_fi_float = -. (2. ** 52.)
+  let max_fi_float = (2. ** 52.) -. 1.
 
   let iter_valid_uchar (f : Uchar.t -> unit) (str : string) : unit =
     let str_len = String.length str in
@@ -3286,7 +3285,7 @@ end = struct
     | `str s -> serialize_string_jcs dest s
     | `num n ->
         if is_encodable_num n
-        then Buffer.add_string dest (string_of_int (int_of_float n))
+        then Buffer.add_string dest (Int53p.to_string (Int53p.of_float n))
         else raise (Invalid_argument (sprintf "Number cannot be safely encoded with Json_JCSnafi (encountering: %f)" n))
     | `obj es ->
         let cmp = if is_all_ascii_property es then String.compare

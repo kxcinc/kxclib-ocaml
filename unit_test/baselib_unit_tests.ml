@@ -898,8 +898,8 @@ let jcsnafi_is_encodable =
           (sprintf "jcsnafi_is_encodable")
           expected_value (Json_JCSnafi.is_encodable jv)
     )  in
-  let min_fi_float = Float.of_int (- (1 lsl 52)) in
-  let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
+  let min_fi_float = -. (2. ** 52.) in
+  let max_fi_float = (2. ** 52.) -. 1. in
    [
     "jcsnafi_is_encodable", [
       (* literal case *)
@@ -1216,8 +1216,8 @@ let jcsnafi_is_encodable_num =
           (sprintf "jcsnafi_is_encodable_num:")
           expected_value (Json_JCSnafi.is_encodable_num f)
     ) in
-  let min_fi_float = Float.of_int (- (1 lsl 52)) in
-  let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
+  let min_fi_float = -. (2. ** 52.) in
+  let max_fi_float = (2. ** 52.) -. 1. in
    [
     "jcsnafi_is_encodable_num", [
       case min_fi_float true;

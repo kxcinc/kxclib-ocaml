@@ -1,14 +1,43 @@
 open Kxclib_priv_test_lib.Json
 open Kxclib.Json
-let min_fi_int = (- (1 lsl 52))
-let max_fi_int = (1 lsl 52) - 1
+
+let min_fi_float = -. (2. ** 52.)
+let max_fi_float = (2. ** 52.) -. 1.
+let min_fi_int53p = Int53p.of_float min_fi_float
+let max_fi_int53p = Int53p.of_float max_fi_float
 
 (* Generators *)
 
-let gen_fi_int = QCheck2.Gen.int_range min_fi_int max_fi_int
-let gen_fi_float = QCheck2.Gen.map float_of_int gen_fi_int
-let invalid_neg_fi_int_range = QCheck2.Gen.int_range min_int (pred min_fi_int)
-let invalid_pos_fi_int_range = QCheck2.Gen.int_range (succ max_fi_int) max_int
+let gen_int64_range (low_i64 : int64) (high_i64 : int64) : int64 QCheck2.Gen.t =
+  if low_i64 > high_i64 then raise (Invalid_argument "high_i64 < low_i64")
+  else
+    (* Add 1L to calculate the number of values *)
+    let range_width = Int64.add (Int64.sub high_i64 low_i64) 1L in
+
+    (* When `range_with` is 0L,
+       [Int64.min_int, Int64.max_int] is specified. *)
+    if range_width = 0L then
+      QCheck2.Gen.int64
+    else
+      (* Map the range of Gen.int64 to [low_i64, high_i64] *)
+      QCheck2.Gen.map (fun i64 ->
+          let rem = Int64.rem i64 range_width in
+          
+          (* If the remainder is negative, adjust it to 0 or greater. *)
+          let offset = if rem < 0L then Int64.add rem range_width else rem in
+          
+          (* By adding the offset to the minimum value (low_i64),
+             values within the range are generated. *)
+          Int64.add low_i64 offset
+        ) QCheck2.Gen.int64
+
+let gen_fi_int53p : int53p QCheck2.Gen.t = 
+  let min_fi_int53p_int64 = Int53p.to_int64 min_fi_int53p in
+  let max_fi_int53p_int64 = Int53p.to_int64 max_fi_int53p in
+  QCheck2.Gen.map Int53p.of_int64 (gen_int64_range min_fi_int53p_int64 max_fi_int53p_int64)
+
+let invalid_neg_fi_int64 = gen_int64_range Int64.min_int (Int64.pred (Int53p.to_int64 min_fi_int53p))
+let invalid_pos_fi_int64 = gen_int64_range (Int64.succ (Int53p.to_int64 max_fi_int53p)) Int64.max_int
 
 let gen_random_byte_string = QCheck2.Gen.(
   let invalid_char = char_range (char_of_int 128) (char_of_int 255) in
@@ -77,7 +106,7 @@ let gen_unique_fnames len = QCheck2.Gen.(
 let rec sized_jv size = QCheck2.Gen.(
     let gen_null = pure `null in
     let gen_bool = bool >|= (fun x -> `bool x) in
-    let gen_int = gen_fi_int >|= (fun x -> `num (float_of_int x)) in (* TODO: int53p convert *)
+    let gen_int = gen_fi_int53p >|= (fun x -> `num (Int53p.to_float x)) in
     let gen_num = gen_int in
     let gen_str = gen_unicode_string >|= (fun s -> `str s) in
     let gen_atom = oneof [ gen_null; gen_bool; gen_num; gen_str; ] in
@@ -276,13 +305,13 @@ let () =
 
   let run_tests tests = QCheck_base_runner.run_tests_main tests in
   [
-    that "is_encodable_num: Invalid negative integer range" invalid_neg_fi_int_range ~print:string_of_int
+    that "is_encodable_num: Invalid negative integer range" invalid_neg_fi_int64 ~print:Int64.to_string
       (fun i ->
-        float_of_int i |> Json_JCSnafi.is_encodable_num |> not
+        Int64.to_float i |> Json_JCSnafi.is_encodable_num |> not
       );
-    that "is_encodable_num: Invalid positive integer range" invalid_pos_fi_int_range ~print:string_of_int
+    that "is_encodable_num: Invalid positive integer range" invalid_pos_fi_int64 ~print:Int64.to_string
       (fun i ->
-        float_of_int i |> Json_JCSnafi.is_encodable_num |> not
+        Int64.to_float i |> Json_JCSnafi.is_encodable_num |> not
       );
 
     that "compare_field_name: " (QCheck2.Gen.pair gen_unicode_string gen_unicode_string)
@@ -302,15 +331,15 @@ let () =
         let unparsed_jv = Json_JCSnafi.unparse_jcsnafi jv in
         let unparsed_shuffled_jv = Json_JCSnafi.unparse_jcsnafi shuffled_jv in
         unparsed_jv = unparsed_shuffled_jv);
-    that "unparse_jcsnafi: Invalid negative integer range" invalid_neg_fi_int_range ~print:string_of_int
+    that "unparse_jcsnafi: Invalid negative integer range" invalid_neg_fi_int64 ~print:Int64.to_string
       (fun i ->
         does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JCSnafi (encountering:")
-          (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i)))
+          (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (Int64.to_float i)))
       );
-    that "unparse_jcsnafi: Invalid positive integer range" invalid_pos_fi_int_range ~print:string_of_int
+    that "unparse_jcsnafi: Invalid positive integer range" invalid_pos_fi_int64 ~print:Int64.to_string
       (fun i ->
         does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JCSnafi (encountering:")
-          (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (float_of_int i)))
+          (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (Int64.to_float i)))
       );
     that "unparse_jcsnafi: Invalid UTF-8 string" gen_random_byte_string ~print:identity
       (fun s ->
