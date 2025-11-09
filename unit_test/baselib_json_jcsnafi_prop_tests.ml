@@ -39,9 +39,16 @@ let gen_fi_int53p : int53p QCheck2.Gen.t =
 let invalid_neg_fi_int64 = gen_int64_range Int64.min_int (Int64.pred (Int53p.to_int64 min_fi_int53p))
 let invalid_pos_fi_int64 = gen_int64_range (Int64.succ (Int53p.to_int64 max_fi_int53p)) Int64.max_int
 
-let gen_random_byte_string = QCheck2.Gen.(
-  let invalid_char = char_range (char_of_int 128) (char_of_int 255) in
-  map String.of_list (list_size (int_range 1 100) invalid_char))
+let gen_invalid_utf8_char = QCheck2.Gen.(
+  oneof [
+    char_range (char_of_int 128) (char_of_int 191);
+    char_range (char_of_int 192) (char_of_int 193);
+    char_range (char_of_int 245) (char_of_int 255);
+  ])
+
+let gen_random_invalid_utf8_string = QCheck2.Gen.(
+  map String.of_list (list_size (int_range 1 100) gen_invalid_utf8_char)
+)
 
 let gen_unicode_char =
   QCheck2.Gen.(
@@ -51,7 +58,7 @@ let gen_unicode_char =
 
 let gen_uchar_list len =
   QCheck2.Gen.(
-    int_range 1 len >>= fun len' ->
+    int_range 0 len >>= fun len' ->
     list_size (pure len') gen_unicode_char
   )
 
@@ -81,22 +88,21 @@ let gen_lone_surrogate_string =
   in
     QCheck2.Gen.map bytes_of_surrogate_codepoint gen_surrogate_codepoint
 
-let string_of_uchars_with_inj pos inj uchars =
-  let buf = Buffer.create (List.length uchars  + String.length inj) in
-  List.iteri (fun i uchar ->
-    if i = pos then Buffer.add_string buf inj
-    else Buffer.add_utf_8_uchar buf uchar
-  ) uchars;
-  Buffer.contents buf
+let gen_unicode_string_with_surrogate_len len = QCheck2.Gen.(
+  map3 (fun prefix invalid suffix -> prefix ^ invalid ^ suffix)
+       (gen_unicode_string_len len)
+       gen_lone_surrogate_string
+       (gen_unicode_string_len len))
 
-let gen_unicode_string_with_surrogate_len len =
-  QCheck2.Gen.(gen_uchar_list len >>= fun uchars ->
-    let len' = List.length uchars in
-    let gen_pos = int_range 0 (len' - 1) in
-    map3 string_of_uchars_with_inj gen_pos gen_lone_surrogate_string (pure uchars)
-  )
+let gen_unicode_string_with_surrogate = gen_unicode_string_with_surrogate_len 10
 
-let gen_unicode_string_with_surrogate = gen_unicode_string_with_surrogate_len 50
+let gen_unicode_string_with_invalid_unicode_string_len len = QCheck2.Gen.(
+  map3 (fun prefix invalid suffix -> prefix ^ invalid ^ suffix)
+       (gen_unicode_string_len len)
+       gen_random_invalid_utf8_string
+       (gen_unicode_string_len len))
+
+let gen_unicode_string_with_invalid_unicode_string = gen_unicode_string_with_invalid_unicode_string_len 10
 
 let gen_unique_fnames len = QCheck2.Gen.(
   let module StringSet = Set.Make(String) in
@@ -104,43 +110,43 @@ let gen_unique_fnames len = QCheck2.Gen.(
       (list_repeat len gen_unicode_string))
 
 let rec sized_jv size = QCheck2.Gen.(
-    let gen_null = pure `null in
-    let gen_bool = bool >|= (fun x -> `bool x) in
-    let gen_int = gen_fi_int53p >|= (fun x -> `num (Int53p.to_float x)) in
-    let gen_num = gen_int in
-    let gen_str = gen_unicode_string >|= (fun s -> `str s) in
-    let gen_atom = oneof [ gen_null; gen_bool; gen_num; gen_str; ] in
+  let gen_null = pure `null in
+  let gen_bool = bool >|= (fun x -> `bool x) in
+  let gen_int = gen_fi_int53p >|= (fun x -> `num (Int53p.to_float x)) in
+  let gen_num = gen_int in
+  let gen_str = gen_unicode_string >|= (fun s -> `str s) in
+  let gen_atom = oneof [ gen_null; gen_bool; gen_num; gen_str; ] in
 
-    let gen_len n = int_range 0 (n / 2) in
+  let gen_len n = int_range 0 (n / 2) in
 
-    let gen_arr n =
-      (if n > 1 then
-         gen_len n >>= fun len ->
-         if len = 0 then pure []
-         else list_size (int_bound len) (sized_jv (n / len))
-       else pure [])
-      >|= (fun xs -> `arr xs) in
+  let gen_arr n =
+    (if n > 1 then
+       gen_len n >>= fun len ->
+       if len = 0 then pure []
+       else list_size (int_bound len) (sized_jv (n / len))
+     else pure [])
+    >|= (fun xs -> `arr xs) in
 
-    let gen_obj n =
-      (if n > 1 then
-         gen_len n >>= fun len ->
-           gen_unique_fnames len >>= (fun keys ->
-             let keys_len = List.length keys in
-             if keys_len = 0 then pure []
-             else
-               map2 (fun ks vs -> List.combine ks vs)
-               (pure keys)
-               (list_repeat keys_len (sized_jv (n / keys_len))))
-       else pure [])
-       >|= (fun fs -> `obj fs) in
+  let gen_obj n =
+    (if n > 1 then
+       gen_len n >>= fun len ->
+         gen_unique_fnames len >>= (fun keys ->
+           let keys_len = List.length keys in
+           if keys_len = 0 then pure []
+           else
+             map2 (fun ks vs -> List.combine ks vs)
+             (pure keys)
+             (list_repeat keys_len (sized_jv (n / keys_len))))
+     else pure [])
+     >|= (fun fs -> `obj fs) in
 
-    match size with
-    | 0 -> pure `null
-    | 1 -> gen_atom
-    | _ -> frequency [(1, gen_atom);
-                      (4, gen_arr size);
-                      (5, gen_obj size);
-                     ])
+  match size with
+  | 0 -> pure `null
+  | 1 -> gen_atom
+  | _ -> frequency [(1, gen_atom);
+                    (4, gen_arr size);
+                    (5, gen_obj size);
+                   ])
 
 let gen_jv_jcsnafi = QCheck2.Gen.sized sized_jv
 
@@ -184,10 +190,13 @@ let gen_jv_with_duplicate_keys = QCheck2.Gen.(sized (fun size ->
     pure (`obj invalid_pairs)
   ))
 
-let rec contains_str = function
+let rec contains_str_or_obj (jv : jv) : bool =
+  match jv with
   | `str _ -> true
-  | `arr xs -> List.exists contains_str xs
-  | `obj es -> List.exists (fun (_, v) -> contains_str v) es
+  | `arr xs -> List.exists contains_str_or_obj xs
+  | `obj es ->
+      List.length es > 0
+      || List.exists (fun (_, v) -> contains_str_or_obj v) es
   | _ -> false
 
 let rec filter_gen p gen = QCheck2.Gen.(
@@ -195,42 +204,69 @@ let rec filter_gen p gen = QCheck2.Gen.(
                    else filter_gen p gen
 )
 
-let gen_jv_with_string = filter_gen contains_str gen_jv_jcsnafi
+let gen_jv_with_str_or_obj = filter_gen contains_str_or_obj gen_jv_jcsnafi
 
 let rec gen_inject_one_bad_string bad_string_gen jv = QCheck2.Gen.(
   match jv with
   | `str _ ->
-    bad_string_gen >|= (fun s -> `str s)
+      bad_string_gen >|= (fun s -> `str s)
 
   | `arr xs ->
       let candidates = List.mapi (fun i x -> (i, x)) xs in
-      let string_candidates = List.filter (fun (_, v) -> contains_str v) candidates in
+      let replaceable_candidates = List.filter (fun ix -> snd ix |> contains_str_or_obj) candidates in
 
-      if string_candidates = [] then pure (`arr xs)
+      if replaceable_candidates = [] then pure (`arr xs)
       else
-        oneofl string_candidates >>= fun (i', target) ->
+        oneofl replaceable_candidates >>= fun (i', target) ->
         gen_inject_one_bad_string bad_string_gen target >>= fun target' ->
         let xs' = List.mapi (fun i x -> if i = i' then target' else x) xs in
         pure (`arr xs')
 
   | `obj es ->
-      let candidates = List.mapi (fun i e -> (i, e)) es in
-      let string_candidates = List.filter (fun (_, (_, v)) -> contains_str v) candidates in
+      let action_lists =
+        List.mapi (fun i (_, v) ->
+          
+          let action_key () =
+            bad_string_gen >>= fun bad_key ->
+            let es' = List.mapi (fun i' (k, v) ->
+              if i = i' then (bad_key, v) else (k, v)
+            ) es in
+            pure (`obj es')
+          in
 
-      if string_candidates = [] then pure (`obj es)
+          if contains_str_or_obj v then
+            let action_val () =
+              gen_inject_one_bad_string bad_string_gen v >>= fun v' ->
+              let es' = List.mapi (fun i' (k, v) ->
+                if i = i' then (k, v') else (k, v)
+              ) es in
+              pure (`obj es')
+            in
+            [action_val; action_key]
+          else
+            [action_key]
+
+        ) es
+      in
+      
+      let actions = List.flatten action_lists in
+
+      if actions = [] then
+        pure (`obj es)
       else
-        oneofl string_candidates >>= fun (i', (_, target)) ->
-        gen_inject_one_bad_string bad_string_gen target >>= fun target' ->
-        let es' = List.mapi (fun i (k, v) -> if i = i' then (k, target') else (k, v)) es in
-        pure (`obj es')
+        oneofl actions >>= fun selected_action ->
+        selected_action ()
 
-  | _ -> pure jv)
+  | _ -> pure jv
+)
 
 let gen_jv_with_invalid_unicode = QCheck2.Gen.(
-  gen_jv_with_string >>= gen_inject_one_bad_string gen_random_byte_string)
+  no_shrink gen_jv_with_str_or_obj >>=
+    gen_inject_one_bad_string gen_unicode_string_with_invalid_unicode_string)
 
 let gen_jv_with_surrogates = QCheck2.Gen.(
-  gen_jv_with_string >>= gen_inject_one_bad_string gen_unicode_string_with_surrogate)
+  no_shrink gen_jv_with_str_or_obj >>=
+    gen_inject_one_bad_string gen_unicode_string_with_surrogate)
 
 (* Helper functions *)
 
@@ -341,12 +377,11 @@ let () =
         does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JCSnafi (encountering:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi(`num (Int64.to_float i)))
       );
-    that "unparse_jcsnafi: Invalid UTF-8 string" gen_random_byte_string ~print:identity
+    that "unparse_jcsnafi: Invalid UTF-8 string" gen_unicode_string_with_invalid_unicode_string ~print:identity
       (fun s ->
-        QCheck2.assume (is_invalid_utf8 s);
         does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
-    that "unparse_jcsnafi: Invalid UTF-8 object property name" gen_jv_with_invalid_unicode ~print:string_of_jv
+    that "unparse_jcsnafi: Invalid UTF-8 object property name or string value" gen_jv_with_invalid_unicode ~print:string_of_jv
       (fun jv ->
         does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi jv));
@@ -354,7 +389,7 @@ let () =
       (fun s ->
         does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi (`str s)));
-    that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name" gen_jv_with_surrogates ~print:string_of_jv
+    that "unparse_jcsnafi: Unicode surrogate codepoint range in object property name or string value" gen_jv_with_surrogates ~print:string_of_jv
       (fun jv ->
         does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi jv));
