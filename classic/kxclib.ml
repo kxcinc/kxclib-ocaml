@@ -3236,6 +3236,9 @@ end = struct
   let compare_field_name (str1 : string) (str2 : string) : int =
     Bytes.compare (utf16_bytes_of_string str1) (utf16_bytes_of_string str2)
 
+  let projected_compare_with cmp proj a b =
+    cmp (proj a) (proj b)
+
   let is_ascii_str = String.for_all (fun c -> Char.code c <= 127)
 
   let is_all_ascii_property (es : (string * jv) list) : bool =
@@ -3256,21 +3259,21 @@ end = struct
         if not all_members_encodable then
           false
         else
-        let cmp = if is_all_ascii_property es then String.compare
-                    else compare_field_name in
+          let cmp = if is_all_ascii_property es then String.compare
+                      else compare_field_name in
 
-        let cmp_asserting_uniq x y =
-          let ret = cmp x y in
-          if ret = 0
-          then raise (Invalid_argument ("Duplicate property names: " ^ x))
-          else ret
-        in
+          let cmp_asserting_uniq x y =
+            let ret = cmp x y in
+            if ret = 0
+            then raise (Invalid_argument ("Duplicate property names: " ^ x))
+            else ret
+          in
 
-        try
-          let _ = List.sort (fun (key1, _) (key2, _) -> cmp_asserting_uniq key1 key2) es in
+          try
+            let _ = List.sort (projected_compare_with cmp_asserting_uniq fst) es in
             true
-        with
-        | Invalid_argument _ -> false
+          with
+          | Invalid_argument _ -> false
 
   let iter_sep (sep : char) (buf : Buffer.t) (f : Buffer.t -> 'a -> unit) (xs : 'a list) : unit =
     match xs with
@@ -3302,7 +3305,7 @@ end = struct
           else ret
         in
 
-        let sorted_obj = List.sort (fun (key1, _) (key2, _) -> cmp_asserting_uniq key1 key2) es in
+        let sorted_obj = List.sort (projected_compare_with cmp_asserting_uniq fst) es in
         
         let serialize_elem (buf : Buffer.t) (key, value) : unit =
           serialize_string_jcs buf key;
