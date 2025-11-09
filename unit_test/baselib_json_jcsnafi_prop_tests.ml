@@ -1,8 +1,8 @@
 open Kxclib_priv_test_lib.Json
 open Kxclib.Json
 
-let min_fi_float : float = -. (2. ** 52.)
-let max_fi_float : float = (2. ** 52.) -. 1.
+let min_fi_float : float = -. (2.0 ** 52.0)
+let max_fi_float : float = (2.0 ** 52.0) -. 1.0
 let min_fi : int53p = Int53p.of_float min_fi_float
 let max_fi : int53p = Int53p.of_float max_fi_float
 
@@ -30,6 +30,9 @@ let gen_int64_range (low_i64 : int64) (high_i64 : int64) : int64 QCheck2.Gen.t =
              values within the range are generated. *)
           Int64.add low_i64 offset
         ) QCheck2.Gen.int64
+
+let gen_int64 : int64 QCheck2.Gen.t =
+  gen_int64_range Int64.min_int Int64.max_int
 
 let gen_fi : int53p QCheck2.Gen.t = 
   let min_fi_int53p_int64 = Int53p.to_int64 min_fi in
@@ -103,6 +106,13 @@ let gen_unicode_string_with_invalid_unicode_string_len (len : int) : string QChe
 
 let gen_unicode_string_with_invalid_unicode_string : string QCheck2.Gen.t =
   gen_unicode_string_with_invalid_unicode_string_len 10
+
+let gen_valid_or_invalid_unicode_string : string QCheck2.Gen.t = QCheck2.Gen.(
+  oneof [
+    gen_unicode_string;
+    gen_unicode_string_with_invalid_unicode_string;
+    gen_unicode_string_with_surrogate
+  ])
 
 let gen_unique_fnames (len : int) : string list QCheck2.Gen.t = QCheck2.Gen.(
   let module StringSet = Set.Make(String) in
@@ -223,10 +233,10 @@ let rec gen_inject_one_bad_string (bad_string_gen : string QCheck2.Gen.t) (jv : 
         pure (`arr xs')
 
   | `obj es ->
-      let action_lists =
+      let replaced_es_lists =
         List.mapi (fun i (_, v) ->
           
-          let action_key () =
+          let replace_key () =
             bad_string_gen >>= fun bad_key ->
             let es' = List.mapi (fun i' (k, v) ->
               if i = i' then (bad_key, v) else (k, v)
@@ -235,27 +245,27 @@ let rec gen_inject_one_bad_string (bad_string_gen : string QCheck2.Gen.t) (jv : 
           in
 
           if contains_str_or_obj v then
-            let action_val () =
+            let replace_val () =
               gen_inject_one_bad_string bad_string_gen v >>= fun v' ->
               let es' = List.mapi (fun i' (k, v) ->
                 if i = i' then (k, v') else (k, v)
               ) es in
               pure (`obj es')
             in
-            [action_val; action_key]
+            [replace_val; replace_key]
           else
-            [action_key]
+            [replace_key]
 
         ) es
       in
       
-      let actions = List.flatten action_lists in
+      let replaced_es_list = List.flatten replaced_es_lists in
 
-      if actions = [] then
+      if replaced_es_list = [] then
         pure (`obj es)
       else
-        oneofl actions >>= fun selected_action ->
-        selected_action ()
+        oneofl replaced_es_list >>= fun selected_replacement ->
+        selected_replacement ()
 
   | _ -> pure jv
 )
@@ -267,6 +277,14 @@ let gen_jv_with_invalid_unicode : jv QCheck2.Gen.t = QCheck2.Gen.(
 let gen_jv_with_surrogates : jv QCheck2.Gen.t = QCheck2.Gen.(
   no_shrink gen_jv_with_str_or_obj >>=
     gen_inject_one_bad_string gen_unicode_string_with_surrogate)
+
+let gen_valid_or_invalid_jv : jv QCheck2.Gen.t = QCheck2.Gen.(
+  oneof [
+    gen_jv_jcsnafi;
+    gen_jv_with_invalid_unicode;
+    gen_jv_with_surrogates
+  ])
+
 
 (* Helper functions *)
 
@@ -284,6 +302,13 @@ let does_throw_p (p : exn -> bool) (f : unit -> 'a) : bool =
     false
   with
   | e -> p e
+
+let does_throw_any (f : unit -> 'a) : bool =
+  try
+    ignore (f ());
+    false
+  with
+  | _  -> true
 
 let is_invalid_utf8 str : bool =
   let str_len = String.length str in
@@ -398,4 +423,31 @@ let () =
         does_throw_p (is_invalid_arg_prefix "Duplicate property names:")
           (fun () -> Json_JCSnafi.unparse_jcsnafi jv)
         );
+
+    that "if `is_encodable_num` is true, it can be unparsed into JCSnafi " gen_int64 ~print:Int64.to_string
+      (fun i ->
+        let f = Int64.to_float i in
+        let jv_num = `num f in
+        if (Json_JCSnafi.is_encodable_num f) then
+          (ignore (Json_JCSnafi.unparse_jcsnafi jv_num); true)
+        else
+          (does_throw_p (is_invalid_arg_prefix "Number cannot be safely encoded with Json_JCSnafi (encountering:")
+                        (fun () -> Json_JCSnafi.unparse_jcsnafi jv_num))
+      );
+    that "if `is_encodable_str` is true, it can be unparsed into JCSnafi " gen_valid_or_invalid_unicode_string ~print:identity
+      (fun s ->
+        let jv_str = `str s in
+        if (Json_JCSnafi.is_encodable_str s) then
+          (ignore (Json_JCSnafi.unparse_jcsnafi jv_str); true)
+        else
+          (does_throw_p (is_invalid_arg_prefix "Invalid Unicode:")
+                        (fun () -> Json_JCSnafi.unparse_jcsnafi jv_str))
+      );
+    that "if `is_encodable` is true, it can be unparsed into JCSnafi " gen_valid_or_invalid_jv ~print:string_of_jv
+      (fun jv ->
+        if (Json_JCSnafi.is_encodable jv) then
+          (ignore (Json_JCSnafi.unparse_jcsnafi jv); true)
+        else
+          (does_throw_any (fun () -> Json_JCSnafi.unparse_jcsnafi jv))
+      );
   ] |> run_tests |> exit
