@@ -669,8 +669,8 @@ let json_unparse_jcsnafi =
           expected_exn
           (fun () -> ignore (Json_JCSnafi.unparse_jcsnafi jv))
     ) in
-  let min_fi_float = Float.of_int (- (1 lsl 52)) in
-  let max_fi_float = (Float.of_int ((1 lsl 52) - 1)) in
+  let min_fi_float = -. (2.0 ** 52.0) in
+  let max_fi_float = (2.0 ** 52.0) -. 1.0 in
    [
     "json_unparse_jcsnafi", [
       (* literal case *)
@@ -814,6 +814,7 @@ let json_unparse_jcsnafi =
       case_exn (`obj [("あ", `bool true); ("あ", `bool false)])  (Invalid_argument "Duplicate property names: あ");
       case_exn (`obj [("あいう", `bool true); ("あいう", `bool false)])  (Invalid_argument "Duplicate property names: あいう");
       case_exn (`obj [("\u{20ac}", `bool true); ({|€|}, `bool false)]) (Invalid_argument "Duplicate property names: €");
+      case_exn (`obj [ ("\128", `arr [ ]); ]) (Invalid_argument "Invalid Unicode: \128");
 
       (* array case *)
       case (`arr []) {|[]|};
@@ -898,8 +899,8 @@ let jcsnafi_is_encodable =
           (sprintf "jcsnafi_is_encodable")
           expected_value (Json_JCSnafi.is_encodable jv)
     )  in
-  let min_fi_float = -. (2. ** 52.) in
-  let max_fi_float = (2. ** 52.) -. 1. in
+  let min_fi_float = -. (2.0 ** 52.0) in
+  let max_fi_float = (2.0 ** 52.0) -. 1.0 in
    [
     "jcsnafi_is_encodable", [
       (* literal case *)
@@ -1043,6 +1044,7 @@ let jcsnafi_is_encodable =
       case (`obj [("あ", `bool true); ("あ", `bool false)]) false;
       case (`obj [("あいう", `bool true); ("あいう", `bool false)]) false;
       case (`obj [("\u{20ac}", `bool true); ({|€|}, `bool false)]) false;
+      case (`obj [ ("\128", `arr [ ]); ]) false;
 
       (* array case *)
       case (`arr []) true;

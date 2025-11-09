@@ -3171,8 +3171,8 @@ module Json_JCSnafi : sig
   val unparse_jcsnafi : jv -> string
 end = struct
   open Json
-  let min_fi_float = -. (2. ** 52.)
-  let max_fi_float = (2. ** 52.) -. 1.
+  let min_fi_float = -. (2.0 ** 52.0)
+  let max_fi_float = (2.0 ** 52.0) -. 1.0
 
   let iter_valid_uchar (f : Uchar.t -> unit) (str : string) : unit =
     let str_len = String.length str in
@@ -3249,6 +3249,13 @@ end = struct
     | `str s -> is_encodable_str s
     | `arr xs -> List.for_all is_encodable xs
     | `obj es ->
+        let all_members_encodable = 
+          List.for_all (fun (k, v) -> is_encodable_str k && is_encodable v) es
+        in
+        
+        if not all_members_encodable then
+          false
+        else
         let cmp = if is_all_ascii_property es then String.compare
                     else compare_field_name in
 
@@ -3261,10 +3268,7 @@ end = struct
 
         try
           let _ = List.sort (fun (key1, _) (key2, _) -> cmp_asserting_uniq key1 key2) es in
-
-          (* No need to check the key `_k`, 
-             because `compare_field_name` has also been checked for valid UTF-8 encoding. *)
-          List.for_all (fun (_k, v) -> is_encodable v) es
+            true
         with
         | Invalid_argument _ -> false
 
