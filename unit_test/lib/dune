@@ -1,5 +1,6 @@
 (library
  (name kxclib_priv_test_lib)
+ (modules json)
  (libraries kxclib qcheck)
  (flags (:standard
           -open Kxclib)))

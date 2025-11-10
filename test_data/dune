@@ -1,0 +1,5 @@
+(library
+ (name test_data)
+ (libraries kxclib)
+ (flags (:standard
+          -open Kxclib)))
