@@ -654,80 +654,83 @@ let json_show =
     ];
   ]
 
+(* test_data/jcsnafi_test_data.ml *)
+module Jcsnafi_data = Jcsnafi_test_data.Make(Float)
+
 let json_unparse_jcsnafi =
   let counter = ref 0 in
-  let case jv unparsed_jcsnafi id =
+  let case actual unparsed_jcsnafi id =
     test_case (sprintf "json_unparse_jcsnafi_%d: %s" id unparsed_jcsnafi) `Quick (fun () ->
         check string
           (sprintf "json_unparsed_jcsnafi: %s"
              unparsed_jcsnafi)
-          unparsed_jcsnafi (Json_JCSnafi.unparse_jcsnafi jv)
+          unparsed_jcsnafi actual
     )  in
-  let case_exn jv expected_exn id =
+  let case_exn f expected_exn id =
     test_case (sprintf "json_unparse_jcsnafi_%d" id) `Quick (fun () ->
         check_raises "json_unparsed_jcsnafi should raise exn"
           expected_exn
-          (fun () -> ignore (Json_JCSnafi.unparse_jcsnafi jv))
+          (f &> ignore)
     ) in
    [
     "json_unparse_jcsnafi",
-      Jcsnafi_test_data.cases_for_unparse_jcsnafi (module Float) case case_exn
+      Jcsnafi_data.cases_for_unparse_jcsnafi case case_exn
       |&> (fun case -> get_and_incr counter |> case)
   ]
 
 let jcsnafi_is_encodable =
   let counter = ref 0 in
-  let case jv expected_value id =
+  let case actual expected_value id =
     test_case (sprintf "jcsnafi_is_encodable_%d" id ) `Quick (fun () ->
         check bool
           (sprintf "jcsnafi_is_encodable")
-          expected_value (Json_JCSnafi.is_encodable jv)
+          expected_value actual
     )  in
    [
     "jcsnafi_is_encodable", 
-    Jcsnafi_test_data.cases_for_is_encodable (module Float) case
+    Jcsnafi_data.cases_for_is_encodable case
     |&> (fun case -> get_and_incr counter |> case)
   ]
 
 let jcsnafi_is_encodable_str = 
   let counter = ref 0 in
-  let case s expected_value id =
+  let case actual expected_value id =
     test_case (sprintf "jcsnafi_is_encodable_str_%d:" id) `Quick (fun () ->
         check bool
           (sprintf "jcsnafi_is_encodable_str:")
-          expected_value (Json_JCSnafi.is_encodable_str s)
+          expected_value actual
     ) in
    [
     "jcsnafi_is_encodable_str",
-      Jcsnafi_test_data.cases_for_is_encodable_str case
+      Jcsnafi_data.cases_for_is_encodable_str case
       |&> (fun case -> get_and_incr counter |> case)
   ]
 
 let jcsnafi_is_encodable_num = 
   let counter = ref 0 in
-  let case f expected_value id =
+  let case actual expected_value id =
     test_case (sprintf "jcsnafi_is_encodable_num_%d:" id) `Quick (fun () ->
         check bool
           (sprintf "jcsnafi_is_encodable_num:")
-          expected_value (Json_JCSnafi.is_encodable_num f)
+          expected_value actual
     ) in
    [
     "jcsnafi_is_encodable_num", 
-    Jcsnafi_test_data.cases_for_is_encodable_num (module Float) case
+    Jcsnafi_data.cases_for_is_encodable_num case
     |&> (fun case -> get_and_incr counter |> case)
   ]
 
 let jcsnafi_compare_field_name = 
   let counter = ref 0 in
-  let case str1 str2 expected_value id =
+  let case actual expected_value id =
     test_case (sprintf "jcsnafi_compare_field_name_%d:" id) `Quick (fun () ->
         check int
           (sprintf "jcsnafi_compare_field_name:")
-          expected_value (Json_JCSnafi.compare_field_name str1 str2)
+          expected_value actual
     ) in
   [
     "jcsnafi_compare_field_name", 
-    Jcsnafi_test_data.cases_for_compare_field_name case
+    Jcsnafi_data.cases_for_compare_field_name case
     |&> (fun case -> get_and_incr counter |> case)
   ]
 
@@ -735,7 +738,7 @@ let jcsnafi_compare_field_name_rfc8785 =
   [
     "jcsnafi_compare_field_name_rfc8785", [
       test_case (sprintf "jcsnafi_compare_field_name_rfc8785:") `Quick (fun () ->
-        Jcsnafi_test_data.test_compare_field_name_rfc8785 & fun ~actual ~expected () ->
+        Jcsnafi_data.test_compare_field_name_rfc8785 & fun ~actual ~expected () ->
           check' (list string)
             ~msg:(sprintf "jcsnafi_compare_field_name_rfc8785:")
             ~expected
