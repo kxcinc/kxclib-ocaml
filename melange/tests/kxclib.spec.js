@@ -8,6 +8,7 @@ const JsonExt = kxclib_js.Json_ext;
 
 const Json_ext_test = kxclib_melange_test.Json_ext_test;
 const Promise_io_test = kxclib_melange_test.Promise_io_test;
+const Jcsnafi_test = kxclib_melange_test.Jcsnafi_test;
 
 test('it loads', () => {
   expect(kxclib).toBeDefined();
@@ -16,6 +17,7 @@ test('it loads', () => {
   expect(kxclib_melange_test).toBeDefined();
   expect(Json_ext_test).toBeDefined();
   expect(Promise_io_test).toBeDefined();
+  expect(Jcsnafi_test).toBeDefined();
 });
 
 const samples = [
@@ -102,4 +104,13 @@ test('Promise_io (ported)', async () => {
   for (const test of Promise_io_test.tests) {
     await test();
   }
+});
+
+test('Jcsnafi (ported)', async () => {
+  Jcsnafi_test.test_unparse_jcsnafi();
+  Jcsnafi_test.test_is_encodable();
+  Jcsnafi_test.test_is_encodable_str();
+  Jcsnafi_test.test_is_encodable_num();
+  Jcsnafi_test.test_compare_field_name();
+  Jcsnafi_test.test_compare_field_name_rfc8785();
 });
