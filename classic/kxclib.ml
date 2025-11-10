@@ -1716,7 +1716,7 @@ module Int53p = struct
         let to_int = to_int
         let of_int = of_int
 
-        let to_string f = Float.to_string f
+        let to_string f = f |> Int64.of_float |> Int64.to_string
       end
       include Float'
       module Ops = MakeOps(struct type int53p = float include Float' end)
