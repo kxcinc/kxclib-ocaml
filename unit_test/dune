@@ -11,3 +11,5 @@
  (preprocess (pps ppx_optcomp))
  (flags (:standard
           -open Kxclib)))
+
+(rule (copy ../test_data/jcsnafi_test_data.ml jcsnafi_test_data.ml))

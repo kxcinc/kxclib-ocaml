@@ -3,7 +3,8 @@
    jsoo_unit_tests
    baselib_unit_tests
    baselib_json_prop_tests
-   baselib_jvpath_prop_tests)
+   baselib_jvpath_prop_tests
+   baselib_json_jcsnafi_prop_tests)
  (libraries
    alcotest qcheck
    kxclib_jsoo_core kxclib_jsoo_js
@@ -22,3 +23,6 @@
 (rule (copy ../../unit_test/baselib_unit_tests.ml baselib_unit_tests.ml))
 (rule (copy ../../unit_test/baselib_json_prop_tests.ml baselib_json_prop_tests.ml))
 (rule (copy ../../unit_test/baselib_jvpath_prop_tests.ml baselib_jvpath_prop_tests.ml))
+(rule (copy ../../unit_test/baselib_json_jcsnafi_prop_tests.ml baselib_json_jcsnafi_prop_tests.ml))
+
+(rule (copy ../../test_data/jcsnafi_test_data.ml jcsnafi_test_data.ml))
