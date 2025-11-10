@@ -3244,13 +3244,25 @@ end = struct
   let is_all_ascii_property (es : (string * jv) list) : bool =
     List.for_all (fun e -> fst e |> is_ascii_str) es
 
+  let sort_obj_asserting_uniq (es : (string * jv) list) : (string * jv) list =
+    let cmp = if is_all_ascii_property es then String.compare
+                  else compare_field_name in
+
+    let cmp_asserting_uniq x y =
+      let ret = cmp x y in
+        if ret = 0
+        then raise (Invalid_argument ("Duplicate property names: " ^ x))
+        else ret
+    
+    in
+    List.sort (projected_compare_with cmp_asserting_uniq fst) es 
+
   let rec is_encodable (jv : jv) : bool =
     match jv with
     | `null -> true
     | `bool _ -> true
     | `num n -> is_encodable_num n
     | `str s -> is_encodable_str s
-    | `arr xs -> List.for_all is_encodable xs
     | `obj es ->
         let all_members_encodable = 
           List.for_all (fun (k, v) -> is_encodable_str k && is_encodable v) es
@@ -3259,21 +3271,12 @@ end = struct
         if not all_members_encodable then
           false
         else
-          let cmp = if is_all_ascii_property es then String.compare
-                      else compare_field_name in
-
-          let cmp_asserting_uniq x y =
-            let ret = cmp x y in
-            if ret = 0
-            then raise (Invalid_argument ("Duplicate property names: " ^ x))
-            else ret
-          in
-
-          try
-            let _ = List.sort (projected_compare_with cmp_asserting_uniq fst) es in
-            true
-          with
-          | Invalid_argument _ -> false
+          (try
+             let _ = sort_obj_asserting_uniq es in
+             true
+           with
+           | Invalid_argument _ -> false)
+    | `arr xs -> List.for_all is_encodable xs
 
   let iter_sep (sep : char) (buf : Buffer.t) (f : Buffer.t -> 'a -> unit) (xs : 'a list) : unit =
     match xs with
@@ -3295,17 +3298,7 @@ end = struct
         then Buffer.add_string dest (Int53p.to_string (Int53p.of_float n))
         else raise (Invalid_argument (sprintf "Number cannot be safely encoded with Json_JCSnafi (encountering: %f)" n))
     | `obj es ->
-        let cmp = if is_all_ascii_property es then String.compare
-                  else compare_field_name in
-
-        let cmp_asserting_uniq x y =
-          let ret = cmp x y in
-          if ret = 0
-          then raise (Invalid_argument ("Duplicate property names: " ^ x))
-          else ret
-        in
-
-        let sorted_obj = List.sort (projected_compare_with cmp_asserting_uniq fst) es in
+        let sorted_obj = sort_obj_asserting_uniq es in
         
         let serialize_elem (buf : Buffer.t) (key, value) : unit =
           serialize_string_jcs buf key;
