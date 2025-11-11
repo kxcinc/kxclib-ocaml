@@ -11,13 +11,16 @@ let test_canonicalize =
   let open QCheck2 in
   [
     Test.make ~count:2000 ~name:"Json_jcsnafi canonicalize"
-      (Jcsnafi_qcheck_generators.gen_jv_jcsnafi
-        |> Gen.map (fun jv ->
-          (canonicalize & Json_ext.to_xjv jv, Json_JCSnafi.unparse_jcsnafi jv)
-        ))
-      ~print:(fun (canonicalized, unparsed) ->
-        sprintf "RFC8785: %s, Json_JCSnafi: %s" canonicalized unparsed)
-      (!!String.equal)
+      Jcsnafi_qcheck_generators.gen_jv_jcsnafi
+      ~print:(fun jv ->
+        sprintf "input jv:\n\t%s\n\nRFC8785.canonicalize:\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\n"
+          (Json.show jv)
+          (canonicalize & Json_ext.to_xjv jv)
+          (Json_JCSnafi.unparse_jcsnafi jv))
+      (fun jv ->
+        let canonicalized = canonicalize & Json_ext.to_xjv jv in
+        let jcsnafi_unparsed = Json_JCSnafi.unparse_jcsnafi jv in
+        String.equal canonicalized jcsnafi_unparsed)
   ] |&> QCheck_alcotest.to_alcotest
 
 let () =
