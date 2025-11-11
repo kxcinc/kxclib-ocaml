@@ -13,10 +13,32 @@ let test_canonicalize =
     Test.make ~count:2000 ~name:"Json_jcsnafi canonicalize"
       Jcsnafi_qcheck_generators.gen_jv_jcsnafi
       ~print:(fun jv ->
-        sprintf "input jv:\n\t%s\n\nRFC8785.canonicalize:\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\n"
-          (Json.show jv)
+        let esc s = "\"" ^ String.escaped s ^ (
+                        if String.escaped s <> s
+                        then "\"mlesc" else "\"")
+        in
+        let rec show_jv : Json.jv -> string = function
+          (* | `null -> "null" *)
+          (* | `bool true -> "true" *)
+          (* | `bool false -> "false" *)
+          | (`null | `bool _ | `num _) as j -> Json.show j
+          | `str s -> esc s
+          | `arr xs -> "[" ^ (String.concat","(xs |&> show_jv)) ^ "]"
+          | `obj fs -> "[" ^ (String.concat","(fs |&> fun (k, v) -> esc k ^ ":" ^ show_jv v)) ^ "]"
+        in
+        sprintf
+          "input jv:\n\t%s\n\nRFC8785.canonicalize:\n\t%s\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\t%s\n\nre-interp:\n\nRFC8785.canonicalize:\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\n"
+
+          (show_jv jv)
+
           (canonicalize & Json_ext.to_xjv jv)
-          (Json_JCSnafi.unparse_jcsnafi jv))
+          ((canonicalize & Json_ext.to_xjv jv) |> esc)
+
+          (Json_JCSnafi.unparse_jcsnafi jv)
+          (Json_JCSnafi.unparse_jcsnafi jv |> esc)
+
+          (Json_ext.of_json_string_opt (canonicalize & Json_ext.to_xjv jv) >? show_jv |? "(invalid-json)")
+          (Json_ext.of_json_string_opt (Json_JCSnafi.unparse_jcsnafi jv) >? show_jv |? "(invalid-json)"))
       (fun jv ->
         let canonicalized = canonicalize & Json_ext.to_xjv jv in
         let jcsnafi_unparsed = Json_JCSnafi.unparse_jcsnafi jv in
