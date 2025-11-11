@@ -4,16 +4,17 @@
    baselib_unit_tests
    baselib_json_prop_tests
    baselib_jvpath_prop_tests
-   baselib_json_jcsnafi_prop_tests)
+   baselib_json_jcsnafi_prop_tests
+   baselib_json_jcsnafi_rfc_8785_test)
  (libraries
-   alcotest qcheck
+   alcotest qcheck qcheck-alcotest
    kxclib_jsoo_core kxclib_jsoo_js
    kxclib_priv_test_lib
    js_of_ocaml
  )
  (modes js)
  (js_of_ocaml
-  (javascript_files additional_stubs.js))
+  (javascript_files additional_stubs.js canonicalize_rfc_8785.js))
  (preprocess (pps ppx_optcomp))
  (flags (:standard
           -open Kxclib
