@@ -30,6 +30,8 @@ end) = struct
       case (`str "\x09") {|"\t"|};
       case (`str "\x0C") {|"\f"|};
       case (`str "\x0D") {|"\r"|};
+      (* NUL and U+10FC10 *)
+      case (`str "\000\000\xF4\x8F\xB0\x90") "\"\u0000\u0000\244\143\176\144\"";
 
       (* Boundary of 1-byte characters |00..7F| *)
       case (`str "\x00") {|"\u0000"|};
@@ -223,6 +225,13 @@ end) = struct
                 (Invalid_argument "Number cannot be safely encoded with Json_JCSnafi (encountering: 333333333.333333)");
                 (* {|{"literals":[null,true,false],"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA'B\"\\\\\"/"}|}; *)
 
+      (* regression; 
+
+         found with QCHECK_SEED=350655625 node _build/default/jsoo/unit_test/baselib_json_jcsnafi_rfc_8785_test.bc.js
+         at commit a626f41c6e17dac2a768c3be153852dd0881896b (part of PR https://github.com/kxcinc/kxclib-ocaml/pull/79) *)
+      case 
+        (`obj ["", `null; "\000\000\000\244\143\176\128", `null])
+        ({|{"":null,"\u0000\u0000\u0000|}^"\xF4\x8F\xB0\x80"^{|":null}|});
     ]
 
   let cases_for_is_encodable case =
