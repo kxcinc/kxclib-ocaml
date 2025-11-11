@@ -13,3 +13,4 @@
           -open Kxclib)))
 
 (rule (copy ../test_data/jcsnafi_test_data.ml jcsnafi_test_data.ml))
+(rule (copy ../test_data/jcsnafi_qcheck_generators.ml jcsnafi_qcheck_generators.ml))
