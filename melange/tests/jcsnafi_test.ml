@@ -16,12 +16,12 @@ open struct
 end
 
 let test_unparse_jcsnafi () =
-  let case_exn f (exn: exn) = fun () ->
+  let case_exn (f: unit -> string) (exn: exn) = fun () ->
     let error_name = match exn with
       | Invalid_argument _ -> "Invalid_argument"
       | _ -> "Error"
     in
-    to_throw (expect (f ())) error_name;
+    to_throw (expect f) error_name;
     Promise_io.return ()
   in
 
