@@ -61,7 +61,7 @@ let test_canonicalize =
 
 let () =
   Printexc.record_backtrace true;
-  run "Baselib_json_csnafi_rfc_8785_test" ([
+  run "Baselib_json_jcsnafi_rfc_8785_test" ([
     "check external", [
       test_case "canonicalize" `Quick (fun () ->
         check' bytes
