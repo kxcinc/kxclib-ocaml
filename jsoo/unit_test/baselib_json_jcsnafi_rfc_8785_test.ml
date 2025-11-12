@@ -1,5 +1,6 @@
 open Alcotest
 open Kxclib_js
+open Jsoo_test_helpers
 
 module Rfc8785 = struct
   external canonicalize : Js_of_ocaml.Js.js_string Js_of_ocaml.Js.t -> bytes = "canonicalize_rfc_8785"
@@ -25,32 +26,18 @@ let test_canonicalize =
     Test.make ~count:2000 ~name:"Json_jcsnafi canonicalize"
       Jcsnafi_qcheck_generators.gen_jv_jcsnafi
       ~print:(fun jv ->
-        let esc s = "\"" ^ String.escaped s ^ (
-                        if String.escaped s <> s
-                        then "\"mlesc" else "\"")
-        in
-        let rec show_jv : Json.jv -> string = function
-          (* | `null -> "null" *)
-          (* | `bool true -> "true" *)
-          (* | `bool false -> "false" *)
-          | (`null | `bool _ | `num _) as j -> Json.show j
-          | `str s -> esc s
-          | `arr xs -> "[" ^ (String.concat","(xs |&> show_jv)) ^ "]"
-          | `obj fs -> "[" ^ (String.concat","(fs |&> fun (k, v) -> esc k ^ ":" ^ show_jv v)) ^ "]"
-        in
         let canonicalized = canonicalize_jv jv |> of_bytes in
         let unparsed = Json_JCSnafi.unparse_jcsnafi jv in
         sprintf
-          "input jv:\n\t%s\n\nRFC8785.canonicalize:\n\t%s\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\t%s\n\nre-interp:\n\nRFC8785.canonicalize:\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\n"
-
+          "input jv:\n\t%s\n\n"
           (show_jv jv)
-
+        ^ sprintf "Rfc8785.canonicalize:\n\t%s\n\t%s\n\n"
           canonicalized
           (canonicalized |> esc)
-
+        ^ sprintf "Json_JCSnafi.unparse_jcsnafi:\n\t%s\n\t%s\n\n"
           unparsed
           (unparsed |> esc)
-
+        ^ sprintf "re-interp:\n\nRfc8785.canonicalize:\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\n"
           (Json_ext.of_json_string_opt canonicalized >? show_jv |? "(invalid-json)")
           (Json_ext.of_json_string_opt unparsed >? show_jv |? "(invalid-json)"))
       (fun jv ->
