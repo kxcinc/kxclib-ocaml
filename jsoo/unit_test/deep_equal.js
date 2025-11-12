@@ -28,8 +28,8 @@ function json_string_deep_equal(json1, json2) {
 
         if (
           ks1.length === ks2.length &&
-          ks1.every((k) => k in o2) &&
-          ks2.every((k) => k in o1)
+          ks1.every((k) => ks2.includes(k)) &&
+          ks2.every((k) => ks1.includes(k))
         ) {
           return ks1.every((k) => deepEqual(o1[k], o2[k]));
         } else {
