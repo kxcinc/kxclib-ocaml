@@ -11,6 +11,7 @@
    kxclib_jsoo_core kxclib_jsoo_js
    kxclib_priv_test_lib
    js_of_ocaml
+   yojson
  )
  (modes js)
  (js_of_ocaml
