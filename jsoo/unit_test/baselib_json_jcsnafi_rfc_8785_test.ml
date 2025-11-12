@@ -2,7 +2,16 @@ open Alcotest
 open Kxclib_js
 
 module Rfc8785 = struct
-  external canonicalize : 'a -> bytes = "canonicalize_rfc_8785"
+  external canonicalize : Js_of_ocaml.Js.js_string Js_of_ocaml.Js.t -> bytes = "canonicalize_rfc_8785"
+
+  let canonicalize_jv jv =
+    try
+      Json.to_yojson jv
+      |> Yojson.Safe.to_string
+      |> Js_of_ocaml.Js.string
+      |> canonicalize
+    with e ->
+      failwith' "%s: %s" (Json.show jv) (Printexc.to_string e)
 end
 
 open Rfc8785
@@ -29,21 +38,23 @@ let test_canonicalize =
           | `arr xs -> "[" ^ (String.concat","(xs |&> show_jv)) ^ "]"
           | `obj fs -> "[" ^ (String.concat","(fs |&> fun (k, v) -> esc k ^ ":" ^ show_jv v)) ^ "]"
         in
+        let canonicalized = canonicalize_jv jv |> of_bytes in
+        let unparsed = Json_JCSnafi.unparse_jcsnafi jv in
         sprintf
           "input jv:\n\t%s\n\nRFC8785.canonicalize:\n\t%s\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\t%s\n\nre-interp:\n\nRFC8785.canonicalize:\n\t%s\n\nJson_JCSnafi.unparse_jcsnafi:\n\t%s\n\n"
 
           (show_jv jv)
 
-          ((canonicalize & Json_ext.to_xjv jv) |> of_bytes)
-          ((canonicalize & Json_ext.to_xjv jv) |> of_bytes |> esc)
+          canonicalized
+          (canonicalized |> esc)
 
-          (Json_JCSnafi.unparse_jcsnafi jv)
-          (Json_JCSnafi.unparse_jcsnafi jv |> esc)
+          unparsed
+          (unparsed |> esc)
 
-          (Json_ext.of_json_string_opt (Json_ext.to_xjv jv |> canonicalize |> of_bytes) >? show_jv |? "(invalid-json)")
-          (Json_ext.of_json_string_opt (Json_JCSnafi.unparse_jcsnafi jv) >? show_jv |? "(invalid-json)"))
+          (Json_ext.of_json_string_opt canonicalized >? show_jv |? "(invalid-json)")
+          (Json_ext.of_json_string_opt unparsed >? show_jv |? "(invalid-json)"))
       (fun jv ->
-        let canonicalized = canonicalize & Json_ext.to_xjv jv in
+        let canonicalized = canonicalize_jv jv in
         let jcsnafi_unparsed = Json_JCSnafi.unparse_jcsnafi jv |> to_bytes in
         Bytes.equal canonicalized jcsnafi_unparsed)
   ] |&> QCheck_alcotest.to_alcotest
@@ -56,7 +67,7 @@ let () =
         check' bytes
           ~msg:"It will be success to call external function 'canonicalize'"
           ~expected:("null" |> to_bytes)
-          ~actual:(canonicalize Js_of_ocaml.Js.null)
+          ~actual:(canonicalize & Js_of_ocaml.Js.string "null")
         )
     ];
     "canonicalize", test_canonicalize
