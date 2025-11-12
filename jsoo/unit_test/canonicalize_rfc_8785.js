@@ -1,6 +1,6 @@
 /**
  * @type {(object: any) => string}
- * https://tex2e.github.io/rfc-translater/html/rfc8785.html
+ * https://www.rfc-editor.org/rfc/rfc8785.html
 */
 //Provides: canonicalize_rfc_8785
 //Requires: caml_string_of_jsstring
