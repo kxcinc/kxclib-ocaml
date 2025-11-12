@@ -2,10 +2,13 @@ open Alcotest
 open Kxclib_js
 
 module Rfc8785 = struct
-  external canonicalize : 'a -> string = "canonicalize_rfc_8785"
+  external canonicalize : 'a -> bytes = "canonicalize_rfc_8785"
 end
 
 open Rfc8785
+
+let to_bytes = Bytes.of_string
+let of_bytes = Bytes.to_string
 
 let test_canonicalize =
   let open QCheck2 in
@@ -31,18 +34,18 @@ let test_canonicalize =
 
           (show_jv jv)
 
-          (canonicalize & Json_ext.to_xjv jv)
-          ((canonicalize & Json_ext.to_xjv jv) |> esc)
+          ((canonicalize & Json_ext.to_xjv jv) |> of_bytes)
+          ((canonicalize & Json_ext.to_xjv jv) |> of_bytes |> esc)
 
           (Json_JCSnafi.unparse_jcsnafi jv)
           (Json_JCSnafi.unparse_jcsnafi jv |> esc)
 
-          (Json_ext.of_json_string_opt (canonicalize & Json_ext.to_xjv jv) >? show_jv |? "(invalid-json)")
+          (Json_ext.of_json_string_opt (Json_ext.to_xjv jv |> canonicalize |> of_bytes) >? show_jv |? "(invalid-json)")
           (Json_ext.of_json_string_opt (Json_JCSnafi.unparse_jcsnafi jv) >? show_jv |? "(invalid-json)"))
       (fun jv ->
         let canonicalized = canonicalize & Json_ext.to_xjv jv in
-        let jcsnafi_unparsed = Json_JCSnafi.unparse_jcsnafi jv in
-        String.equal canonicalized jcsnafi_unparsed)
+        let jcsnafi_unparsed = Json_JCSnafi.unparse_jcsnafi jv |> to_bytes in
+        Bytes.equal canonicalized jcsnafi_unparsed)
   ] |&> QCheck_alcotest.to_alcotest
 
 let () =
@@ -50,9 +53,9 @@ let () =
   run "Baselib_json_csnafi_rfc_8785_test" ([
     "check external", [
       test_case "canonicalize" `Quick (fun () ->
-        check' string
+        check' bytes
           ~msg:"It will be success to call external function 'canonicalize'"
-          ~expected:"null"
+          ~expected:("null" |> to_bytes)
           ~actual:(canonicalize Js_of_ocaml.Js.null)
         )
     ];
