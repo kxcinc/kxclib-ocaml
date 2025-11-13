@@ -1,17 +1,23 @@
 //Provides: _canonicalize_rfc_8785_TextEncoder
 var _canonicalize_rfc_8785_TextEncoder = new TextEncoder()
 
+//Provides: _canonicalize_rfc_8785_TextDecoder
+var _canonicalize_rfc_8785_TextDecoder = new TextDecoder()
+
 /**
- * @type {(jsonString: string) => unknown}
+ * @type {(jsonString: <ocaml:bytes>) => <ocaml:bytes>}
  * https://www.rfc-editor.org/rfc/rfc8785.html
 */
 //Provides: canonicalize_rfc_8785
 //Requires: _canonicalize_rfc_8785_TextEncoder
+//Requires: _canonicalize_rfc_8785_TextDecoder
+//Requires: caml_convert_bytes_to_array
 //Requires: caml_bytes_of_array
 function canonicalize_rfc_8785(jsonString) {
   var buffer = "";
-  serialize(JSON.parse(jsonString));
-  return caml_bytes_of_array(_canonicalize_rfc_8785_TextEncoder.encode(buffer));
+  serialize(JSON.parse(_canonicalize_rfc_8785_TextDecoder.decode(caml_convert_bytes_to_array(jsonString))));
+  var returning = caml_bytes_of_array(_canonicalize_rfc_8785_TextEncoder.encode(buffer));
+  return returning;
 
   function serialize(object) {
     if (

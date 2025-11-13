@@ -3,13 +3,16 @@ open Kxclib_js
 open Jsoo_test_helpers
 
 module Rfc8785 = struct
-  external canonicalize : Js_of_ocaml.Js.js_string Js_of_ocaml.Js.t -> bytes = "canonicalize_rfc_8785"
+
+  (* utf8 json string -> utf8 json string *)
+  external canonicalize : bytes -> bytes = "canonicalize_rfc_8785"
 
   let canonicalize_jv jv =
+    (* NB: seems that Js_of_ocaml.Js.string is buggy *)
     try
       Json.to_yojson jv
       |> Yojson.Safe.to_string
-      |> Js_of_ocaml.Js.string
+      |> Bytes.of_string
       |> canonicalize
     with e ->
       failwith' "%s: %s" (Json.show jv) (Printexc.to_string e)
@@ -24,7 +27,12 @@ let test_canonicalize =
   let open QCheck2 in
   [
     Test.make ~count:2000 ~name:"Json_jcsnafi canonicalize"
-      Jcsnafi_qcheck_generators.gen_jv_jcsnafi
+      QCheck2.Gen.(
+      oneof [
+          Jcsnafi_qcheck_generators.gen_jv_jcsnafi;
+
+          (* regression: seems that Js_of_ocaml.Js.string is buggy *)
+          return (`obj ["\237\159\191", `null]) ])
       ~print:(fun jv ->
         let canonicalized = canonicalize_jv jv |> of_bytes in
         let unparsed = Json_JCSnafi.unparse_jcsnafi jv in
@@ -54,7 +62,7 @@ let () =
         check' bytes
           ~msg:"It will be success to call external function 'canonicalize'"
           ~expected:("null" |> to_bytes)
-          ~actual:(canonicalize & Js_of_ocaml.Js.string "null")
+          ~actual:(canonicalize & Bytes.of_string "null")
         )
     ];
     "canonicalize", test_canonicalize
