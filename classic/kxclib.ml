@@ -463,8 +463,8 @@ let foldl = List.fold_left
 let foldr f z l = List.fold_right f l z
 (** {!List.fold_left} but arg pos exchanged *)
 
-let projected_compare proj a b =
-  compare (proj a) (proj b)
+let projected_compare ?(cmp=compare) proj a b =
+  cmp (proj a) (proj b)
 
 let neg = Int.neg
 let mul = Int.mul
@@ -3177,58 +3177,57 @@ end = struct
   let iter_valid_uchar (f : Uchar.t -> unit) (str : string) : unit =
     let str_len = String.length str in
     let rec loop (i : int) : unit = 
-      if i >= str_len then
-        ()
-      else
+      if i < str_len then
         let utf8dec = String.get_utf_8_uchar str i in
-        
-        if not (Uchar.utf_decode_is_valid utf8dec) then
-          raise (Invalid_argument ("Invalid Unicode: " ^ str))
-        else
-          let uchar = Uchar.utf_decode_uchar utf8dec in
-          f uchar;
 
-          let utf8dec_len = Uchar.utf_decode_length utf8dec in
-          loop (i + utf8dec_len)
+        if not (Uchar.utf_decode_is_valid utf8dec) then
+          invalid_arg' "Invalid Unicode: %s" (String.escaped str)
+        else
+          Uchar.utf_decode_uchar utf8dec |> f;
+          loop (i + Uchar.utf_decode_length utf8dec)
     in
     loop 0
 
   let utf16_bytes_of_string (str: string) : bytes =
     let buf = Buffer.create (String.length str) in
-    
-    let f (uchar : Uchar.t) : unit =
-      Buffer.add_utf_16be_uchar buf uchar
-    in
-    iter_valid_uchar f str;
+    str |> iter_valid_uchar (Buffer.add_utf_16be_uchar buf);
     Buffer.to_bytes buf
 
-  let serialize_string_jcs (dest : Buffer.t) (str : string) : unit =
-    let f (uchar : Uchar.t) : unit =
-      let uchar_int = Uchar.to_int uchar in
-        (* ref. https://www.rfc-editor.org/rfc/rfc8785#section-3.2.2.2 *)
-        (match uchar_int with
-         | 0x0008 -> Buffer.add_string dest {|\b|}
-         | 0x0009 -> Buffer.add_string dest {|\t|}
-         | 0x000A -> Buffer.add_string dest {|\n|}
-         | 0x000C -> Buffer.add_string dest {|\f|}
-         | 0x000D -> Buffer.add_string dest {|\r|}
-         | ui when ui >= 0x0000 && ui <= 0x001F
-             -> Buffer.add_string dest (Printf.sprintf "\\u%04x" ui)
-         | 0x005C -> Buffer.add_string dest {|\\|}
-         | 0x0022 -> Buffer.add_string dest {|\"|}
-         | _ -> Buffer.add_utf_8_uchar dest uchar 
-        )
-    in
-    Buffer.add_string dest "\"";
-    iter_valid_uchar f str;
-    Buffer.add_string dest "\""
+  let serialize_string_jcs ?buf str =
+    let buf = buf |?! (fun () -> Buffer.create (String.length str)) in
+    Buffer.add_string buf "\"";
+
+    (if str |> String.for_all (fun c ->
+                   (* check if directly printable *)
+                   c != '\\' && c != '\"' &&
+                     let x = Char.code c in
+                     x >= 0x20 && x < 0x7f)
+
+    then (* fast path *)
+      Buffer.add_string buf str
+
+    else (* otherwise.. *)
+      str |> iter_valid_uchar (fun uchar ->
+        (* ref: https://www.rfc-editor.org/rfc/rfc8785#section-3.2.2.2 *)
+        match Uchar.to_int uchar with
+        | 0x0008 -> Buffer.add_string buf {|\b|}
+        | 0x0009 -> Buffer.add_string buf {|\t|}
+        | 0x000A -> Buffer.add_string buf {|\n|}
+        | 0x000C -> Buffer.add_string buf {|\f|}
+        | 0x000D -> Buffer.add_string buf {|\r|}
+        | ui when ui >= 0x0000 && ui <= 0x001F
+          -> Buffer.add_string buf (Printf.sprintf "\\u%04x" ui)
+        | 0x005C -> Buffer.add_string buf {|\\|}
+        | 0x0022 -> Buffer.add_string buf {|\"|}
+        | _ -> Buffer.add_utf_8_uchar buf uchar));
+
+    Buffer.add_string buf "\"";
+    buf
 
   let is_encodable_str (str : string) : bool =
-    try
-      iter_valid_uchar (fun _ -> ()) str;
-      true
-    with
-    | Invalid_argument _ -> false
+    match iter_valid_uchar (constant ()) str with
+    | _ -> true
+    | exception (Invalid_argument _) -> false
 
   let is_encodable_num (f : float) : bool =
     f >= min_fi_float && f <= max_fi_float && Float.is_integer f
@@ -3236,26 +3235,22 @@ end = struct
   let compare_field_name (str1 : string) (str2 : string) : int =
     Bytes.compare (utf16_bytes_of_string str1) (utf16_bytes_of_string str2)
 
-  let projected_compare_with cmp proj a b =
-    cmp (proj a) (proj b)
-
   let is_ascii_str = String.for_all (fun c -> Char.code c <= 127)
 
-  let is_all_ascii_property (es : (string * jv) list) : bool =
-    List.for_all (fun e -> fst e |> is_ascii_str) es
+  let is_all_ascii_property : (string * jv) list -> bool =
+    List.for_all (fst &> is_ascii_str)
 
   let sort_obj_asserting_uniq (es : (string * jv) list) : (string * jv) list =
     let cmp = if is_all_ascii_property es then String.compare
                   else compare_field_name in
 
     let cmp_asserting_uniq x y =
-      let ret = cmp x y in
-        if ret = 0
-        then raise (Invalid_argument ("Duplicate property names: " ^ x))
-        else ret
-    
+      match cmp x y with
+      | 0 -> invalid_arg' "Duplicate property names: %s"
+               (serialize_string_jcs x |> Buffer.contents)
+      | r -> r
     in
-    List.sort (projected_compare_with cmp_asserting_uniq fst) es 
+    List.sort (projected_compare ~cmp:cmp_asserting_uniq fst) es 
 
   let rec is_encodable (jv : jv) : bool =
     match jv with
@@ -3263,61 +3258,66 @@ end = struct
     | `bool _ -> true
     | `num n -> is_encodable_num n
     | `str s -> is_encodable_str s
-    | `obj es ->
-        let all_members_encodable = 
-          List.for_all (fun (k, v) -> is_encodable_str k && is_encodable v) es
-        in
-        
-        if not all_members_encodable then
-          false
-        else
-          (try
-             let _ = sort_obj_asserting_uniq es in
-             true
-           with
-           | Invalid_argument _ -> false)
+    | `obj es -> (
+      match
+        (* check if all members encodables *)
+        List.for_all (fun (k, v) -> is_encodable_str k && is_encodable v) es,
+        (* check if keys are all unique *)
+        sort_obj_asserting_uniq es
+      with
+      | (false, _
+         | exception (Invalid_argument _)
+        ) -> false
+      | _ -> true
+    )
     | `arr xs -> List.for_all is_encodable xs
 
-  let iter_sep (sep : char) (buf : Buffer.t) (f : Buffer.t -> 'a -> unit) (xs : 'a list) : unit =
-    match xs with
-    | [] -> ()
-    | hd :: tl ->
-        f buf hd;
-        List.iter (fun x ->
-          Buffer.add_char buf sep;
-          f buf x) tl
-
-  let rec unparse_jcsnafi0 (dest : Buffer.t) (jv : jv) : unit =
+  let rec unparse_jcsnafi0 ?buf (jv : jv) : Buffer.t =
+    let imm s =
+      buf |?! (fun () -> Buffer.create (String.length s))
+      |-> (Fn.flip Buffer.add_string s)
+    in
     match jv with
-    | `null -> Buffer.add_string dest "null"
-    | `bool true -> Buffer.add_string dest "true"
-    | `bool false -> Buffer.add_string dest "false"
-    | `str s -> serialize_string_jcs dest s
-    | `num n ->
-        if is_encodable_num n
-        then Buffer.add_string dest (Int53p.to_string (Int53p.of_float n))
-        else raise (Invalid_argument (sprintf "Number cannot be safely encoded with Json_JCSnafi (encountering: %f)" n))
-    | `obj es ->
-        let sorted_obj = sort_obj_asserting_uniq es in
-        
-        let serialize_elem (buf : Buffer.t) (key, value) : unit =
-          serialize_string_jcs buf key;
-          Buffer.add_char buf ':';
-          unparse_jcsnafi0 buf value
-        in
+    | `null -> imm "null"
+    | `bool true -> imm "true"
+    | `bool false -> imm "false"
+    | `str s -> serialize_string_jcs ?buf s
 
-        Buffer.add_char dest '{';
-        iter_sep ',' dest serialize_elem sorted_obj;
-        Buffer.add_char dest '}'
-    | `arr xs ->
-        Buffer.add_char dest '[';
-        iter_sep ',' dest unparse_jcsnafi0 xs;
-        Buffer.add_char dest ']'
+    | `num n when is_encodable_num n ->
+       imm (Int53p.to_string (Int53p.of_float n))
+    | `num n ->
+       invalid_arg'
+         "Number cannot be safely encoded with Json_JCSnafi (encountering: %f)" n
+
+    | `obj [] -> imm "{}" (* fast path *)
+    | `obj ((k1, _) :: _ as es) -> (
+      let buf = buf |?! (fun () -> Buffer.create (String.length k1)) in
+      let es = sort_obj_asserting_uniq es in
+      let per_entry (k, v) =
+        serialize_string_jcs ~buf k |> ignore;
+        Buffer.add_char buf ':';
+        unparse_jcsnafi0 ~buf v |> ignore
+      in
+      Buffer.add_char buf '{';
+      es |> List.iter'
+              (per_entry &> (fun () -> Buffer.add_char buf ','))
+              per_entry;
+      Buffer.add_char buf '}';
+      buf
+    )
+
+    | `arr [] -> imm "[]" (* fast path *)
+    | `arr es ->
+       let buf = buf |?! (fun () -> Buffer.create 8 (* that is, 64 bits *)) in
+      Buffer.add_char buf '[';
+      es |> List.iter'
+              (unparse_jcsnafi0 ~buf &> (fun _ -> Buffer.add_char buf ','))
+              (unparse_jcsnafi0 ~buf &> ignore);
+      Buffer.add_char buf ']';
+      buf
 
   let unparse_jcsnafi (jv : jv) : string =
-    let buf = Buffer.create 1024 in
-    unparse_jcsnafi0 buf jv;
-    Buffer.contents buf
+    unparse_jcsnafi0 jv |> Buffer.contents
 end
 
 module Jv : sig

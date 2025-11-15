@@ -69,7 +69,7 @@ val iotafl' : ('a -> 'b -> 'a) -> 'a -> (int -> 'b) -> int -> 'a
 val min_by : ('a -> 'b) -> 'a -> 'a -> 'a
 val max_by : ('a -> 'b) -> 'a -> 'a -> 'a
 
-val projected_compare : ('a -> 'b) -> 'a -> 'a -> int
+val projected_compare : ?cmp:('b -> 'b -> int) -> ('a -> 'b) -> 'a -> 'a -> int
 
 val dup : 'x -> 'x * 'x
 val swap : 'x * 'y -> 'y * 'x

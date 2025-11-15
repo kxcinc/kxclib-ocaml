@@ -5,6 +5,9 @@ module Make(SP : sig
   val succ : float -> float
   val pred : float -> float
 end) = struct
+  let expected_exn_invalid_unicode s =
+    Invalid_argument ("Invalid Unicode: " ^ String.escaped s)
+
   let cases_for_unparse_jcsnafi case case_exn =
     let case = case % Json_JCSnafi.unparse_jcsnafi in
     let case_exn jv = case_exn (fun () -> Json_JCSnafi.unparse_jcsnafi jv) in
@@ -36,64 +39,64 @@ end) = struct
       (* Boundary of 1-byte characters |00..7F| *)
       case (`str "\x00") {|"\u0000"|};
       case (`str "\x7F") "\"\x7F\"";
-      case_exn (`str "\x80") (Invalid_argument "Invalid Unicode: \x80");
+      case_exn (`str "\x80") (expected_exn_invalid_unicode "\x80");
 
       (* Boundary of 2-byte characters |C2..DF|80..BF| *)
       (*   1st byte check |C2..DF|<valid>| *)
-      case_exn (`str "\xC1\x80") (Invalid_argument "Invalid Unicode: \xC1\x80");
+      case_exn (`str "\xC1\x80") (expected_exn_invalid_unicode "\xC1\x80");
       case (`str "\xC2\x80") "\"\xC2\x80\"";
       case (`str "\xDF\x80") "\"\xDF\x80\"";
-      case_exn (`str "\xE0\x80") (Invalid_argument "Invalid Unicode: \xE0\x80");
+      case_exn (`str "\xE0\x80") (expected_exn_invalid_unicode "\xE0\x80");
       (*   2st byte check |C2 and DF|80..BF| *)
-      case_exn (`str "\xC2\x7F") (Invalid_argument "Invalid Unicode: \xC2\x7F");
+      case_exn (`str "\xC2\x7F") (expected_exn_invalid_unicode "\xC2\x7F");
       case (`str "\xC2\xBF") "\"\xC2\xBF\"";
-      case_exn (`str "\xC2\xC0") (Invalid_argument "Invalid Unicode: \xC2\xC0");
-      case_exn (`str "\xDF\x7F") (Invalid_argument "Invalid Unicode: \xDF\x7F");
+      case_exn (`str "\xC2\xC0") (expected_exn_invalid_unicode "\xC2\xC0");
+      case_exn (`str "\xDF\x7F") (expected_exn_invalid_unicode "\xDF\x7F");
       case (`str "\xDF\xBF") "\"\xDF\xbf\"";
-      case_exn (`str "\xDF\xC0") (Invalid_argument "Invalid Unicode: \xDF\xc0");
+      case_exn (`str "\xDF\xC0") (expected_exn_invalid_unicode "\xDF\xc0");
 
       (* Boundary of 3-byte characters |E0..EF|80..BF^|80..BF| *)
       (*   1st byte check |E0..EF|<valid>|<valid>| *)
-      case_exn (`str "\xDF\x80\x80") (Invalid_argument "Invalid Unicode: \xDF\x80\x80");
+      case_exn (`str "\xDF\x80\x80") (expected_exn_invalid_unicode "\xDF\x80\x80");
       case (`str "\xE0\xA0\x80") "\"\xE0\xA0\x80\""; (* ^if 1st byte is E0, 2nd byte must be outside the range E0..9F. *)
       case (`str "\xEF\xBF\xBF") "\"\xEF\xBF\xBF\"";
-      case_exn (`str "\xF0\x80\x80") (Invalid_argument "Invalid Unicode: \xF0\x80\x80");
+      case_exn (`str "\xF0\x80\x80") (expected_exn_invalid_unicode "\xF0\x80\x80");
       (*   2nd byte check |<valid>|80..BF|<valid>|*)
-      case_exn (`str "\xE1\x7F\x80") (Invalid_argument "Invalid Unicode: \xE1\x7F\x80");
+      case_exn (`str "\xE1\x7F\x80") (expected_exn_invalid_unicode "\xE1\x7F\x80");
       case (`str "\xE1\x80\x80") "\"\xE1\x80\x80\""; (* include checking 3rd byte *)
       case (`str "\xE1\xBF\x80") "\"\xE1\xBF\x80\"";
-      case_exn (`str "\xE1\xC0\x80") (Invalid_argument "Invalid Unicode: \xE1\xC0\x80");
+      case_exn (`str "\xE1\xC0\x80") (expected_exn_invalid_unicode "\xE1\xC0\x80");
       (*   3rd byte check |<valid>|<valid>|80..BF|*)
-      case_exn (`str "\xE1\x80\x7F") (Invalid_argument "Invalid Unicode: \xE1\x80\x7F");
+      case_exn (`str "\xE1\x80\x7F") (expected_exn_invalid_unicode "\xE1\x80\x7F");
       case (`str "\xE1\x80\xBF") "\"\xE1\x80\xBF\"";
-      case_exn (`str "\xE1\x80\xC0") (Invalid_argument "Invalid Unicode: \xE1\x80\xC0");
+      case_exn (`str "\xE1\x80\xC0") (expected_exn_invalid_unicode "\xE1\x80\xC0");
       (*   3-byte characters special check *)
-      case_exn (`str "\xE0\x9F\xBF") (Invalid_argument "Invalid Unicode: \xE0\x9F\xBF");
+      case_exn (`str "\xE0\x9F\xBF") (expected_exn_invalid_unicode "\xE0\x9F\xBF");
       case (`str "\xED\x9F\xBF") "\"\xED\x9F\xBF\"";
-      case_exn (`str "\xED\xA0\x80") (Invalid_argument "Invalid Unicode: \xED\xA0\x80");
-      case_exn (`str "\xED\xBF\xBF") (Invalid_argument "Invalid Unicode: \xED\xBF\xBF");
+      case_exn (`str "\xED\xA0\x80") (expected_exn_invalid_unicode "\xED\xA0\x80");
+      case_exn (`str "\xED\xBF\xBF") (expected_exn_invalid_unicode "\xED\xBF\xBF");
       case (`str "\xEE\x80\x80") "\"\xEE\x80\x80\"";
 
       (* Boundary of 4-byte characters |F0..F4|80..BF^|80..BF|80..BF| *)
       (*   1st byte check |F0..F4|<valid>|<valid>|<valid>| *)
-      case_exn (`str "\xEF\xBF\xBF\xBF") (Invalid_argument "Invalid Unicode: \xEF\xBF\xBF\xBF");
+      case_exn (`str "\xEF\xBF\xBF\xBF") (expected_exn_invalid_unicode "\xEF\xBF\xBF\xBF");
       case (`str "\xF0\x90\x80\x80") "\"\xF0\x90\x80\x80\""; (* ^if 1st byte is F0, 2nd byte is invalid if if it falls within the range 80..8F. *)
       case (`str "\xF4\x8F\xBF\xBF") "\"\xF4\x8F\xBF\xBF\""; (* ^if 1st byte is F4, 2nd byte is invalid if it is 90 or greater. *)
-      case_exn (`str "\xF5\x80\x80\x80") (Invalid_argument "Invalid Unicode: \xF5\x80\x80\x80");
+      case_exn (`str "\xF5\x80\x80\x80") (expected_exn_invalid_unicode "\xF5\x80\x80\x80");
       (*   2nd byte check |<valid>|80..BF|<valid>|<valid>| *)
-      case_exn (`str "\xF1\x7F\x80\x80") (Invalid_argument "Invalid Unicode: \xF1\x7F\x80\x80");
+      case_exn (`str "\xF1\x7F\x80\x80") (expected_exn_invalid_unicode "\xF1\x7F\x80\x80");
       case (`str "\xF1\x80\x80\x80") "\"\xF1\x80\x80\x80\""; (* include checking 3rd and 4th byte *)
       case (`str "\xF1\xBF\xBF\xBF") "\"\xF1\xBF\xBF\xBF\""; (* include checking 3rd and 4th byte *)
-      case_exn (`str "\xF1\xC0\x80\x80") (Invalid_argument "Invalid Unicode: \xF1\xC0\x80\x80");
+      case_exn (`str "\xF1\xC0\x80\x80") (expected_exn_invalid_unicode "\xF1\xC0\x80\x80");
       (*   3rd byte check |<valid>|<valid>|80..BF|<valid>| *)
-      case_exn (`str "\xF1\x80\x7F\x80") (Invalid_argument "Invalid Unicode: \xF1\x80\x7F\x80");
-      case_exn (`str "\xF1\x80\xC0\x80") (Invalid_argument "Invalid Unicode: \xF1\x80\xC0\x80");
+      case_exn (`str "\xF1\x80\x7F\x80") (expected_exn_invalid_unicode "\xF1\x80\x7F\x80");
+      case_exn (`str "\xF1\x80\xC0\x80") (expected_exn_invalid_unicode "\xF1\x80\xC0\x80");
       (*   4th byte check |<valid>|<valid>|<valid>|80..BF| *)
-      case_exn (`str "\xF1\x80\x80\x7F") (Invalid_argument "Invalid Unicode: \xF1\x80\x80\x7F");
-      case_exn (`str "\xF1\x80\x80\xC0") (Invalid_argument "Invalid Unicode: \xF1\x80\x80\xC0");
+      case_exn (`str "\xF1\x80\x80\x7F") (expected_exn_invalid_unicode "\xF1\x80\x80\x7F");
+      case_exn (`str "\xF1\x80\x80\xC0") (expected_exn_invalid_unicode "\xF1\x80\x80\xC0");
       (*   4-byte characters special check *)
-      case_exn (`str "\xF0\x8F\xBF\xBF") (Invalid_argument "Invalid Unicode: \xF0\x8F\xBF\xBF");
-      case_exn (`str "\xF4\x90\x80\x80") (Invalid_argument "Invalid Unicode: \xF4\x90\x80\x80");
+      case_exn (`str "\xF0\x8F\xBF\xBF") (expected_exn_invalid_unicode "\xF0\x8F\xBF\xBF");
+      case_exn (`str "\xF4\x90\x80\x80") (expected_exn_invalid_unicode "\xF4\x90\x80\x80");
 
       (* number case *)
       case (`num min_fi_float) {|-4503599627370496|};
@@ -147,11 +150,11 @@ end) = struct
       case (`obj [("array", `arr [`bool true; `bool false])]) {|{"array":[true,false]}|};
       case (`obj [("array", `arr [`null; `bool true; `bool false; `str "foo"; `num 1.0])])
             {|{"array":[null,true,false,"foo",1]}|};
-      case_exn (`obj [("foo", `bool true); ("foo", `bool false)]) (Invalid_argument "Duplicate property names: foo");
-      case_exn (`obj [("あ", `bool true); ("あ", `bool false)])  (Invalid_argument "Duplicate property names: あ");
-      case_exn (`obj [("あいう", `bool true); ("あいう", `bool false)])  (Invalid_argument "Duplicate property names: あいう");
-      case_exn (`obj [("\u{20ac}", `bool true); ({|€|}, `bool false)]) (Invalid_argument "Duplicate property names: €");
-      case_exn (`obj [ ("\128", `arr [ ]); ]) (Invalid_argument "Invalid Unicode: \128");
+      case_exn (`obj [("foo", `bool true); ("foo", `bool false)]) (Invalid_argument "Duplicate property names: \"foo\"");
+      case_exn (`obj [("あ", `bool true); ("あ", `bool false)])  (Invalid_argument "Duplicate property names: \"あ\"");
+      case_exn (`obj [("あいう", `bool true); ("あいう", `bool false)])  (Invalid_argument "Duplicate property names: \"あいう\"");
+      case_exn (`obj [("\u{20ac}", `bool true); ({|€|}, `bool false)]) (Invalid_argument "Duplicate property names: \"€\"");
+      case_exn (`obj [ ("\128", `arr [ ]); ]) (expected_exn_invalid_unicode "\128");
 
       (* array case *)
       case (`arr []) {|[]|};
