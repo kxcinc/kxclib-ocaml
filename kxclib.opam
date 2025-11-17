@@ -17,6 +17,7 @@ depends: [
   "ppx_deriving" {build}
   "alcotest" {with-test}
   "qtest" {with-test}
+  "qcheck-alcotest" {with-test}
   "ocaml" {>= "4.13.0"}
   "odoc" {with-doc}
 ]

@@ -69,7 +69,7 @@ val iotafl' : ('a -> 'b -> 'a) -> 'a -> (int -> 'b) -> int -> 'a
 val min_by : ('a -> 'b) -> 'a -> 'a -> 'a
 val max_by : ('a -> 'b) -> 'a -> 'a -> 'a
 
-val projected_compare : ('a -> 'b) -> 'a -> 'a -> int
+val projected_compare : ?cmp:('b -> 'b -> int) -> ('a -> 'b) -> 'a -> 'a -> int
 
 val dup : 'x -> 'x * 'x
 val swap : 'x * 'y -> 'y * 'x
@@ -1243,7 +1243,17 @@ module Json : sig
   val of_jsonm' : 'loc jsonm' -> (jv * 'loc jsonm', 'loc jsonm_pe) result
   val of_jsonm : jsonm -> (jv * jsonm) option
   val to_jsonm : jv -> jsonm
+
+  module JCSnafi : sig
+    val is_encodable_str : string -> bool
+    val is_encodable_num : float -> bool
+    val is_encodable : jv -> bool
+    val unparse_jcsnafi : jv -> string
+    val compare_field_name : string -> string -> int
+  end
 end
+
+module Json_JCSnafi = Json.JCSnafi
 
 module Jv : sig
   open Json

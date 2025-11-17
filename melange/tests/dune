@@ -1,12 +1,20 @@
 (library
  (name kxclib_melange_test)
- (modules kxclib_melange_test)
+ (modules
+  kxclib_melange_test
+  utils
+  jcsnafi_test
+  jcsnafi_test_data)
  (libraries kxclib_melange kxclib_melange_js)
  (modes melange)
  (melange.runtime_deps
   (glob_files *.js))
  (preprocess
-  (pps melange.ppx)))
+  (pps melange.ppx))
+ (flags (:standard
+        -open Kxclib)))
+
+(rule (copy ../../test_data/jcsnafi_test_data.ml jcsnafi_test_data.ml))
 
 (rule
  (alias runtest)
@@ -22,3 +30,4 @@
     (with-accepted-exit-codes 0
      (chdir ../_output
       (run %{bun} test))))))
+

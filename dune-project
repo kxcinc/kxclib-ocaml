@@ -25,6 +25,7 @@
 
   (alcotest :with-test)
   (qtest :with-test)
+  (qcheck-alcotest :with-test)
 
   (ocaml (>= 4.13.0))))
 

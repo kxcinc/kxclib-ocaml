@@ -5,14 +5,7 @@ open struct
   external _cast : 'a -> 'b = "%identity"
 end
 
-module Jest = struct
-  type t
-  external expect : 'a -> t = "expect" [@@mel.module "bun:test"]
-  external to_be : t -> 'a -> unit = "toBe" [@@mel.send]
-  external to_strict_equal : t -> 'a -> unit = "toStrictEqual" [@@mel.send]
-  external to_be_undefined : t -> unit = "toBeUndefined" [@@mel.send]
-end
-
+open Utils
 open Jest
 
 module Json_ext_test : sig
@@ -126,3 +119,12 @@ end = struct
     test04;
   |]
 end
+
+module Jcsnafi_test : sig
+  val test_unparse_jcsnafi : (unit -> unit Promise_io.t)
+  val test_is_encodable : (unit -> unit Promise_io.t)
+  val test_is_encodable_str : (unit -> unit Promise_io.t)
+  val test_is_encodable_num : (unit -> unit Promise_io.t)
+  val test_compare_field_name : (unit -> unit Promise_io.t)
+  val test_compare_field_name_rfc8785 : (unit -> unit Promise_io.t)
+end = Jcsnafi_test
