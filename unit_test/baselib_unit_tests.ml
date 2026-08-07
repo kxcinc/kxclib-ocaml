@@ -556,8 +556,12 @@ let json_escaped_suite =
 
 let int53p_impl_to_string =
   let counter = ref 0 in
+  (* IntImpl only covers the int53 range when the native int is wide enough,
+     which it is not under js_of_ocaml (32-bit int) *)
   let impls : (module Int53p.S) list =
-    Int53p.Internals.[(module IntImpl); (module Int64Impl); (module FloatImpl)] in
+    Int53p.Internals.(
+      (if Sys.int_size >= 53 then [(module IntImpl : Int53p.S)] else [])
+      @ [(module Int64Impl); (module FloatImpl)]) in
   let case n expected =
     impls |&> (fun (module I : Int53p.S) ->
         let id = get_and_incr counter in
