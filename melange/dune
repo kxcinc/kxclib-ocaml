@@ -66,13 +66,11 @@
   (with-stderr-to %{target}
     (run %{bin:ocamlc} -pp %{dep:ppx/kxc_melange_ppx.exe} -stop-after parsing -dsource %{deps}))))
 
-(library
- (name kxclib_src_melange)
- (optional)
- (modules kxclib_src)
- (preprocess (pps ppx_deriving.std ppx_optcomp))
- (modes melange)
- (flags (:standard)))
+(rule
+ (target kxclib_src.pp.ml)
+ (deps kxclib_src.ml)
+ (action
+  (run %{dep:ppx/kxclib_src_ppx.exe} -o %{target} --impl %{deps} -dump-ast)))
 
 (melange.emit
  (target _output)

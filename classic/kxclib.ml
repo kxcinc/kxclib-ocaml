@@ -2193,7 +2193,12 @@ module FmtPervasives = struct
 
     let stdout_ppf = Format.std_formatter
     let stderr_ppf = Format.err_formatter
-    let null_ppf = Format.formatter_of_out_functions {
+    let null_ppf =
+      (* record-update over an existing out_functions value keeps this
+         compatible across stdlib versions that add fields (e.g. out_width
+         since OCaml 5.4) without version-conditional compilation *)
+      Format.formatter_of_out_functions {
+          (Format.get_formatter_out_functions ()) with
           out_string = (fun _ _ _ -> ());
           out_flush = (fun _ -> ());
           out_newline = (fun _ -> ());
