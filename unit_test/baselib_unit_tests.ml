@@ -554,6 +554,36 @@ let json_escaped_suite =
     ];
   ]
 
+let int53p_impl_to_string =
+  let counter = ref 0 in
+  (* IntImpl only covers the int53 range when the native int is wide enough,
+     which it is not under js_of_ocaml (32-bit int) *)
+  let impls : (module Int53p.S) list =
+    Int53p.Internals.(
+      (if Sys.int_size >= 53 then [(module IntImpl : Int53p.S)] else [])
+      @ [(module Int64Impl); (module FloatImpl)]) in
+  let case n expected =
+    impls |&> (fun (module I : Int53p.S) ->
+        let id = get_and_incr counter in
+        test_case (sprintf "int53p_impl_to_string_%d" id) `Quick (fun () ->
+            check string
+              (sprintf "%s.to_string %F"
+                 (Int53p.show_int53p_impl_flavor I.impl_flavor) n)
+              expected I.(of_float n |> to_string)
+          ))
+  in [
+    "int53p_impl_to_string",
+    [
+      case 0. "0";
+      case 3. "3";
+      case (-3.) "-3";
+      (* what Json.unparse prints for safe integers; FloatImpl backs jsoo *)
+      case 1786044309314. "1786044309314";
+      case 4503599627370495. "4503599627370495";
+      case (-4503599627370496.) "-4503599627370496";
+    ] |> List.concat;
+  ]
+
 let json_unparse =
   let counter = ref 0 in
   let case jv unparsed =
@@ -572,9 +602,17 @@ let json_unparse =
       case (`num 3.) {|3|};
       case (`num 0.) {|0|};
       case (`num 3.14) {|3.14|};
-      case (`num 4.5e12) {|4.5e+12|};
+      case (`num 4.5e12) {|4500000000000|};
       case (`num (-3.)) {|-3|};
       case (`num (-4.6e-24)) {|-4.6e-24|};
+      (* safe integers must unparse exactly, not rounded by "%g" *)
+      case (`num (-0.)) {|0|};
+      case (`num 1786044309314.) {|1786044309314|};
+      case (`num 4503599627370495.) {|4503599627370495|};
+      case (`num (-4503599627370496.)) {|-4503599627370496|};
+      (* integers beyond the int53 range keep the "%g" representation *)
+      case (`num 4503599627370496.) {|4.5036e+15|};
+      case (`num (-4503599627370497.)) {|-4.5036e+15|};
       case (`str "\000") {|"\u0000"|};
       case (`str "abc") {|"abc"|};
       case (`str "a\nbc") {|"a\nbc"|};
@@ -871,6 +909,7 @@ let () =
   ] @ stream_suite
     @ string_partition
     @ json_escaped_suite
+    @ int53p_impl_to_string
     @ json_unparse @ json_show
     @ json_unparse_jcsnafi
     @ jcsnafi_is_encodable_str

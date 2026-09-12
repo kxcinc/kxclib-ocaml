@@ -2740,6 +2740,12 @@ end = struct
   and normalize_fields : jv_fields -> jv_fields = fun fs ->
     sort_by_key fs |&> (fun (k, v) -> k, normalize v)
 
+  let min_fi_float = -. (2.0 ** 52.0)
+  let max_fi_float = (2.0 ** 52.0) -. 1.0
+
+  let is_encodable_num f =
+    f >= min_fi_float && f <= max_fi_float && Float.is_integer f
+
   let rec pp_unparse = fun ppf ->
     let self = pp_unparse in
     let outs = Format.pp_print_string ppf in
@@ -2748,6 +2754,9 @@ end = struct
     | `null -> outs "null"
     | `bool true -> outs "true"
     | `bool false -> outs "false"
+    | `num n when is_encodable_num n ->
+       (* "%g" would round these to 6 significant digits *)
+       outs (Int53p.to_string (Int53p.of_float n))
     | `num n -> outf "%g" n
     | `str s -> outf "\"%a\"" String.pp_json_escaped s
     | `arr [] -> outs "[]"
@@ -3169,9 +3178,6 @@ end = struct
             xs (Seq.return `Oe))
 
   module JCSnafi = struct
-    let min_fi_float = -. (2.0 ** 52.0)
-    let max_fi_float = (2.0 ** 52.0) -. 1.0
-
     let iter_valid_uchar f str =
       let str_len = String.length str in
       let rec loop i =
@@ -3227,8 +3233,8 @@ end = struct
       | _ -> true
       | exception (Invalid_argument _) -> false
 
-    let is_encodable_num f =
-      f >= min_fi_float && f <= max_fi_float && Float.is_integer f
+    (* shared with pp_unparse; re-exported to satisfy the signature check *)
+    let is_encodable_num = is_encodable_num
 
     let compare_field_name str1 str2 =
       Bytes.compare (utf16_bytes_of_string str1) (utf16_bytes_of_string str2)
