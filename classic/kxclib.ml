@@ -3071,8 +3071,10 @@ end = struct
         | None -> `List [`String c]
         | Some x -> `List [`String c; x]
       end
+  (* a bare coercion as the fun body would be pretty-printed by ppxlib (internal AST >= 5.2)
+     as [fun x :> yojson -> x], which the OCaml 5.1 parser in the melange pp pipeline rejects *)
   let yojson_safe_of_basic : yojson' -> yojson = fun x ->
-    (x :> yojson)
+    let y = (x :> yojson) in y
 
   type jsonm = jsonm_token seq
   and jsonm_token = [
