@@ -40,7 +40,11 @@ jobs:
           node-version: 'latest'
           pr-report-test-result: ${{ matrix.ocaml-version == '5.3.0' }}
           # https://bun.sh/docs/installation
+          # GIT_CONFIG_*: opam 2.6.0 runs git with GIT_CONFIG_GLOBAL=/dev/null, ignoring the
+          # safe.directory set up by the container entrypoint; passing it via GIT_CONFIG_* env
+          # vars survives (opam keeps pre-existing entries). cf. ocaml/opam#6963
           setup-command: |
+            export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$GITHUB_WORKSPACE"
             curl -fsSL https://bun.sh/install | bash -s "bun-${{ matrix.oven-version }}"
             opam install . --yes --deps-only --with-test --verbose
           test-command: |
@@ -81,6 +85,11 @@ jobs:
         uses: kxcdev/ocaml-general-gha@v3
         with:
           ocaml-version: '5.3.0'
+
+          # same opam 2.6.0 workaround as the quick-check job above
+          setup-command: |
+            export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$GITHUB_WORKSPACE"
+            opam install . --yes --deps-only --with-test --verbose
 
           skip-testing: true
           report-test-result: false
