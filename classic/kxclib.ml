@@ -1469,7 +1469,7 @@ end
 module Obj = struct
   include Obj
 
-  [%%if ocaml_version < (5, 5, 0)]
+  [%%if ocaml_version < (5, 6, 0)]
   (* latest known version of OCaml using this implementation *)
   (* https://github.com/ocaml/ocaml/blob/5.5/runtime/hash.c#L313-L325 *)
   let hash_variant s =
@@ -1483,8 +1483,7 @@ module Obj = struct
     if !accu > 0x3FFFFFFF then !accu - (1 lsl 31) else !accu
   [%%else]
   let hash_variant _s =
-    failwith "Kxclib.Obj.hash_variant is not support for this OCaml version"
-  [@@alert unavailable "hash_variant is not available for this OCaml version"]
+    failwith "Kxclib.Obj.hash_variant is not supported for this OCaml version"
   [%%endif]
 end
 
