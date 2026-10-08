@@ -1469,9 +1469,9 @@ end
 module Obj = struct
   include Obj
 
-  [%%if ocaml_version < (5, 4, 0)]
+  [%%if ocaml_version < (5, 6, 0)]
   (* latest known version of OCaml using this implementation *)
-  (* https://github.com/ocaml/ocaml/blob/5.3/runtime/hash.c#L313-L325 *)
+  (* https://github.com/ocaml/ocaml/blob/5.5/runtime/hash.c#L313-L325 *)
   let hash_variant s =
     let accu = ref 0 in
     for i = 0 to String.length s - 1 do
@@ -1483,8 +1483,7 @@ module Obj = struct
     if !accu > 0x3FFFFFFF then !accu - (1 lsl 31) else !accu
   [%%else]
   let hash_variant _s =
-    failwith "Kxclib.Obj.hash_variant is not support for this OCaml version"
-  [@@alert unavailable "hash_variant is not available for this OCaml version"]
+    failwith "Kxclib.Obj.hash_variant is not supported for this OCaml version"
   [%%endif]
 end
 
@@ -2193,7 +2192,12 @@ module FmtPervasives = struct
 
     let stdout_ppf = Format.std_formatter
     let stderr_ppf = Format.err_formatter
-    let null_ppf = Format.formatter_of_out_functions {
+    let null_ppf =
+      (* record-update over an existing out_functions value keeps this
+         compatible across stdlib versions that add fields (e.g. out_width
+         since OCaml 5.4) without version-conditional compilation *)
+      Format.formatter_of_out_functions {
+          (Format.get_formatter_out_functions ()) with
           out_string = (fun _ _ _ -> ());
           out_flush = (fun _ -> ());
           out_newline = (fun _ -> ());
@@ -3066,8 +3070,10 @@ end = struct
         | None -> `List [`String c]
         | Some x -> `List [`String c; x]
       end
+  (* a bare coercion as the fun body would be pretty-printed by ppxlib (internal AST >= 5.2)
+     as [fun x :> yojson -> x], which the OCaml 5.1 parser in the melange pp pipeline rejects *)
   let yojson_safe_of_basic : yojson' -> yojson = fun x ->
-    (x :> yojson)
+    let y = (x :> yojson) in y
 
   type jsonm = jsonm_token seq
   and jsonm_token = [
