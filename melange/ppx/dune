@@ -1,5 +1,11 @@
 (executable
  (name kxc_melange_ppx)
+ (modules kxc_melange_ppx)
  (libraries kxclib ppxlib)
  (preprocess
   (pps ppxlib.metaquot)))
+
+(executable
+ (name kxclib_src_ppx)
+ (modules kxclib_src_ppx)
+ (libraries ppxlib ppx_deriving.std ppx_optcomp))
