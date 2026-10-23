@@ -12,7 +12,12 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
+          # todo.later - unpin back to ubuntu-latest once OCaml builds are
+          #              confirmed stable on Ubuntu 26 runners
+          # OCaml (setup-ocaml) runs directly on the runner; pin to 24.04 to avoid
+          # known issues with OCaml on Ubuntu 26 as ubuntu-latest migrates to it.
+          # cf. https://discuss.ocaml.org/t/error-139-when-building-ocaml-5-5-0-on-ubuntu-26-04/18310
+          - ubuntu-24.04
         ocaml-version:
           - 5.1.x
           - 5.3.x
