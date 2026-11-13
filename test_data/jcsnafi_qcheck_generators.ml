@@ -114,7 +114,7 @@ let gen_valid_or_invalid_unicode_string : string QCheck2.Gen.t = QCheck2.Gen.(
 let gen_unique_fnames (len : int) : string list QCheck2.Gen.t = QCheck2.Gen.(
   let module StringSet = Set.Make(String) in
   map (fun l -> StringSet.of_list l |> StringSet.elements)
-      (list_repeat len gen_unicode_string))
+      (list_size (return len) gen_unicode_string))
 
 let rec sized_jv (size : int) : jv QCheck2.Gen.t = QCheck2.Gen.(
   let gen_null = pure `null in
@@ -142,14 +142,14 @@ let rec sized_jv (size : int) : jv QCheck2.Gen.t = QCheck2.Gen.(
            else
              map2 (fun ks vs -> List.combine ks vs)
              (pure keys)
-             (list_repeat keys_len (sized_jv (n / keys_len))))
+             (list_size (return keys_len) (sized_jv (n / keys_len))))
      else pure [])
      >|= (fun fs -> `obj fs) in
 
   match size with
   | 0 -> pure `null
   | 1 -> gen_atom
-  | _ -> frequency [(1, gen_atom);
+  | _ -> oneof_weighted [(1, gen_atom);
                     (4, gen_arr size);
                     (5, gen_obj size);
                    ])
@@ -160,13 +160,13 @@ let gen_jv_jcsnafi : jv QCheck2.Gen.t =
 let rec gen_shuffled_jv (jv : jv) : jv QCheck2.Gen.t = QCheck2.Gen.(
   match jv with
   | `obj es ->
-      shuffle_l es >>= (fun shuffled_es ->
+      shuffle_list es >>= (fun shuffled_es ->
         let shuffled_all = List.map (fun (k, v) ->
           gen_shuffled_jv v >|= (fun v' -> (k, v'))) shuffled_es in
-          flatten_l shuffled_all >|= (fun obj' -> `obj obj'))
+          flatten_list shuffled_all >|= (fun obj' -> `obj obj'))
   | `arr xs ->
       let shuffled_xs = List.map gen_shuffled_jv xs in
-      flatten_l shuffled_xs >|= (fun xs' -> `arr xs')
+      flatten_list shuffled_xs >|= (fun xs' -> `arr xs')
   | _ -> pure jv)
 
 let gen_jv_and_shuffled_pair : (jv * jv) QCheck2.Gen.t = QCheck2.Gen.(
@@ -184,11 +184,11 @@ let gen_jv_with_duplicate_keys : jv QCheck2.Gen.t = QCheck2.Gen.(sized (fun size
     let keys_len = List.length keys in
     let val_size = if keys_len = 0 then 0
                    else (n - 1) / keys_len in
-    list_repeat keys_len (sized_jv val_size) >>= fun vals ->
+    list_size (return keys_len) (sized_jv val_size) >>= fun vals ->
     let valid_pairs = List.combine keys vals in
 
     (* create duplicated key *)
-    oneofl keys >>= fun dup_key ->
+    oneof_list keys >>= fun dup_key ->
 
     (* create new value for duplicated key *)
     sized_jv (max 1 (n / 2)) >>= fun val' ->
@@ -224,7 +224,7 @@ let rec gen_inject_one_bad_string (bad_string_gen : string QCheck2.Gen.t) (jv : 
 
       if replaceable_candidates = [] then pure (`arr xs)
       else
-        oneofl replaceable_candidates >>= fun (i', target) ->
+        oneof_list replaceable_candidates >>= fun (i', target) ->
         gen_inject_one_bad_string bad_string_gen target >>= fun target' ->
         let xs' = List.mapi (fun i x -> if i = i' then target' else x) xs in
         pure (`arr xs')
@@ -261,7 +261,7 @@ let rec gen_inject_one_bad_string (bad_string_gen : string QCheck2.Gen.t) (jv : 
       if replaced_es_list = [] then
         pure (`obj es)
       else
-        oneofl replaced_es_list >>= fun selected_replacement ->
+        oneof_list replaced_es_list >>= fun selected_replacement ->
         selected_replacement ()
 
   | _ -> pure jv
