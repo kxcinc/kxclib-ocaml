@@ -20,26 +20,26 @@ let gen_jv' ~has_non_printable_string =
     let gen_int = G.int >|= (fun x -> `num (float_of_int x)) in
     let gen_float = G.float >|= (fun x -> `num x) in
     let gen_num =
-      G.frequency [
+      G.oneof_weighted [
           5, gen_int;
           2, gen_float;
         ] in
     let rec gen_valid_utf_8_string ~small () =
-      (if small then G.small_string ~gen:G.char else G.string)
+      (if small then G.string_small else G.string)
       >>= fun str ->
       if String.is_valid_utf_8 str then G.pure str
       else gen_valid_utf_8_string () ~small in
     let gen_str =
-      G.frequency (
+      G.oneof_weighted (
           if has_non_printable_string
           then [
-              5, G.small_string ~gen:G.printable;
+              5, G.string_small_of G.printable;
               1, gen_valid_utf_8_string() ~small:true;
               1, G.string_printable;
               1, gen_valid_utf_8_string() ~small:false;
             ]
           else [
-              5, G.small_string ~gen:G.printable;
+              5, G.string_small_of G.printable;
               1, G.string_printable;
         ])
       >|= (fun x -> `str x) in
@@ -56,16 +56,16 @@ let gen_jv' ~has_non_printable_string =
        else G.pure [])
       >|= (fun xs -> `arr xs) in
     let gen_fname =
-      G.frequency (
+      G.oneof_weighted (
           if has_non_printable_string
           then [
-              10, G.small_string ~gen:G.printable;
+              10, G.string_small_of G.printable;
               2, gen_valid_utf_8_string() ~small:true;
               2, G.string_printable;
               1, gen_valid_utf_8_string() ~small:false;
             ]
           else [
-              10, G.small_string ~gen:G.printable;
+              10, G.string_small_of G.printable;
               2, G.string_printable;
         ]) in
     let gen_field size : (string*jv) G.t =
@@ -83,7 +83,7 @@ let gen_jv' ~has_non_printable_string =
     | 0 -> G.pure `null
     | 1 -> gen_atom
     | _ -> (
-      G.frequency [
+      G.oneof_weighted [
           1, gen_atom;
           2, gen_arr;
           3, gen_obj;
