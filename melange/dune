@@ -61,7 +61,9 @@
 
 (rule
  (target kxclib_melange_core.pp.ml)
- (deps kxclib_src.pp.ml)
+ ; dune >= 3.20 / melange >= 7 stage preprocessed melange sources under
+ ; .melange_src/ instead of the flat module path
+ (deps .melange_src/kxclib_src.pp.ml)
  (action
   (with-stderr-to %{target}
     (run %{bin:ocamlc} -pp %{dep:ppx/kxc_melange_ppx.exe} -stop-after parsing -dsource %{deps}))))
