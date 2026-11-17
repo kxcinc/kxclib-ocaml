@@ -25,7 +25,7 @@
 
   (alcotest :with-test)
   (qtest :with-test)
-  (qcheck-alcotest :with-test)
+  (qcheck-alcotest (and :with-test (>= 0.90)))
 
   (ocaml (>= 4.13.0))))
 
